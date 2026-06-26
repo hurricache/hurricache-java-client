@@ -18,7 +18,7 @@ public class ControlOperationsTest extends TestBase {
         KeyHint keyHint = client.createKeyValue(key, "data".getBytes()).get();
 
         // Set TTL to 100 seconds
-        Boolean success = client.setTtl(key,keyHint, 100).get();
+        Boolean success = client.setTtl(key, keyHint, 100).get();
         Assertions.assertTrue(success);
 
         // Verify TTL

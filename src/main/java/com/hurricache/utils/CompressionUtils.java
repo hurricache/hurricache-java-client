@@ -16,7 +16,7 @@ public class CompressionUtils {
     private static final int COMPRESSION_THRESHOLD = 1024; // 1KB
 
 
-    public static Key.Builder compressKeyIfNeeded(byte[] data,Integer clientId) {
+    public static Key.Builder compressKeyIfNeeded(byte[] data, Integer clientId) {
         BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
         Key.Builder keyBuilder = Key.newBuilder();
         if (data.length > COMPRESSION_THRESHOLD) {
@@ -29,14 +29,14 @@ public class CompressionUtils {
             payloadBuilder.setSize(compressedLength);
 
             keyBuilder.setCompressionInfo(CompressedInfo.newBuilder()
-                                                    .setEnabled(true)
-                                                    .setRawSize(data.length)
-                                                    .build());
+                    .setEnabled(true)
+                    .setRawSize(data.length)
+                    .build());
         } else {
             payloadBuilder.setPayload(ByteString.copyFrom(data));
             payloadBuilder.setSize(data.length);
         }
-        if (clientId != null){
+        if (clientId != null) {
             keyBuilder.setClientId(clientId);
         }
 
@@ -57,9 +57,9 @@ public class CompressionUtils {
             payloadBuilder.setSize(compressedLength);
 
             valueBuilder.setCompressionInfo(CompressedInfo.newBuilder()
-                                                    .setEnabled(true)
-                                                    .setRawSize(data.length)
-                                                    .build());
+                    .setEnabled(true)
+                    .setRawSize(data.length)
+                    .build());
         } else {
             payloadBuilder.setPayload(ByteString.copyFrom(data));
             payloadBuilder.setSize(data.length);
@@ -68,10 +68,11 @@ public class CompressionUtils {
         return valueBuilder.setValue(payloadBuilder.build());
     }
 
-    public static byte[] decompressIfNeeded(ValueResponse responseValue){
+    public static byte[] decompressIfNeeded(ValueResponse responseValue) {
         return decompressIfNeeded(responseValue.getValue());
     }
-    public static byte[] decompressIfNeeded(UpdateValueResponse responseValue){
+
+    public static byte[] decompressIfNeeded(UpdateValueResponse responseValue) {
         if (responseValue.getResult()) {
             return decompressIfNeeded(responseValue.getValue());
         } else {

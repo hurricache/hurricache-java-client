@@ -54,8 +54,8 @@ public class LockingValuesTest extends TestBase {
         // 2. Attempt unlock by intruder (Should be rejected)
         LockStatus failedUnlock = client.unlockObject(lockKey, intruderId).get();
         Assertions.assertEquals(LockStatus.CANT_UNLOCK,
-                                failedUnlock,
-                                "Intruder should not be able to unlock owner's lock");
+                failedUnlock,
+                "Intruder should not be able to unlock owner's lock");
 
         // 3. Attempt unlock by owner (Should succeed)
         LockStatus successUnlock = client.unlockObject(lockKey, ownerId).get();

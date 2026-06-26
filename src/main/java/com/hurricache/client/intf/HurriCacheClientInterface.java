@@ -1,7 +1,6 @@
 package com.hurricache.client.intf;
 
 import com.hurricache.client.KeyUtils;
-import com.hurricache.grpc.Key;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -28,15 +27,15 @@ public interface HurriCacheClientInterface {
     }
 
     default KeyHint getKeyHint(byte[] key) {
-        return KeyHint.newBuilder().setWeekHash(KeyUtils.weekHash(key, key.length, 0)).build();
+        return KeyHint.newBuilder().setWeekHash(KeyUtils.weakHash(key, key.length, 0)).build();
     }
 
-    default CompletableFuture<Boolean> setTtl(String key,KeyHint hint, long ttl) {
-        return setTtl(key,hint, ttl, getDefaultClientId());
+    default CompletableFuture<Boolean> setTtl(String key, KeyHint hint, long ttl) {
+        return setTtl(key, hint, ttl, getDefaultClientId());
     }
 
-    default CompletableFuture<Boolean> setTtl(byte[] key,KeyHint hint, long ttl, int clientId) {
-        return setTtl(key, hint, ttl, clientId,getDefaultTimeout());
+    default CompletableFuture<Boolean> setTtl(byte[] key, KeyHint hint, long ttl, int clientId) {
+        return setTtl(key, hint, ttl, clientId, getDefaultTimeout());
     }
 
     default CompletableFuture<Boolean> setTtl(String key, KeyHint hint, long ttl, int clientId) {
@@ -145,6 +144,7 @@ public interface HurriCacheClientInterface {
     default CompletableFuture<byte[]> getValue(byte[] key, KeyHint keyhint, int clientId) {
         return getValue(key, keyhint, clientId, getDefaultTimeout());
     }
+
     default CompletableFuture<byte[]> getValue(String key, KeyHint keyhint, int clientId) {
         return getValue(serializeKey(key), keyhint, clientId, getDefaultTimeout());
     }
@@ -158,11 +158,11 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value) {
         return updateKeyValue(serializeKey(key),
-                              null,
-                              value,
-                              getDefaultTtl(),
-                              getDefaultClientId(),
-                              getDefaultTimeout());
+                null,
+                value,
+                getDefaultTtl(),
+                getDefaultClientId(),
+                getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint keyHint, byte[] value, int clientID) {
@@ -175,11 +175,11 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<byte[]> updateKeyValue(String key, KeyHint hint, byte[] value) {
         return updateKeyValue(serializeKey(key),
-                              hint,
-                              value,
-                              getDefaultTtl(),
-                              getDefaultClientId(),
-                              getDefaultTimeout());
+                hint,
+                value,
+                getDefaultTtl(),
+                getDefaultClientId(),
+                getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value, int clientId) {
@@ -229,6 +229,7 @@ public interface HurriCacheClientInterface {
     default CompletableFuture<Boolean> remove(byte[] key, KeyHint hint, int clientid) {
         return remove(key, hint, clientid, getDefaultTimeout());
     }
+
     default CompletableFuture<Boolean> remove(String key, KeyHint hint, int clientid) {
         return remove(serializeKey(key), hint, clientid, getDefaultTimeout());
     }
@@ -245,30 +246,30 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<KeyHint> createQueue(String key) {
         return createQueue(serializeKey(key),
-                           Collections.emptyList(),
-                           getDefaultTtl(),
-                           getDefaultClientId(),
-                           getDefaultTimeout());
+                Collections.emptyList(),
+                getDefaultTtl(),
+                getDefaultClientId(),
+                getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHint> createQueue(String key, List<byte[]> initialValue) {
         return createQueue(serializeKey(key),
-                           initialValue == null
-                           ? Collections.emptyList()
-                           : initialValue,
-                           getDefaultTtl(),
-                           getDefaultClientId(),
-                           getDefaultTimeout());
+                initialValue == null
+                        ? Collections.emptyList()
+                        : initialValue,
+                getDefaultTtl(),
+                getDefaultClientId(),
+                getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHint> createQueue(byte[] key, List<byte[]> initialValue) {
         return createQueue(key,
-                           initialValue == null
-                           ? Collections.emptyList()
-                           : initialValue,
-                           getDefaultTtl(),
-                           getDefaultClientId(),
-                           getDefaultTimeout());
+                initialValue == null
+                        ? Collections.emptyList()
+                        : initialValue,
+                getDefaultTtl(),
+                getDefaultClientId(),
+                getDefaultTimeout());
     }
 
     CompletableFuture<KeyHint> createList(byte[] key,
@@ -295,12 +296,12 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<KeyHint> createList(String key, List<byte[]> initialValue, int clientId) {
         return createList(serializeKey(key),
-                          initialValue == null
-                          ? Collections.emptyList()
-                          : initialValue,
-                          getDefaultTtl(),
-                          clientId,
-                          getDefaultTimeout());
+                initialValue == null
+                        ? Collections.emptyList()
+                        : initialValue,
+                getDefaultTtl(),
+                clientId,
+                getDefaultTimeout());
     }
 
     CompletableFuture<KeyHint> createVector(byte[] key,
@@ -327,12 +328,12 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<KeyHint> createVector(String key, List<byte[]> initialValue, int clientId) {
         return createVector(serializeKey(key),
-                            initialValue == null
-                            ? Collections.emptyList()
-                            : initialValue,
-                            getDefaultTtl(),
-                            clientId,
-                            getDefaultTimeout());
+                initialValue == null
+                        ? Collections.emptyList()
+                        : initialValue,
+                getDefaultTtl(),
+                clientId,
+                getDefaultTimeout());
     }
 
     CompletableFuture<byte[]> getAndRemoveFront(byte[] key, KeyHint hint, int clientId, Duration timeout);
@@ -423,8 +424,8 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<List<byte[]>> streamList(String key, int clientId) {
         return streamList(serializeKey(key), // Преобразуем String в byte[]
-                          null,                                // KeyHint не указан
-                          clientId, getDefaultTimeout()                  // Таймаут по умолчанию
+                null,                                // KeyHint не указан
+                clientId, getDefaultTimeout()                  // Таймаут по умолчанию
         );
     }
 
@@ -507,12 +508,12 @@ public interface HurriCacheClientInterface {
                                                                  int start,
                                                                  int end) {
         return streamElementInRange(serializeKey(key),
-                                    hint,
-                                    isArray,
-                                    start,
-                                    end,
-                                    getDefaultClientId(),
-                                    getDefaultTimeout());
+                hint,
+                isArray,
+                start,
+                end,
+                getDefaultClientId(),
+                getDefaultTimeout());
     }
 
     default CompletableFuture<List<byte[]>> streamElementInRange(String key,
@@ -555,11 +556,11 @@ public interface HurriCacheClientInterface {
                                                             int clientId,
                                                             Duration timeout);
 
-    default CompletableFuture<byte[]> getAndRemoveElementAtPosition(String key,KeyHint hint, int pos) {
-        return getAndRemoveElementAtPosition(key,hint, pos, getDefaultClientId());
+    default CompletableFuture<byte[]> getAndRemoveElementAtPosition(String key, KeyHint hint, int pos) {
+        return getAndRemoveElementAtPosition(key, hint, pos, getDefaultClientId());
     }
 
-    default CompletableFuture<byte[]> getAndRemoveElementAtPosition(String key,KeyHint hint, int pos, int clientId) {
+    default CompletableFuture<byte[]> getAndRemoveElementAtPosition(String key, KeyHint hint, int pos, int clientId) {
         return getAndRemoveElementAtPosition(serializeKey(key), hint, pos, clientId, getDefaultTimeout());
     }
 
@@ -595,24 +596,24 @@ public interface HurriCacheClientInterface {
     default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos) {
         byte[] key1 = serializeKey(key);
         return addElementToPosition(key1, // Преобразуем ключ в byte[]
-                                    getKeyHint(key1),                                // KeyHint не указан
-                                    data, pos, getDefaultClientId(),               // Клиент по умолчанию
-                                    getDefaultTimeout()                 // Таймаут по умолчанию
+                getKeyHint(key1),                                // KeyHint не указан
+                data, pos, getDefaultClientId(),               // Клиент по умолчанию
+                getDefaultTimeout()                 // Таймаут по умолчанию
         );
     }
 
     default CompletableFuture<Boolean> addElementToPosition(String key, KeyHint hint, List<byte[]> data, int pos) {
         return addElementToPosition(serializeKey(key), // Преобразуем ключ в byte[]
-                                    hint,                                // KeyHint не указан
-                                    data, pos, getDefaultClientId(),               // Клиент по умолчанию
-                                    getDefaultTimeout()                 // Таймаут по умолчанию
+                hint,                                // KeyHint не указан
+                data, pos, getDefaultClientId(),               // Клиент по умолчанию
+                getDefaultTimeout()                 // Таймаут по умолчанию
         );
     }
 
     default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos, int clientId) {
         byte[] key1 = serializeKey(key);
         return addElementToPosition(key1, getKeyHint(key1), // KeyHint не указан
-                                    data, pos, clientId, getDefaultTimeout() // Таймаут по умолчанию
+                data, pos, clientId, getDefaultTimeout() // Таймаут по умолчанию
         );
     }
 
@@ -663,24 +664,25 @@ public interface HurriCacheClientInterface {
                                                        int clientId,
                                                        Duration timeout);
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key,KeyHint hint , int pos,int endPos) {
-        return removeElementAtPosition(key,hint, pos,endPos, getDefaultClientId());
+    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHint hint, int pos, int endPos) {
+        return removeElementAtPosition(key, hint, pos, endPos, getDefaultClientId());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key,KeyHint hint , int pos) {
-        return removeElementAtPosition(key,hint, pos,pos+1, getDefaultClientId());
-    }
-    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key,KeyHint hint , int pos) {
-        return removeElementAtPosition(key,hint, pos,pos+1, getDefaultClientId(),getDefaultTimeout());
+    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHint hint, int pos) {
+        return removeElementAtPosition(key, hint, pos, pos + 1, getDefaultClientId());
     }
 
-
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHint hint,int pos,int endPos, int clientId) {
-        return removeElementAtPosition(serializeKey(key), hint, pos,endPos, clientId, getDefaultTimeout());
+    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHint hint, int pos) {
+        return removeElementAtPosition(key, hint, pos, pos + 1, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHint hint, int pos,int endPos) {
-        return removeElementAtPosition(key, hint, pos,endPos, getDefaultClientId(), getDefaultTimeout());
+
+    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHint hint, int pos, int endPos, int clientId) {
+        return removeElementAtPosition(serializeKey(key), hint, pos, endPos, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHint hint, int pos, int endPos) {
+        return removeElementAtPosition(key, hint, pos, endPos, getDefaultClientId(), getDefaultTimeout());
     }
 
     void shutdown();
@@ -741,8 +743,8 @@ public interface HurriCacheClientInterface {
 
     default KeyHint getKeyHint(byte[] key, KeyHint hint) {
         return hint == null
-               ? getKeyHint(key)
-               : hint;
+                ? getKeyHint(key)
+                : hint;
     }
 
 }

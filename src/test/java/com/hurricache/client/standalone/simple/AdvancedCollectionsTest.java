@@ -25,8 +25,8 @@ public class AdvancedCollectionsTest extends TestBase {
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         Boolean boolResponse1 = client.addElementToPosition(listKey,
-                                                            List.of("NewPos1".getBytes(StandardCharsets.UTF_8)),
-                                                            1).get();
+                List.of("NewPos1".getBytes(StandardCharsets.UTF_8)),
+                1).get();
 
         byte[] head = client.getHead(listKey).get();
         byte[] pos1 = client.getElementAtPosition(listKey, 1).get();
@@ -40,13 +40,13 @@ public class AdvancedCollectionsTest extends TestBase {
         String vecKey = "removePosKey";
         // Setup Vector: [0, 1, 2]
         KeyHint keyHint = client.createVector(vecKey, List.of("0".getBytes())).get();
-        client.addElementToTail(vecKey,keyHint, Arrays.asList("1".getBytes(), "2".getBytes())).get();
+        client.addElementToTail(vecKey, keyHint, Arrays.asList("1".getBytes(), "2".getBytes())).get();
 
         // removeTail -> [0, 1]
         client.removeTail(vecKey).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.removeElementAtPosition(vecKey,keyHint, 0,0).get();
+        client.removeElementAtPosition(vecKey, keyHint, 0, 0).get();
 
         byte[] remaining = client.getElementAtPosition(vecKey, 0).get();
         Assertions.assertEquals("1", new String(remaining));
@@ -94,11 +94,11 @@ public class AdvancedCollectionsTest extends TestBase {
         String key = "boolRangeKey";
         KeyHint keyHint = client.createVector(key, List.of("0".getBytes())).get();
         for (int i = 1; i < 5; i++) {
-            client.addElementToTail(key,keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.addElementToTail(key, keyHint, List.of(String.valueOf(i).getBytes())).get();
         }
 
         // Remove indices 0 to 2
-        Boolean statusList = client.removeElementAtPosition(key,keyHint, 0, 2).get();
+        Boolean statusList = client.removeElementAtPosition(key, keyHint, 0, 2).get();
 
         Assertions.assertTrue(statusList);
     }

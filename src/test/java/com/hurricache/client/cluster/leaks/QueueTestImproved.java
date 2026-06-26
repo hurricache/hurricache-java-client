@@ -13,10 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class QueueTestImproved extends AdvancedTest {
 
 
-
-
-
-
     @Test
     void createQueueValueLoopLeakTest1() {
         // Easily test standard values by passing the creator lambda

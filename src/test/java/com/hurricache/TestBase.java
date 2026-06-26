@@ -90,8 +90,8 @@ public abstract class TestBase {
         private Value createValue(byte[] data) {
             return Value.newBuilder()
                     .setValue(BinaryPayload.newBuilder()
-                                      .setPayload(com.google.protobuf.ByteString.copyFrom(data))
-                                      .build())
+                            .setPayload(com.google.protobuf.ByteString.copyFrom(data))
+                            .build())
                     .build();
         }
 
@@ -162,11 +162,11 @@ public abstract class TestBase {
             String key = keyToString(request.getKey());
             Value oldValue = keyValueStore.put(key, request.getValue());
             responseObserver.onNext(UpdateValueResponse.newBuilder()
-                                            .setResult(true)
-                                            .setValue(oldValue != null
-                                                      ? oldValue
-                                                      : Value.getDefaultInstance())
-                                            .build());
+                    .setResult(true)
+                    .setValue(oldValue != null
+                            ? oldValue
+                            : Value.getDefaultInstance())
+                    .build());
             responseObserver.onCompleted();
         }
 

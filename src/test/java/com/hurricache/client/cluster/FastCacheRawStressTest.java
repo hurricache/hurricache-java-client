@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class FastCacheRawStressTest {
 
-    private final static String prefix = UUID.randomUUID()+"-"+System.currentTimeMillis()+":::";
+    private final static String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
     private final int THREAD_COUNT = 32; // Optimized for i9
     private final int OPERATIONS_PER_THREAD = 100000;
     private final int PIPELINE_BATCH_SIZE = 100; // Pipeline requests to saturate C++ engine
@@ -40,9 +40,9 @@ public class FastCacheRawStressTest {
     void highConcurrencyCreateLoadTest() throws InterruptedException {
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
-        FastCacheAsyncSmartClient client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)){
+        FastCacheAsyncSmartClient client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
 
-            public Duration getDefaultTtl(){
+            public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }
         };
@@ -88,7 +88,7 @@ public class FastCacheRawStressTest {
                                     threadLocalStorage[threadId][indexMapping.get(k)] = hint;
                                     writeSuccessCount.incrementAndGet();
                                 } catch (Exception e) {
-                                    System.out.println("Error: "+e.getLocalizedMessage());
+                                    System.out.println("Error: " + e.getLocalizedMessage());
                                     writeErrorCount.incrementAndGet();
                                 }
                             }
@@ -245,7 +245,7 @@ public class FastCacheRawStressTest {
     }
 
     private static @NonNull String getTestValue() {
-        return prefix +"stress:";
+        return prefix + "stress:";
     }
 
     private void printResults(String operationalPhase, long startTime, int successCount, int errorCount) {

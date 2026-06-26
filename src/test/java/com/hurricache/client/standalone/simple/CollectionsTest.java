@@ -22,7 +22,7 @@ public class CollectionsTest extends TestBase {
         KeyHint keyHint = client.createVector(listKey, List.of("middle".getBytes()))
                 .get();// Assume server allows create as list or use createList
 
-        client.addElementToTail(listKey,keyHint, List.of("tail".getBytes())).get();
+        client.addElementToTail(listKey, keyHint, List.of("tail".getBytes())).get();
 
         // Get Position
         byte[] posVal = client.getElementAtPosition(listKey, 1).get();
@@ -38,11 +38,11 @@ public class CollectionsTest extends TestBase {
         String rangeKey = "rangeList";
         KeyHint keyHint = client.createList(rangeKey, List.of("0".getBytes())).get();
         for (int i = 1; i < 10; i++) {
-            client.addElementToTail(rangeKey,keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.streamElementInRange(rangeKey,keyHint, false, 2, 5).get();
+        List<byte[]> rangeData = client.streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -54,11 +54,11 @@ public class CollectionsTest extends TestBase {
         String rangeKey = "rangeVector";
         KeyHint keyHint = client.createVector(rangeKey, List.of("0".getBytes())).get();
         for (int i = 1; i < 10; i++) {
-            client.addElementToTail(rangeKey, keyHint,List.of(String.valueOf(i).getBytes())).get();
+            client.addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.streamElementInRange(rangeKey,keyHint, true, 2, 5).get();
+        List<byte[]> rangeData = client.streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -74,7 +74,7 @@ public class CollectionsTest extends TestBase {
         // Create List with first element
         KeyHint keyHint = client.createList(key, List.of(val1.getBytes(StandardCharsets.UTF_8))).get();
         // Add second element
-        client.addElementToTail(key,keyHint, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
+        client.addElementToTail(key, keyHint, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
 
         List<String> results = client.streamList(key).get().stream().map(String::new).toList();
 
@@ -87,7 +87,7 @@ public class CollectionsTest extends TestBase {
     void testCreateAndStreamVector() throws ExecutionException, InterruptedException {
         String key = "vectorTestKey";
         KeyHint keyHint = client.createVector(key, List.of("v1".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key,keyHint, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
+        client.addElementToTail(key, keyHint, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
 
         List<String> results = client.streamVector(key).get().stream().map(String::new).toList();
 
@@ -99,7 +99,7 @@ public class CollectionsTest extends TestBase {
     void testFrontBackOperations() throws ExecutionException, InterruptedException {
         String key = "edgeTestKey";
         KeyHint keyHint = client.createList(key, List.of("head".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key,keyHint, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
+        client.addElementToTail(key, keyHint, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get Head/Front
         byte[] head = client.getHead(key).get();
@@ -116,7 +116,7 @@ public class CollectionsTest extends TestBase {
     void testAtomicRemoval() throws ExecutionException, InterruptedException {
         String key = "removalTestKey";
         KeyHint keyHint = client.createList(key, List.of("item1".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key,keyHint, List.of("item2".getBytes(StandardCharsets.UTF_8))).get();
+        client.addElementToTail(key, keyHint, List.of("item2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Remove Front
         byte[] removed = client.getAndRemoveFront(key).get();
@@ -131,16 +131,16 @@ public class CollectionsTest extends TestBase {
     void testPositionalOperationsVector() throws ExecutionException, InterruptedException {
         String key = "posTestKeyVector";
         KeyHint keyHint = client.createVector(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key,keyHint,
-                                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
-                                              "pos2".getBytes(StandardCharsets.UTF_8))).get();
+        client.addElementToTail(key, keyHint,
+                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
+                        "pos2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get At Position 1
         byte[] pos1 = client.getElementAtPosition(key, 1).get();
         Assertions.assertEquals("pos1", new String(pos1));
 
         // Remove At Position 1
-        byte[] removed = client.getAndRemoveElementAtPosition(key,keyHint, 1).get();
+        byte[] removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
         Assertions.assertEquals("pos1", new String(removed));
 
         CountDownLatch latch = new CountDownLatch(1);
@@ -158,16 +158,16 @@ public class CollectionsTest extends TestBase {
     void testPositionalOperationsList() throws ExecutionException, InterruptedException {
         String key = "posTestKeyList";
         KeyHint keyHint = client.createList(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key,keyHint,
-                                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
-                                              "pos2".getBytes(StandardCharsets.UTF_8))).get();
+        client.addElementToTail(key, keyHint,
+                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
+                        "pos2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get At Position 1
         byte[] pos1 = client.getElementAtPosition(key, 1).get();
         Assertions.assertEquals("pos1", new String(pos1));
 
         // Remove At Position 1
-        byte[] removed = client.getAndRemoveElementAtPosition(key,keyHint, 1).get();
+        byte[] removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
         Assertions.assertEquals("pos1", new String(removed));
 
         List<byte[]> results = client.streamList(key).get();
@@ -187,7 +187,7 @@ public class CollectionsTest extends TestBase {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Server should return NOT_FOUND if key doesn't exist
             Assertions.assertTrue(cause.getStatus().getCode() == Status.Code.NOT_FOUND
-                                  || cause.getStatus().getCode() == Status.Code.INTERNAL);
+                    || cause.getStatus().getCode() == Status.Code.INTERNAL);
         } catch (InterruptedException e) {
             Assertions.fail(e.getMessage());
         }

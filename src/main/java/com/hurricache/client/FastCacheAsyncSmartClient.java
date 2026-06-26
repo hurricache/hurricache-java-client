@@ -50,8 +50,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     private final Duration readyTimeout = Duration.ofSeconds(60);
 
     final AtomicReference<RoutingInfo> routing_info = new AtomicReference<>(new RoutingInfo(1024,
-                                                                                            new ConcurrentHashMap<>(),
-                                                                                            new ConcurrentHashMap<>()));
+            new ConcurrentHashMap<>(),
+            new ConcurrentHashMap<>()));
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
     private final CountDownLatch readyLatch = new CountDownLatch(1);
@@ -120,7 +120,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
                 peerRoutingList.forEach(item -> item.getPartitionIdsList()
                         .forEach(id -> newRoutingTable.put(Pair.of(item.getRole(), id),
-                                                           newRoutingTableTarget.get(item.getTarget()))));
+                                newRoutingTableTarget.get(item.getTarget()))));
 
                 routing_info.set(new RoutingInfo(maxShards, newRoutingTable, newRoutingTableTarget));
 
@@ -139,9 +139,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     private HurriCacheClientInterface newFastCacheClient(String target) {
         return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target)
-                                                      .usePlaintext()
-                                                      .directExecutor()
-                                                      .build(), defaultClientId, defaultTimeout) {
+                .usePlaintext()
+                .directExecutor()
+                .build(), defaultClientId, defaultTimeout) {
             @Override
             public Duration getDefaultTtl() {
                 return FastCacheAsyncSmartClient.this.getDefaultTtl();
@@ -194,8 +194,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
         RoutingInfo routingInfo = routing_info.get();
         int shard = (hint == null)
-                    ? (randomShard.incrementAndGet() & Integer.MAX_VALUE) % routingInfo.max_shards
-                    : (int) (Integer.toUnsignedLong(hint.getWeekHash()) % routingInfo.max_shards);
+                ? (randomShard.incrementAndGet() & Integer.MAX_VALUE) % routingInfo.max_shards
+                : (int) (Integer.toUnsignedLong(hint.getWeekHash()) % routingInfo.max_shards);
 
         HurriCacheClientInterface master = getRoute(routingInfo, shard, MASTER);
         HurriCacheClientInterface backup = getRoute(routingInfo, shard, BACKUP);
@@ -227,11 +227,11 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 // Completely lock-free load balancing execution sequence
                 boolean tryMasterFirst = ThreadLocalRandom.current().nextBoolean();
                 HurriCacheClientInterface primary = tryMasterFirst
-                                                   ? master
-                                                   : backup;
+                        ? master
+                        : backup;
                 HurriCacheClientInterface secondary = tryMasterFirst
-                                                     ? backup
-                                                     : master;
+                        ? backup
+                        : master;
                 yield action.apply(primary)
                         .handle(fallbackGuard(shard, routingInfo, action, primary, secondary))
                         .thenCompose(Function.identity());
@@ -257,8 +257,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 log.atDebug().log("[REROUTE] Redirecting payload to dynamic target: {}", targetRoute);
                 HurriCacheClientInterface directClient = getRoute(routingInfo, targetRoute);
                 return directClient != null
-                       ? action.apply(directClient)
-                       : CompletableFuture.failedFuture(ex);
+                        ? action.apply(directClient)
+                        : CompletableFuture.failedFuture(ex);
             }
 
             // 2. Client-Side Transport Failure Recovery (Failover Layer)
@@ -269,7 +269,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 if (fallbackEndpoint != null) {
                     log.atInfo()
                             .log("[FAILOVER] Failing over pipeline execution target to: {}",
-                                 fallbackEndpoint.getTarget());
+                                    fallbackEndpoint.getTarget());
                     return action.apply(fallbackEndpoint);
                 }
             }
@@ -500,32 +500,32 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     private boolean isUnavailable(Throwable ex) {
         Throwable c = (ex instanceof CompletionException)
-                      ? ex.getCause()
-                      : ex;
+                ? ex.getCause()
+                : ex;
         return c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.UNAVAILABLE;
     }
 
     private boolean isTimeout(Throwable ex) {
         Throwable c = (ex instanceof CompletionException)
-                      ? ex.getCause()
-                      : ex;
+                ? ex.getCause()
+                : ex;
         return c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED;
     }
 
     private boolean isReroute(Throwable ex) {
         Throwable c = (ex instanceof CompletionException)
-                      ? ex.getCause()
-                      : ex;
+                ? ex.getCause()
+                : ex;
         return c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION;
     }
 
     private String getRerouteTarget(Throwable ex) {
         Throwable c = (ex instanceof CompletionException)
-                      ? ex.getCause()
-                      : ex;
+                ? ex.getCause()
+                : ex;
         if (c instanceof StatusRuntimeException sre
-            && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION
-            && sre.getTrailers() != null) {
+                && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION
+                && sre.getTrailers() != null) {
             return sre.getTrailers().get(Metadata.Key.of("x-fastcache-route", Metadata.ASCII_STRING_MARSHALLER));
         }
         return null;

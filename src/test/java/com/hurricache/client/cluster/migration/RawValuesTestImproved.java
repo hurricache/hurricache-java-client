@@ -15,8 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RawValuesTestImproved extends AdvancedTest {
 
 
-
-
     @Test
     void createKeyValueLoopMigration() throws InterruptedException {
         ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
@@ -43,19 +41,19 @@ public class RawValuesTestImproved extends AdvancedTest {
         // Phase 2: Async Read Validation on Degraded Cluster
         AtomicInteger reducedGood = new AtomicInteger();
         runAsyncBatch("Get on reduced Cluster",
-                      NUM_OF_KEYS,
-                      emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
-                      (entry, badCounter) -> {
-                          Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
-            client.getValue(p.first, p.second.second).thenAccept(res -> {
-                              if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
-                                  reducedGood.incrementAndGet();
-                              } else {
-                                  badCounter.incrementAndGet();
-                              }
-                          });
-                      },
-                      Pair.class);
+                NUM_OF_KEYS,
+                emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
+                (entry, badCounter) -> {
+                    Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
+                    client.getValue(p.first, p.second.second).thenAccept(res -> {
+                        if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
+                            reducedGood.incrementAndGet();
+                        } else {
+                            badCounter.incrementAndGet();
+                        }
+                    });
+                },
+                Pair.class);
         assertMigrationResults(new Date() + " Reduced Cluster Verifications", reducedGood.get());
 
         // Topology Change: Scale Up
@@ -65,19 +63,19 @@ public class RawValuesTestImproved extends AdvancedTest {
         // Phase 3: Async Read Validation on Growing/Rebalancing Cluster
         AtomicInteger growingGood = new AtomicInteger();
         runAsyncBatch("Get on growing Cluster",
-                      NUM_OF_KEYS,
-                      emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
-                      (entry, badCounter) -> {
-                          Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
-                          client.getValue(p.first, p.second.second).thenAccept(res -> {
-                              if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
-                                  growingGood.incrementAndGet();
-                              } else {
-                                  badCounter.incrementAndGet();
-                              }
-                          });
-                      },
-                      Pair.class);
+                NUM_OF_KEYS,
+                emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
+                (entry, badCounter) -> {
+                    Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
+                    client.getValue(p.first, p.second.second).thenAccept(res -> {
+                        if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
+                            growingGood.incrementAndGet();
+                        } else {
+                            badCounter.incrementAndGet();
+                        }
+                    });
+                },
+                Pair.class);
         assertMigrationResults("Growing Cluster Verifications", growingGood.get());
     }
 

@@ -40,16 +40,16 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Owner locks GLOBAL on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1,keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get());
 
         // 2. Intruder tries updateValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "new".getBytes(), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1, keyHint, "new".getBytes(), intruderId).get());
 
         // 3. Intruder tries remove
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).remove(testKey1,keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).remove(testKey1, keyHint, intruderId).get());
     }
 
     @Test
@@ -69,19 +69,20 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1,keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1, keyHint, intruderId).get());
 
         // 2. Intruder tries updateValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "new".getBytes(), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1, keyHint, "new".getBytes(), intruderId).get());
 
         // 3. Intruder tries remove
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).remove(testKey1,keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).remove(testKey1, keyHint, intruderId).get());
     }
 
     @Test
     @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Master")
     void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
-        String listKey = "global_list" + UUID.randomUUID();;
+        String listKey = "global_list" + UUID.randomUUID();
+        ;
 
         // Create on master
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
@@ -91,21 +92,22 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(listKey,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getFront(listKey,keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getFront(listKey, keyHint, intruderId).get());
 
         // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(listKey,keyHint,
-                                                             Collections.singletonList("item2".getBytes()),
-                                                             intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(listKey, keyHint,
+                Collections.singletonList("item2".getBytes()),
+                intruderId).get());
     }
 
     @Test
     @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Backup")
     void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
-        String listKey = "global_list" + UUID.randomUUID();;
+        String listKey = "global_list" + UUID.randomUUID();
+        ;
 
         // Create on backup
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
@@ -115,15 +117,15 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(listKey,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getFront(listKey,keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getFront(listKey, keyHint, intruderId).get());
 
         // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(listKey,keyHint,
-                                                             Collections.singletonList("item2".getBytes()),
-                                                             intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(listKey, keyHint,
+                Collections.singletonList("item2".getBytes()),
+                intruderId).get());
     }
 
     // --- SECTION 2: WRITE LOCK PROTECTION ---
@@ -132,7 +134,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Master")
     void testWriteLockProtectionCreateOnMaster() throws Exception {
         // Create on master
-        String testKey1 = testKey + UUID.randomUUID();;
+        String testKey1 = testKey + UUID.randomUUID();
+        ;
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
                 .get();
@@ -140,17 +143,17 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1,keyHint, intruderId).get();
+        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get();
         assertNotNull(data);
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "fail".getBytes(), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1, keyHint, "fail".getBytes(), intruderId).get());
 
         // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "success".getBytes(), ownerId).get();
+        byte[] ownerUpdate = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1, keyHint, "success".getBytes(), ownerId).get();
         assertNotNull(ownerUpdate);
     }
 
@@ -166,17 +169,17 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1,keyHint, intruderId).get();
+        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1, keyHint, intruderId).get();
         assertNotNull(data);
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "fail".getBytes(), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1, keyHint, "fail".getBytes(), intruderId).get());
 
         // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "success".getBytes(), ownerId).get();
+        byte[] ownerUpdate = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1, keyHint, "success".getBytes(), ownerId).get();
         assertNotNull(ownerUpdate);
     }
 
@@ -186,7 +189,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Master")
     void testReadLockProtectionCreateOnMaster() throws Exception {
         // Create on master
-        String testKey1 = testKey + UUID.randomUUID();;
+        String testKey1 = testKey + UUID.randomUUID();
+        ;
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
                 .get();
@@ -194,16 +198,16 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1,keyHint, intruderId).get());
+        assertNotNull(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get());
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "bad".getBytes(), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1, keyHint, "bad".getBytes(), intruderId).get());
 
         // 3. Owner Write - SHOULD ALSO FAIL (Read locks block all mutations)
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "bad".getBytes(), ownerId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1, keyHint, "bad".getBytes(), ownerId).get());
     }
 
     @Test
@@ -218,16 +222,16 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1,keyHint, intruderId).get());
+        assertNotNull(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1, keyHint, intruderId).get());
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "bad".getBytes(), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1, keyHint, "bad".getBytes(), intruderId).get());
 
         // 3. Owner Write - SHOULD ALSO FAIL (Read locks block all mutations)
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "bad".getBytes(), ownerId).get());
+        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1, keyHint, "bad".getBytes(), ownerId).get());
     }
 
     // --- SECTION 4: LOCK COMPATIBILITY ---
@@ -237,7 +241,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testLockCompatibilityCreateOnMaster() throws Exception {
 
         // Create on master
-        String testKey1 = testKey+ UUID.randomUUID();
+        String testKey1 = testKey + UUID.randomUUID();
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
                 .get();
@@ -245,14 +249,14 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Client A has READ on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // Client B tries WRITE
-        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, res);
 
         // Client B tries READ - SHOULD SUCCEED (Shared Read)
-        LockStatus resRead = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus resRead = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1, keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, resRead);
     }
 
@@ -260,7 +264,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Backup")
     void testLockCompatibilityCreateOnBackup() throws Exception {
         // Create on backup
-        String testKey1 = testKey+ UUID.randomUUID();
+        String testKey1 = testKey + UUID.randomUUID();
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
                 .get();
@@ -268,14 +272,14 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Client A has READ on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // Client B tries WRITE
-        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, res);
 
         // Client B tries READ - SHOULD SUCCEED (Shared Read)
-        LockStatus resRead = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus resRead = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1, keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, resRead);
     }
 
@@ -285,8 +289,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         ExecutionException e = assertThrows(ExecutionException.class, runnable);
         StatusRuntimeException grpcEx = (StatusRuntimeException) e.getCause();
         assertEquals(Status.Code.PERMISSION_DENIED,
-                     grpcEx.getStatus().getCode(),
-                     "Expected PERMISSION_DENIED but got " + grpcEx.getStatus().getCode());
+                grpcEx.getStatus().getCode(),
+                "Expected PERMISSION_DENIED but got " + grpcEx.getStatus().getCode());
     }
 
 }

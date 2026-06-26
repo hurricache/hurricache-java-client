@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class StreamBatchObserver extends CompletableFutureObserver<BatchValueResponse,List<byte[]>> {
+public class StreamBatchObserver extends CompletableFutureObserver<BatchValueResponse, List<byte[]>> {
 
     public StreamBatchObserver(CompletableFuture<List<byte[]>> future) {
         super(future, res -> res.getValueList().stream().map(CompressionUtils::decompressIfNeeded).toList());

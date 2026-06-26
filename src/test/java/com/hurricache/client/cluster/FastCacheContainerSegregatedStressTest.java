@@ -81,7 +81,7 @@ public class FastCacheContainerSegregatedStressTest {
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         byte[] keyBytes = getTestKey("list", threadId, j).getBytes(StandardCharsets.UTF_8);
-                        pipeline.add(client.createList(keyBytes,INITIAL_ELEMENT_LIST));
+                        pipeline.add(client.createList(keyBytes, INITIAL_ELEMENT_LIST));
                         indexMapping.add(j);
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -171,10 +171,10 @@ public class FastCacheContainerSegregatedStressTest {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         byte[] keyBytes = getTestKey("vector", threadId, j).getBytes(StandardCharsets.UTF_8);
                         pipeline.add(client.createVector(keyBytes,
-                                                         INITIAL_ELEMENT_LIST,
-                                                         Duration.ZERO,
-                                                         1,
-                                                         Duration.ofSeconds(2)));
+                                INITIAL_ELEMENT_LIST,
+                                Duration.ZERO,
+                                1,
+                                Duration.ofSeconds(2)));
                         indexMapping.add(j);
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -265,7 +265,7 @@ public class FastCacheContainerSegregatedStressTest {
                         byte[] keyBytes = getTestKey("queue-fifo", threadId, j).getBytes(StandardCharsets.UTF_8);
                         // Initialize empty queues to populate via tail-appends later
                         pipeline.add(client.createQueue(keyBytes,
-                                                        Collections.emptyList()));
+                                Collections.emptyList()));
                         indexMapping.add(j);
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -306,7 +306,7 @@ public class FastCacheContainerSegregatedStressTest {
                         KeyHint hint = threadLocalStorage[threadId][j];
 
                         // Blast element to the tail end of the designated queue instance
-                        pipeline.add(client.addElementToTail(key,hint, INITIAL_ELEMENT_LIST));
+                        pipeline.add(client.addElementToTail(key, hint, INITIAL_ELEMENT_LIST));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
                             for (CompletableFuture<Boolean> future : pipeline) {
@@ -399,7 +399,7 @@ public class FastCacheContainerSegregatedStressTest {
                         byte[] keyBytes = getTestKey("list-fifo", threadId, j).getBytes(StandardCharsets.UTF_8);
                         // Allocate empty root structures
                         pipeline.add(client.createList(keyBytes,
-                                                       Collections.emptyList()));
+                                Collections.emptyList()));
                         indexMapping.add(j);
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -439,7 +439,7 @@ public class FastCacheContainerSegregatedStressTest {
                         String key = getTestKey("list-fifo", threadId, j);
                         KeyHint hint = threadLocalStorage[threadId][j];
 
-                        pipeline.add(client.addElementToTail(key,hint, INITIAL_ELEMENT_LIST));
+                        pipeline.add(client.addElementToTail(key, hint, INITIAL_ELEMENT_LIST));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
                             for (CompletableFuture<Boolean> future : pipeline) {
@@ -505,11 +505,11 @@ public class FastCacheContainerSegregatedStressTest {
         // Hard Core Assertions
         Assertions.assertEquals(EXPECTED_TOTAL_OPS, createSuccess.get(), "List allocation dropped data references.");
         Assertions.assertEquals(EXPECTED_TOTAL_OPS,
-                                enqueueSuccess.get(),
-                                "Inbound FIFO mutations dropped under pressure.");
+                enqueueSuccess.get(),
+                "Inbound FIFO mutations dropped under pressure.");
         Assertions.assertEquals(EXPECTED_TOTAL_OPS,
-                                dequeueSuccess.get(),
-                                "Index zero eviction data tracking corrupted.");
+                dequeueSuccess.get(),
+                "Index zero eviction data tracking corrupted.");
     }
 
     // =========================================================================
@@ -535,7 +535,7 @@ public class FastCacheContainerSegregatedStressTest {
                         byte[] keyBytes = getTestKey("vector-rand", threadId, j).getBytes(StandardCharsets.UTF_8);
                         // Initialize with an initial payload to guarantee slot 0 is occupied
                         pipeline.add(client.createVector(keyBytes,
-                                                         INITIAL_ELEMENT_LIST));
+                                INITIAL_ELEMENT_LIST));
                         indexMapping.add(j);
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -680,12 +680,12 @@ public class FastCacheContainerSegregatedStressTest {
 
         // Hard Boundary Validation Assertions
         Assertions.assertEquals(EXPECTED_TOTAL_OPS,
-                                createSuccess.get(),
-                                "Vector base instance creation failures encountered.");
+                createSuccess.get(),
+                "Vector base instance creation failures encountered.");
         Assertions.assertEquals(EXPECTED_TOTAL_OPS, insertSuccess.get(), "Random-access writes at index 1 dropped.");
         Assertions.assertEquals(EXPECTED_TOTAL_OPS,
-                                readSuccess.get(),
-                                "Random-access reads at index 1 mismatched or corrupted.");
+                readSuccess.get(),
+                "Random-access reads at index 1 mismatched or corrupted.");
         Assertions.assertEquals(EXPECTED_TOTAL_OPS, removeSuccess.get(), "Random-access deletions at index 1 failed.");
     }
 

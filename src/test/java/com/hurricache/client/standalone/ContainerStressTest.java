@@ -72,9 +72,9 @@ public class ContainerStressTest {
                         // Alternating PUSH and POP
                         if (j % 2 == 0) {
                             byte[] data = ("val-" + threadId + "-" + j).getBytes();
-                            client.addElementToTail(QUEUE_KEY,keyHint, List.of(data)).get();
+                            client.addElementToTail(QUEUE_KEY, keyHint, List.of(data)).get();
                         } else {
-                            client.getAndRemoveFront(QUEUE_KEY,keyHint).get();
+                            client.getAndRemoveFront(QUEUE_KEY, keyHint).get();
                         }
                         successCount.incrementAndGet();
                     }
@@ -90,9 +90,9 @@ public class ContainerStressTest {
         long end = System.currentTimeMillis();
 
         System.out.printf("Queue Stress Finished: %d ops in %d ms (Avg: %.2f ops/sec)%n",
-                          successCount.get(),
-                          (end - start),
-                          (successCount.get() / ((end - start) / 1000.0)));
+                successCount.get(),
+                (end - start),
+                (successCount.get() / ((end - start) / 1000.0)));
 
         executor.shutdown();
     }
@@ -105,10 +105,10 @@ public class ContainerStressTest {
     void testShardedVectorThroughput() throws Exception {
         int totalKeys = 1000;
         // Pre-create 1000 vectors to distribute across shards
-        ConcurrentHashMap<String,KeyHint> keyHints = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, KeyHint> keyHints = new ConcurrentHashMap<>();
         for (int i = 0; i < totalKeys; i++) {
             String key = "vec_" + i;
-            keyHints.put(key,client.createVector(key, List.of("init".getBytes())).get());
+            keyHints.put(key, client.createVector(key, List.of("init".getBytes())).get());
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
@@ -122,16 +122,16 @@ public class ContainerStressTest {
             ThreadLocalRandom.current().nextBytes(payload);
 
             // Fire and forget (Async) to maximize gRPC pipeline saturation
-            futures.add(client.addElementToTail(key,keyHints.get(key), List.of(payload)));
+            futures.add(client.addElementToTail(key, keyHints.get(key), List.of(payload)));
         }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(30, TimeUnit.SECONDS);
         long end = System.currentTimeMillis();
 
         System.out.printf("Vector Shard Stress: %d appends in %d ms (Avg: %.2f ops/sec)%n",
-                          futures.size(),
-                          (end - start),
-                          (futures.size() / ((end - start) / 1000.0)));
+                futures.size(),
+                (end - start),
+                (futures.size() / ((end - start) / 1000.0)));
 
         executor.shutdown();
     }
@@ -154,7 +154,7 @@ public class ContainerStressTest {
                         // Alternating PUSH and POP
                         if (j % 2 == 0) {
                             byte[] data = ("val-" + threadId + "-" + j).getBytes();
-                            client.addElementToTail(LIST_KEY,keyHint, List.of(data)).get();
+                            client.addElementToTail(LIST_KEY, keyHint, List.of(data)).get();
                         } else {
                             client.getAndRemoveFront(LIST_KEY).get();
                         }
@@ -172,9 +172,9 @@ public class ContainerStressTest {
         long end = System.currentTimeMillis();
 
         System.out.printf("Queue Stress Finished: %d ops in %d ms (Avg: %.2f ops/sec)%n",
-                          successCount.get(),
-                          (end - start),
-                          (successCount.get() / ((end - start) / 1000.0)));
+                successCount.get(),
+                (end - start),
+                (successCount.get() / ((end - start) / 1000.0)));
 
         executor.shutdown();
     }

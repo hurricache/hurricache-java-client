@@ -17,7 +17,7 @@ public class KeyUtils {
     }
 
     public static Key createKey(byte[] keyStr, int clientId) {
-        KeyHint keyHint = KeyHint.newBuilder().setWeekHash(weekHash(keyStr, keyStr.length, 0)).build();
+        KeyHint keyHint = KeyHint.newBuilder().setWeekHash(weakHash(keyStr, keyStr.length, 0)).build();
         return CompressionUtils.compressKeyIfNeeded(keyStr, clientId).setKeyHint(keyHint).build();
     }
 
@@ -34,8 +34,7 @@ public class KeyUtils {
         if (hint != null) {
             return CompressionUtils.compressKeyIfNeeded(keyStr, clientId).setKeyHint(hint).build();
         }
-        KeyHint keyHint = KeyHint.newBuilder().setWeekHash(weekHash(keyStr, keyStr.length, 0)).build();
-        return CompressionUtils.compressKeyIfNeeded(keyStr, clientId).setKeyHint(keyHint).build();
+        return createKey(keyStr, clientId);
     }
 
     /**
@@ -44,10 +43,11 @@ public class KeyUtils {
     public static Value.Builder createValue(byte[] data) {
         return CompressionUtils.compressIfNeeded(data);
     }
+
     private static final long PRIME_0 = 0x9E3779B97F4A7C15L;
     private static final long PRIME_1 = 0xBF58476D1CE4E5B9L;
 
-    public static int weekHash(byte[] data, int len, long seed) {
+    public static int weakHash(byte[] data, int len, long seed) {
         long a = seed ^ PRIME_0;
         long b = len ^ PRIME_1;
         int offset = 0;
@@ -109,24 +109,24 @@ public class KeyUtils {
     // Helper methods to read Little-Endian values from byte array
     private static long readLongLE(byte[] data, int offset) {
         return ((long) (data[offset] & 0xFF)) |
-               ((long) (data[offset + 1] & 0xFF) << 8) |
-               ((long) (data[offset + 2] & 0xFF) << 16) |
-               ((long) (data[offset + 3] & 0xFF) << 24) |
-               ((long) (data[offset + 4] & 0xFF) << 32) |
-               ((long) (data[offset + 5] & 0xFF) << 40) |
-               ((long) (data[offset + 6] & 0xFF) << 48) |
-               ((long) (data[offset + 7] & 0xFF) << 56);
+                ((long) (data[offset + 1] & 0xFF) << 8) |
+                ((long) (data[offset + 2] & 0xFF) << 16) |
+                ((long) (data[offset + 3] & 0xFF) << 24) |
+                ((long) (data[offset + 4] & 0xFF) << 32) |
+                ((long) (data[offset + 5] & 0xFF) << 40) |
+                ((long) (data[offset + 6] & 0xFF) << 48) |
+                ((long) (data[offset + 7] & 0xFF) << 56);
     }
 
     private static int readIntLE(byte[] data, int offset) {
         return (data[offset] & 0xFF) |
-               ((data[offset + 1] & 0xFF) << 8) |
-               ((data[offset + 2] & 0xFF) << 16) |
-               ((data[offset + 3] & 0xFF) << 24);
+                ((data[offset + 1] & 0xFF) << 8) |
+                ((data[offset + 2] & 0xFF) << 16) |
+                ((data[offset + 3] & 0xFF) << 24);
     }
 
     private static int readShortLE(byte[] data, int offset) {
         return (data[offset] & 0xFF) |
-               ((data[offset + 1] & 0xFF) << 8);
+                ((data[offset + 1] & 0xFF) << 8);
     }
 }

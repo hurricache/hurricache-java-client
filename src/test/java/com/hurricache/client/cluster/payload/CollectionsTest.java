@@ -32,11 +32,11 @@ public class CollectionsTest extends TestBaseCluster {
         client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(listKey, keyHint, List.of(one)).get();
 
         // Get Position
-        byte[] posVal = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(listKey,keyHint, 1).get();
+        byte[] posVal = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
         Assertions.assertArrayEquals(one, posVal);
 
         // Remove Head
-        Boolean headRemoved = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeHead(listKey,keyHint).get();
+        Boolean headRemoved = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeHead(listKey, keyHint).get();
         Assertions.assertTrue(headRemoved);
     }
 
@@ -55,11 +55,11 @@ public class CollectionsTest extends TestBaseCluster {
         client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(listKey, keyHint, List.of(one)).get();
 
         // Get Position
-        byte[] posVal = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(listKey,keyHint, 1).get();
+        byte[] posVal = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
         Assertions.assertArrayEquals(one, posVal);
 
         // Remove Head
-        Boolean headRemoved = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeHead(listKey,keyHint).get();
+        Boolean headRemoved = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeHead(listKey, keyHint).get();
         Assertions.assertTrue(headRemoved);
     }
 
@@ -73,16 +73,16 @@ public class CollectionsTest extends TestBaseCluster {
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
-        byte[] item3=null;
+        byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
-            if (i == 2 ) item3=item;
+            if (i == 2) item3 = item;
             client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(
                     item)).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamElementInRange(rangeKey,keyHint, false, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -99,16 +99,16 @@ public class CollectionsTest extends TestBaseCluster {
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
-        byte[] item3 = null ;
+        byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
-            if (i ==2) item3 = item;
+            if (i == 2) item3 = item;
             client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(
                     item)).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamElementInRange(rangeKey,keyHint, false, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -128,13 +128,13 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
-            if (i==2) item3=item;
+            if (i == 2) item3 = item;
             client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(
                     item)).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamElementInRange(rangeKey,keyHint, true, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -151,16 +151,16 @@ public class CollectionsTest extends TestBaseCluster {
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
-        byte [] item3=null ;
+        byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
-            if (i == 2) item3 =item ;
+            if (i == 2) item3 = item;
             client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(
                     item)).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamElementInRange(rangeKey,keyHint, true, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -180,9 +180,9 @@ public class CollectionsTest extends TestBaseCluster {
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add second element on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key,keyHint, List.of(val2)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of(val2)).get();
 
-        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamList(key,keyHint).get();
+        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamList(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(val1, results.get(0));
@@ -202,9 +202,9 @@ public class CollectionsTest extends TestBaseCluster {
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add second element on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key,keyHint, List.of(val2)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of(val2)).get();
 
-        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamList(key,keyHint).get();
+        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamList(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(val1, results.get(0));
@@ -225,7 +225,7 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] one = createLargePayload(VALUE_SIZE);
         client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of(one)).get();
 
-        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamVector(key,keyHint).get();
+        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(zero, results.getFirst());
@@ -245,7 +245,7 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] one = createLargePayload(VALUE_SIZE);
         client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of(one)).get();
 
-        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamVector(key,keyHint).get();
+        List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(zero, results.getFirst());
@@ -266,13 +266,13 @@ public class CollectionsTest extends TestBaseCluster {
         client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of(one)).get();
 
         // Get Head/Front
-        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(key,keyHint).get();
-        byte[] front = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getFront(key,keyHint).get();
+        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(key, keyHint).get();
+        byte[] front = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getFront(key, keyHint).get();
         Assertions.assertArrayEquals(zero, head);
         Assertions.assertArrayEquals(zero, front);
 
         // Get Tail
-        byte[] tail = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getTail(key,keyHint).get();
+        byte[] tail = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getTail(key, keyHint).get();
         Assertions.assertArrayEquals(one, tail);
     }
 
@@ -291,13 +291,13 @@ public class CollectionsTest extends TestBaseCluster {
         client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of(one)).get();
 
         // Get Head/Front
-        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(key,keyHint).get();
-        byte[] front = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getFront(key,keyHint).get();
+        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(key, keyHint).get();
+        byte[] front = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getFront(key, keyHint).get();
         Assertions.assertArrayEquals(zero, head);
         Assertions.assertArrayEquals(zero, front);
 
         // Get Tail
-        byte[] tail = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getTail(key,keyHint).get();
+        byte[] tail = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getTail(key, keyHint).get();
         Assertions.assertArrayEquals(one, tail);
     }
 
@@ -310,11 +310,11 @@ public class CollectionsTest extends TestBaseCluster {
         client.addElementToTail(key, keyHint, List.of(tail)).get();
 
         // Remove Front
-        byte[] removedHead = client.getAndRemoveFront(key,keyHint).get();
+        byte[] removedHead = client.getAndRemoveFront(key, keyHint).get();
         Assertions.assertArrayEquals(head, removedHead);
 
         // Verify tail is now head
-        byte[] newHead = client.getFront(key,keyHint).get();
+        byte[] newHead = client.getFront(key, keyHint).get();
         Assertions.assertArrayEquals(tail, newHead);
     }
 
@@ -326,22 +326,22 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] zero = createLargePayload(VALUE_SIZE);
         byte[] one = createLargePayload(VALUE_SIZE);
         client.addElementToTail(key, keyHint,
-                                Arrays.asList(zero, one)).get();
+                Arrays.asList(zero, one)).get();
 
         // Get At Position 1
-        byte[] pos1 = client.getElementAtPosition(key,keyHint, 1).get();
+        byte[] pos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(zero, pos1);
 
         // Remove At Position 1
-        byte[] removed = client.getAndRemoveElementAtPosition(key,keyHint, 1).get();
+        byte[] removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(zero, removed);
 
-        List<byte[]> results = client.streamVector(key,keyHint).get();
+        List<byte[]> results = client.streamVector(key, keyHint).get();
 
         System.out.println(results);
 
         // Verify Shift
-        byte[] newPos1 = client.getElementAtPosition(key,keyHint, 1).get();
+        byte[] newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(one, newPos1);
     }
 
@@ -353,21 +353,21 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] one = createLargePayload(VALUE_SIZE);
         byte[] two = createLargePayload(VALUE_SIZE);
         client.addElementToTail(key, keyHint,
-                                Arrays.asList(one, two)).get();
+                Arrays.asList(one, two)).get();
 
         // Get At Position 1
-        byte[] pos1 = client.getElementAtPosition(key,keyHint, 1).get();
+        byte[] pos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(one, pos1);
 
         // Remove At Position 1
-        byte[] removed = client.getAndRemoveElementAtPosition(key,keyHint, 1).get();
+        byte[] removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(one, removed);
 
-        List<byte[]> results = client.streamList(key,keyHint).get();
+        List<byte[]> results = client.streamList(key, keyHint).get();
 
         System.out.println(results);
         // Verify Shift
-        byte[] newPos1 = client.getElementAtPosition(key,keyHint, 1).get();
+        byte[] newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(two, newPos1);
     }
 
@@ -380,7 +380,7 @@ public class CollectionsTest extends TestBaseCluster {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Server should return NOT_FOUND if key doesn't exist
             Assertions.assertTrue(cause.getStatus().getCode() == Status.Code.NOT_FOUND
-                                  || cause.getStatus().getCode() == Status.Code.INTERNAL);
+                    || cause.getStatus().getCode() == Status.Code.INTERNAL);
         } catch (InterruptedException e) {
             Assertions.fail(e.getMessage());
         }

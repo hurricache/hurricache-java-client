@@ -73,21 +73,21 @@ public class AdvancedTest extends TestBaseCluster {
 
         System.out.println(new Date() + " [" + operationName + "] Finished in " + duration + " ms");
         System.out.println(new Date() + "[" + operationName + "] Throughput Profile: " + (secs > 0
-                                                                                          ? (totalExpectedTasks / secs)
-                                                                                          : totalExpectedTasks) + " ops");
+                ? (totalExpectedTasks / secs)
+                : totalExpectedTasks) + " ops");
     }
 
     protected void assertMigrationResults(String context, int completeSuccessCount) {
         System.out.println(context + " -> Success: " + completeSuccessCount + " Failure/Loss: " + (NUM_OF_KEYS
-                                                                                                   - completeSuccessCount));
+                - completeSuccessCount));
         Assertions.assertEquals(NUM_OF_KEYS, completeSuccessCount, context + " failed verification bounds.");
     }
 
     protected void assertLeakResults(String context, int completeSuccessCount) {
         System.out.println(context + " -> Success: " + completeSuccessCount + " Failure/Leak: " + (NUM_OF_KEYS_LEAK
-                                                                                                   - completeSuccessCount));
+                - completeSuccessCount));
         Assertions.assertEquals(NUM_OF_KEYS_LEAK,
-                                completeSuccessCount,
-                                context + " structural leakage verification failed.");
+                completeSuccessCount,
+                context + " structural leakage verification failed.");
     }
 }

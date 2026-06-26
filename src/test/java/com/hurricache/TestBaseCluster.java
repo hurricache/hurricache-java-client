@@ -41,7 +41,7 @@ public abstract class TestBaseCluster {
     protected byte[] createLargePayload(int size) {
         byte[] bytes = UUID.randomUUID().toString().getBytes();
         byte[] payload = new byte[size];
-        System.arraycopy(bytes,0,payload,0 ,bytes.length);
+        System.arraycopy(bytes, 0, payload, 0, bytes.length);
         for (int i = bytes.length; i < size; i++) {
             payload[i] = (byte) (i % 128);
         }
@@ -50,7 +50,7 @@ public abstract class TestBaseCluster {
 
     @BeforeEach
     void setUp() throws IOException {
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000,0, Duration.ofSeconds(3600)){
+        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(3600)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(100);

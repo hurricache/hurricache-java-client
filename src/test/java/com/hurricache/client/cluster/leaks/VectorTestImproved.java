@@ -13,10 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class VectorTestImproved extends AdvancedTest {
 
 
-
-
-
-
     @Test
     void createVectorValueLoopLeakTest1() {
         // Easily test standard values by passing the creator lambda
@@ -93,7 +89,7 @@ public class VectorTestImproved extends AdvancedTest {
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                byte[] data = client.getAndRemoveElementAtPosition(client.serializeKey(k), v.second,0).get();
+                byte[] data = client.getAndRemoveElementAtPosition(client.serializeKey(k), v.second, 0).get();
                 if (v.first.equals(new String(data, StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }

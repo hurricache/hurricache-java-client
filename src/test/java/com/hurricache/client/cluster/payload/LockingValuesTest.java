@@ -31,12 +31,12 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // 1. Lock by anonymous/unanimous user (clientId = 0)
-        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
+        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes, "Should lock unanimously");
 
         // 2. Unlock by a different client (clientId = 999)
         // Logic: if lockedBy == 0, anyone can unlock.
-        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1,keyHint, 999).get();
+        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1, keyHint, 999).get();
         Assertions.assertEquals(LockStatus.OK, unlockRes, "Any client should be able to unlock a unanimous lock");
     }
 
@@ -53,12 +53,12 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // 1. Lock by anonymous/unanimous user (clientId = 0)
-        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
+        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes, "Should lock unanimously");
 
         // 2. Unlock by a different client (clientId = 999)
         // Logic: if lockedBy == 0, anyone can unlock.
-        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1,keyHint, 999).get();
+        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1, keyHint, 999).get();
         Assertions.assertEquals(LockStatus.OK, unlockRes, "Any client should be able to unlock a unanimous lock");
     }
 
@@ -76,17 +76,17 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // 1. Lock by specific owner
-        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
+        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
         // 2. Attempt unlock by intruder (Should be rejected)
-        LockStatus failedUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1,keyHint, intruderId).get();
+        LockStatus failedUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1, keyHint, intruderId).get();
         Assertions.assertEquals(LockStatus.CANT_UNLOCK,
-                                failedUnlock,
-                                "Intruder should not be able to unlock owner's lock");
+                failedUnlock,
+                "Intruder should not be able to unlock owner's lock");
 
         // 3. Attempt unlock by owner (Should succeed)
-        LockStatus successUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1,keyHint, ownerId).get();
+        LockStatus successUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1, keyHint, ownerId).get();
         Assertions.assertEquals(LockStatus.OK, successUnlock);
     }
 
@@ -104,17 +104,17 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // 1. Lock by specific owner
-        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
+        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
         // 2. Attempt unlock by intruder (Should be rejected)
-        LockStatus failedUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1,keyHint, intruderId).get();
+        LockStatus failedUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1, keyHint, intruderId).get();
         Assertions.assertEquals(LockStatus.CANT_UNLOCK,
-                                failedUnlock,
-                                "Intruder should not be able to unlock owner's lock");
+                failedUnlock,
+                "Intruder should not be able to unlock owner's lock");
 
         // 3. Attempt unlock by owner (Should succeed)
-        LockStatus successUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1,keyHint, ownerId).get();
+        LockStatus successUnlock = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1, keyHint, ownerId).get();
         Assertions.assertEquals(LockStatus.OK, successUnlock);
     }
 
@@ -130,10 +130,10 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Client A locks on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
 
         // 2. Client B tries to lock the same object (Should fail)
-        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 2, Duration.ofSeconds(60)).get();
+        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 2, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.CANT_LOCK, conflictRes, "Should not allow double locking");
     }
 
@@ -150,10 +150,10 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Client A locks on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
 
         // 2. Client B tries to lock the same object (Should fail)
-        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 2, Duration.ofSeconds(60)).get();
+        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 2, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.CANT_LOCK, conflictRes, "Should not allow double locking");
     }
 
@@ -170,10 +170,10 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Locked by 0 on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
 
         // 2. Client 1 tries to lock specifically (Should fail because it's already locked)
-        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
+        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.CANT_LOCK, conflictRes);
     }
 
@@ -190,10 +190,10 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Locked by 0 on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
 
         // 2. Client 1 tries to lock specifically (Should fail because it's already locked)
-        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
+        LockStatus conflictRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.CANT_LOCK, conflictRes);
     }
 
@@ -210,7 +210,7 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Lock on backup
-        LockStatus lockStatus = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 555, Duration.ofSeconds(1)).get();
+        LockStatus lockStatus = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 555, Duration.ofSeconds(1)).get();
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // 2. Wait for TTL to expire on the i9 server
@@ -218,7 +218,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 3. Try to unlock with a random ID
         // Logic: isLocked() is false, so canUnLock returns true (idempotency)
-        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1,keyHint, 999).get();
+        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1, keyHint, 999).get();
         Assertions.assertEquals(LockStatus.OK, res, "Unlock on expired lock should return OK");
     }
 
@@ -235,7 +235,7 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Lock on master
-        LockStatus lockStatus = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 555, Duration.ofSeconds(1)).get();
+        LockStatus lockStatus = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, keyHint, LockType.WRITE_LOCK, 555, Duration.ofSeconds(1)).get();
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // 2. Wait for TTL to expire on the i9 server
@@ -243,7 +243,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 3. Try to unlock with a random ID
         // Logic: isLocked() is false, so canUnLock returns true (idempotency)
-        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1,keyHint, 999).get();
+        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1, keyHint, 999).get();
         Assertions.assertEquals(LockStatus.OK, res, "Unlock on expired lock should return OK");
     }
 
@@ -262,16 +262,16 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Lock on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(key,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(60)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(key, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(60)).get();
 
         // 2. Owner should be able to read (requires clientId in GetRequest)
         // Assuming your getValue is updated to pass clientId
-        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(key,keyHint, ownerId).get();
+        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(key, keyHint, ownerId).get();
         Assertions.assertNotNull(data);
 
         // 3. Intruder tries to read (Should fail)
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(key,keyHint, intruderId).get();
+            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(key, keyHint, intruderId).get();
             Assertions.fail("Intruder should have been blocked by GLOBAL lock");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -294,16 +294,16 @@ public class LockingValuesTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(key,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(60)).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(key, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(60)).get();
 
         // 2. Owner should be able to read (requires clientId in GetRequest)
         // Assuming your getValue is updated to pass clientId
-        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(key,keyHint, ownerId).get();
+        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(key, keyHint, ownerId).get();
         Assertions.assertNotNull(data);
 
         // 3. Intruder tries to read (Should fail)
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(key,keyHint, intruderId).get();
+            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(key, keyHint, intruderId).get();
             Assertions.fail("Intruder should have been blocked by GLOBAL lock");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();

@@ -58,15 +58,15 @@ public class LockMethodProtectionTest extends TestBase {
         String listKey = "global_list" + UUID.randomUUID();
 
         KeyHint keyHint = client.createList(listKey, List.of("item1".getBytes()), ownerId).get();
-        client.lockObject(listKey,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.getFront(listKey,keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.getFront(listKey, keyHint, intruderId).get());
 
         // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.addElementToTail(listKey,keyHint,
-                                                             Collections.singletonList("item2".getBytes()),
-                                                             intruderId).get());
+        assertPermissionDenied(() -> client.addElementToTail(listKey, keyHint,
+                Collections.singletonList("item2".getBytes()),
+                intruderId).get());
     }
 
     // --- SECTION 2: WRITE LOCK PROTECTION ---
@@ -147,8 +147,8 @@ public class LockMethodProtectionTest extends TestBase {
         ExecutionException e = assertThrows(ExecutionException.class, runnable);
         StatusRuntimeException grpcEx = (StatusRuntimeException) e.getCause();
         assertEquals(Status.Code.PERMISSION_DENIED,
-                     grpcEx.getStatus().getCode(),
-                     "Expected PERMISSION_DENIED but got " + grpcEx.getStatus().getCode());
+                grpcEx.getStatus().getCode(),
+                "Expected PERMISSION_DENIED but got " + grpcEx.getStatus().getCode());
     }
 
 }

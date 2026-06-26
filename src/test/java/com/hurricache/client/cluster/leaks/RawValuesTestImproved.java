@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RawValuesTestImproved extends AdvancedTest {
 
 
-
-
     @Test
     void createKeyValueLoopLeakTest() {
         // Easily test standard values by passing the creator lambda
@@ -33,7 +31,6 @@ public class RawValuesTestImproved extends AdvancedTest {
 
         assertLeakResults("GetAndDeleteLeakTest", good.get());
     }
-
 
 
     @Test
@@ -109,8 +106,6 @@ public class RawValuesTestImproved extends AdvancedTest {
 
         assertLeakResults("TTLExpirationLeakTest", cleanlyExpiredCount.get());
     }
-
-
 
 
 }

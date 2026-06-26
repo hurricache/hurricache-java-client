@@ -35,11 +35,11 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         byte[] newPos1 = createLargePayload(VALUE_SIZE);
         Boolean boolResponse1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToPosition(listKey, keyHint,
-                                                                                                           List.of(newPos1),
-                                                                                                           1).get();
+                List.of(newPos1),
+                1).get();
 
-        byte[] head1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(listKey,keyHint).get();
-        byte[] pos1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(listKey,keyHint, 1).get();
+        byte[] head1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(listKey, keyHint).get();
+        byte[] pos1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
 
         Assertions.assertArrayEquals(head1, head);
         Assertions.assertArrayEquals(pos1, newPos1);
@@ -63,12 +63,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         byte[] newPos1 = createLargePayload(VALUE_SIZE);
         Boolean boolResponse1 = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToPosition(listKey, keyHint,
-                                                                                                           List.of(newPos1),
-                                                                                                           1).get();
+                List.of(newPos1),
+                1).get();
 
         Assertions.assertTrue(boolResponse1);
-        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(listKey,keyHint).get();
-        byte[] pos1 = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(listKey,keyHint, 1).get();
+        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(listKey, keyHint).get();
+        byte[] pos1 = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
 
         Assertions.assertArrayEquals(head1, head);
         Assertions.assertArrayEquals(newPos1, pos1);
@@ -91,12 +91,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
                 first, second)).get();
 
         // removeTail -> [0, 1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeTail(vecKey,keyHint).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeTail(vecKey, keyHint).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeElementAtPosition(vecKey,keyHint, 0).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeElementAtPosition(vecKey, keyHint, 0).get();
 
-        byte[] remaining = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(vecKey,keyHint, 0).get();
+        byte[] remaining = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(vecKey, keyHint, 0).get();
         Assertions.assertArrayEquals(first, remaining);
     }
 
@@ -117,12 +117,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
                 first, second)).get();
 
         // removeTail -> [0, 1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeTail(vecKey,keyHint).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeTail(vecKey, keyHint).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeElementAtPosition(vecKey,keyHint, 0).get();
+        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeElementAtPosition(vecKey, keyHint, 0).get();
 
-        byte[] remaining = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(vecKey,keyHint, 0).get();
+        byte[] remaining = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(vecKey, keyHint, 0).get();
         Assertions.assertArrayEquals(first, remaining);
     }
 
@@ -136,11 +136,11 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key,keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
+            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
         }
 
         // Remove indices 0 to 2
-        Boolean statusList = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeElementAtPosition(key,keyHint, 0).get();
+        Boolean statusList = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeElementAtPosition(key, keyHint, 0).get();
 
         Assertions.assertTrue(statusList);
     }
@@ -155,11 +155,11 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key,keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
+            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
         }
 
         // Remove indices 0 to 2
-        Boolean statusList = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeElementAtPosition(key,keyHint, 0).get();
+        Boolean statusList = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeElementAtPosition(key, keyHint, 0).get();
 
         Assertions.assertTrue(statusList);
     }
@@ -177,7 +177,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Queues typically don't support positional addition in many implementations.
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToPosition(qKey,keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
+            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToPosition(qKey, keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Expecting an error code if Queues are strictly FIFO
@@ -198,7 +198,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Queues typically don't support positional addition in many implementations.
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToPosition(qKey,keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
+            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToPosition(qKey, keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Expecting an error code if Queues are strictly FIFO

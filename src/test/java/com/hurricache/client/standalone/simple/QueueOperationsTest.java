@@ -26,7 +26,7 @@ public class QueueOperationsTest extends TestBase {
         Assertions.assertNotNull(createRes);
 
         // 2. addElementToTail
-        boolean added = client.addElementToTail(qKey,keyHint, List.of(second.getBytes(StandardCharsets.UTF_8))).get();
+        boolean added = client.addElementToTail(qKey, keyHint, List.of(second.getBytes(StandardCharsets.UTF_8))).get();
 
         Assertions.assertTrue(added);
 
@@ -57,7 +57,7 @@ public class QueueOperationsTest extends TestBase {
     void testQueueOrderPersistence() throws ExecutionException, InterruptedException {
         String qKey = "orderTestQueue";
         KeyHint keyHint = client.createQueue(qKey, List.of("1".getBytes())).get();
-        client.addElementToTail(qKey,keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
+        client.addElementToTail(qKey, keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
 
         // FIFO verification: 1 -> 2 -> 3
         Assertions.assertEquals("1", new String(client.getAndRemoveFront(qKey).get()));
@@ -71,7 +71,7 @@ public class QueueOperationsTest extends TestBase {
 
         // Test addElementToTail on non-existent key
         try {
-            client.addElementToTail(qKey,null, List.of("data".getBytes())).get();
+            client.addElementToTail(qKey, null, List.of("data".getBytes())).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
