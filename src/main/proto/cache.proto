@@ -1,10 +1,10 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "com.fastcache.grpc";
-option java_outer_classname = "FastCache";
-option objc_class_prefix = "FastCache";
-package fastcache;
+option java_package = "com.hurricache.grpc";
+option java_outer_classname = "HurriCache";
+option objc_class_prefix = "HurriCache";
+package hurricache;
 
 message BinaryPayload {
     bytes payload = 1;
@@ -256,7 +256,7 @@ service DataReplicationService{
     rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
 }
 
-service FastCacheGrpcService{    
+service HurriCacheGrpcService{
     rpc lockObject(LockRequest)returns (LockResponse){}
     rpc unlockObject(UnLockRequest)returns (UnlockResponse){}
     rpc setTtl(TtlRequest)returns (BoolResponse){}    

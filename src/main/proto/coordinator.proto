@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "com.fastcache.grpc.coordinator";
+option java_package = "com.hurricache.grpc.coordinator";
 option java_outer_classname = "coordinator";
 option objc_class_prefix = "coordinator";
 package coordinator;
