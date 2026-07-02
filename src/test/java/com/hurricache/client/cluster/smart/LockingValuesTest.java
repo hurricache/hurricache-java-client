@@ -25,17 +25,19 @@ public class LockingValuesTest extends TestBaseCluster {
         // Ensure the object exists in the cache before testing locks
         String lockKey1 = lockKey + UUID.randomUUID();
         // Create should be done on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+                .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
+                .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // 1. Lock by anonymous/unanimous user (clientId = 0)
-        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
+        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes, "Should lock unanimously");
 
         // 2. Unlock by a different client (clientId = 999)
         // Logic: if lockedBy == 0, anyone can unlock.
-        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1, 999).get();
+        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).unlockObject(lockKey1,keyHint, 999).get();
         Assertions.assertEquals(LockStatus.OK, unlockRes, "Any client should be able to unlock a unanimous lock");
     }
 
@@ -45,17 +47,19 @@ public class LockingValuesTest extends TestBaseCluster {
         String lockKey1 = lockKey+ UUID.randomUUID();
 
         // Create should be done on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+                .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
+                .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // 1. Lock by anonymous/unanimous user (clientId = 0)
-        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
+        LockStatus lockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes, "Should lock unanimously");
 
         // 2. Unlock by a different client (clientId = 999)
         // Logic: if lockedBy == 0, anyone can unlock.
-        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1, 999).get();
+        LockStatus unlockRes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1,keyHint, 999).get();
         Assertions.assertEquals(LockStatus.OK, unlockRes, "Any client should be able to unlock a unanimous lock");
     }
 
@@ -225,12 +229,14 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         String lockKey1 = lockKey+ UUID.randomUUID();
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+                .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
+                .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // Lock on master
-        LockStatus lockStatus = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1, LockType.WRITE_LOCK, 555, Duration.ofSeconds(1)).get();
+        LockStatus lockStatus = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(lockKey1,keyHint, LockType.WRITE_LOCK, 555, Duration.ofSeconds(1)).get();
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // 2. Wait for TTL to expire on the i9 server
@@ -238,7 +244,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 3. Try to unlock with a random ID
         // Logic: isLocked() is false, so canUnLock returns true (idempotency)
-        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1, 999).get();
+        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).unlockObject(lockKey1, keyHint,999).get();
         Assertions.assertEquals(LockStatus.OK, res, "Unlock on expired lock should return OK");
     }
 

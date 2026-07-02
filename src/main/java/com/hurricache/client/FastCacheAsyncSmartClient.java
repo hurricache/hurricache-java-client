@@ -202,7 +202,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
         if (master == null && backup == null) {
             return CompletableFuture.failedFuture(new RuntimeException(
-                    "No healthy endpoints available for shard allocation"));
+                    "No healthy endpoints available for shard " + shard));
         }
 
         Mode effectiveMode = configuredMode;
@@ -254,7 +254,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             // 1. Precise Server-Side Dynamic Reroute Request
             if (isReroute(ex)) {
                 String targetRoute = getRerouteTarget(ex);
-                log.atDebug().log("[REROUTE] Redirecting payload to dynamic target: {}", targetRoute);
+                log.atWarn().log("[REROUTE] Redirecting payload to dynamic target: {}", targetRoute);
                 HurriCacheClientInterface directClient = getRoute(routingInfo, targetRoute);
                 return directClient != null
                        ? action.apply(directClient)
@@ -263,7 +263,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
             // 2. Client-Side Transport Failure Recovery (Failover Layer)
             if (isUnavailable(ex)) {
-                log.atDebug().log("[FAILOVER] Node cluster connection dead: {}", currentEndpoint.getTarget());
+                log.atWarn().log("[FAILOVER] Node cluster connection dead: {}", currentEndpoint.getTarget());
                 scheduledExecutorService.execute(this::init); // Trigger background asynchronous routing refresh
 
                 if (fallbackEndpoint != null) {
@@ -272,8 +272,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                  fallbackEndpoint.getTarget());
                     return action.apply(fallbackEndpoint);
                 }
-            }
 
+            }
+            log.atWarn().log("Error during request processing",ex);
             return CompletableFuture.failedFuture(ex);
         };
     }
@@ -499,24 +500,15 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     private boolean isUnavailable(Throwable ex) {
-        Throwable c = (ex instanceof CompletionException)
-                      ? ex.getCause()
-                      : ex;
-        return c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.UNAVAILABLE;
+        return ex instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.UNAVAILABLE;
     }
 
     private boolean isTimeout(Throwable ex) {
-        Throwable c = (ex instanceof CompletionException)
-                      ? ex.getCause()
-                      : ex;
-        return c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED;
+        return ex instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED;
     }
 
     private boolean isReroute(Throwable ex) {
-        Throwable c = (ex instanceof CompletionException)
-                      ? ex.getCause()
-                      : ex;
-        return c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION;
+        return ex instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION;
     }
 
     private String getRerouteTarget(Throwable ex) {

@@ -97,7 +97,7 @@ public interface HurriCacheClientInterface {
                                               Duration timeout);
 
     default CompletableFuture<KeyHint> createKeyValue(byte[] key, byte[] value, int clientId, Duration timeout) {
-        return createKeyValue(key, getKeyHint(key), value, getDefaultTtl(), clientId, timeout);
+        return createKeyValue(key, null, value, getDefaultTtl(), clientId, timeout);
     }
 
     default CompletableFuture<KeyHint> createKeyValue(String key, byte[] value) {
@@ -123,7 +123,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<byte[]> getValue(byte[] key) {
-        return getValue(key, getKeyHint(key), getDefaultClientId(), getDefaultTimeout());
+        return getValue(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> getValue(String key, KeyHint hint) {
@@ -164,6 +164,14 @@ public interface HurriCacheClientInterface {
                               getDefaultClientId(),
                               getDefaultTimeout());
     }
+    default CompletableFuture<byte[]> updateKeyValue(byte[] key, byte[] value) {
+        return updateKeyValue(key,
+                              null,
+                              value,
+                              getDefaultTtl(),
+                              getDefaultClientId(),
+                              getDefaultTimeout());
+    }
 
     default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint keyHint, byte[] value, int clientID) {
         return updateKeyValue(key, keyHint, value, getDefaultTtl(), clientID, getDefaultTimeout());
@@ -193,7 +201,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<Boolean> existKey(byte[] key) {
-        return existKey(key, getKeyHint(key), getDefaultClientId(), getDefaultTimeout());
+        return existKey(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Boolean> existKey(String key, KeyHint hint) {
@@ -595,7 +603,7 @@ public interface HurriCacheClientInterface {
     default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos) {
         byte[] key1 = serializeKey(key);
         return addElementToPosition(key1, // Преобразуем ключ в byte[]
-                                    getKeyHint(key1),                                // KeyHint не указан
+                                    null,                                // KeyHint не указан
                                     data, pos, getDefaultClientId(),               // Клиент по умолчанию
                                     getDefaultTimeout()                 // Таймаут по умолчанию
         );
@@ -611,7 +619,7 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos, int clientId) {
         byte[] key1 = serializeKey(key);
-        return addElementToPosition(key1, getKeyHint(key1), // KeyHint не указан
+        return addElementToPosition(key1, null, // KeyHint не указан
                                     data, pos, clientId, getDefaultTimeout() // Таймаут по умолчанию
         );
     }

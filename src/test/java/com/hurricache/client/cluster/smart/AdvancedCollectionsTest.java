@@ -53,7 +53,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Boolean boolResponse = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToHead(listKey,keyHint, List.of("Head".getBytes(StandardCharsets.UTF_8))).get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
-        Boolean boolResponse1 = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToPosition(listKey,
+        Boolean boolResponse1 = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToPosition(listKey,keyHint,
                                                             List.of("NewPos1".getBytes(StandardCharsets.UTF_8)),
                                                             1).get();
 

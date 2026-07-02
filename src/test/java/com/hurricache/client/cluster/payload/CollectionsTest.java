@@ -306,6 +306,7 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] key = createLargePayload(KEY_SIZE);
         byte[] head = createLargePayload(VALUE_SIZE);
         KeyHint keyHint = client.createList(key, List.of(head)).get();
+        Thread.sleep(150);
         byte[] tail = createLargePayload(VALUE_SIZE);
         client.addElementToTail(key, keyHint, List.of(tail)).get();
 
@@ -323,6 +324,7 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] key = createLargePayload(KEY_SIZE);
         byte[] init = createLargePayload(VALUE_SIZE);
         KeyHint keyHint = client.createVector(key, List.of(init)).get();
+        Thread.sleep(150);
         byte[] zero = createLargePayload(VALUE_SIZE);
         byte[] one = createLargePayload(VALUE_SIZE);
         client.addElementToTail(key, keyHint,
@@ -350,6 +352,7 @@ public class CollectionsTest extends TestBaseCluster {
         byte[] key = createLargePayload(KEY_SIZE);
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHint keyHint = client.createList(key, List.of(zero)).get();
+        Thread.sleep(150);
         byte[] one = createLargePayload(VALUE_SIZE);
         byte[] two = createLargePayload(VALUE_SIZE);
         client.addElementToTail(key, keyHint,

@@ -274,6 +274,7 @@ public class CollectionsTest extends TestBaseCluster {
     void testAtomicRemoval() throws ExecutionException, InterruptedException {
         String key = "removalTestKey"+ UUID.randomUUID();
         KeyHint keyHint = client.createList(key, List.of("item1".getBytes(StandardCharsets.UTF_8))).get();
+        Thread.sleep(150);
         client.addElementToTail(client.serializeKey(key),keyHint, List.of("item2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Remove Front
@@ -289,6 +290,7 @@ public class CollectionsTest extends TestBaseCluster {
     void testPositionalOperationsVector() throws ExecutionException, InterruptedException {
         String key = "posTestKeyVector"+ UUID.randomUUID();
         KeyHint keyHint = client.createVector(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
+        Thread.sleep(150);
         client.addElementToTail(key,keyHint,
                                 Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
                                               "pos2".getBytes(StandardCharsets.UTF_8))).get();
@@ -302,13 +304,13 @@ public class CollectionsTest extends TestBaseCluster {
         Assertions.assertEquals("pos1", new String(removed));
 
         CountDownLatch latch = new CountDownLatch(1);
-        List<byte[]> results = client.streamVector(key).get();
+        List<byte[]> results = client.streamVector(key,keyHint).get();
 
         latch.await(5, TimeUnit.SECONDS);
         System.out.println(results);
 
         // Verify Shift
-        byte[] newPos1 = client.getElementAtPosition(key, 1).get();
+        byte[] newPos1 = client.getElementAtPosition(key, keyHint,1).get();
         Assertions.assertEquals("pos2", new String(newPos1));
     }
 
@@ -316,12 +318,13 @@ public class CollectionsTest extends TestBaseCluster {
     void testPositionalOperationsList() throws ExecutionException, InterruptedException {
         String key = "posTestKeyList"+ UUID.randomUUID();
         KeyHint keyHint = client.createList(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
+        Thread.sleep(150);
         client.addElementToTail(key,keyHint,
                                 Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
                                               "pos2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get At Position 1
-        byte[] pos1 = client.getElementAtPosition(key, 1).get();
+        byte[] pos1 = client.getElementAtPosition(key, keyHint,1).get();
         Assertions.assertEquals("pos1", new String(pos1));
 
         // Remove At Position 1

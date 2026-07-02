@@ -120,7 +120,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                         ? KeyUtils.createKey(key, clientId)
                         : KeyUtils.createKey(key, hint, clientId))
                 .build();
-        getStub(timeout).getTtl(ttlRequest, new CompletableFutureObserver<>(future, item -> item.hasTtl() ? item.getTtl() - System.currentTimeMillis() : -1L));
+        getStub(timeout).getTtl(ttlRequest, new CompletableFutureObserver<>(future, item -> item.hasTtl() ? (item.getTtl() - System.currentTimeMillis()) : -1L));
         return future;
     }
 
@@ -160,7 +160,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             valueBuilder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
         CreateRequest req = CreateRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key,getKeyHint(key,hint), clientId))
+                .setKey(KeyUtils.createKey(key,hint, clientId))
                 .setValue(valueBuilder)
                 .build();
         getStub(timeout).createKeyValue(req, new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
@@ -179,7 +179,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<byte[]> getValue(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        getStub(timeout).getValue(buildGetReq(key, getKeyHint(key,hint), clientId), new DecompressingObserver(future));
+        getStub(timeout).getValue(buildGetReq(key, hint, clientId), new DecompressingObserver(future));
         return future;
     }
 
@@ -206,7 +206,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             builderForValue.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
         UpdateRequest.Builder req = UpdateRequest.newBuilder()
-                .setKey(buildKey(key, getKeyHint(key,hint), clientId))
+                .setKey(buildKey(key, hint, clientId))
                 .setValue(builderForValue);
 
         getStub(timeout).updateValue(req.build(), new DecompressingObserver.Update(future));
@@ -241,7 +241,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     public CompletableFuture<Boolean> remove(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         getStub(timeout)
-                .remove(buildGetReq(key, getKeyHint(key,hint), clientId),
+                .remove(buildGetReq(key, hint, clientId),
                         new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
     }
@@ -261,7 +261,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                   int clientId,
                                                   Duration timeout) {
         CompletableFuture<KeyHint> future = new CompletableFuture<>();
-        CreateQueueRequest.Builder builder = CreateQueueRequest.newBuilder().setKey(KeyUtils.createKey(key,getKeyHint(key), clientId));
+        CreateQueueRequest.Builder builder = CreateQueueRequest.newBuilder().setKey(KeyUtils.createKey(key, clientId));
         if (initialValue != null) {
             initialValue.forEach(elem -> builder.addValue(CompressionUtils.compressIfNeeded(elem)));
         }
@@ -280,7 +280,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                  Duration timeout) {
         CompletableFuture<KeyHint> future = new CompletableFuture<>();
         CreateListRequest.Builder builder = CreateListRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key,getKeyHint(key), clientId))
+                .setKey(KeyUtils.createKey(key, clientId))
                 .setAsArray(false);
         if (ttl!=null && !ttl.isZero()){
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
@@ -298,7 +298,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                    Duration timeout) {
         CompletableFuture<KeyHint> future = new CompletableFuture<>();
         CreateListRequest.Builder builder = CreateListRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key,getKeyHint(key), clientId))
+                .setKey(KeyUtils.createKey(key, clientId))
                 .setAsArray(true);
         if (ttl !=null && !ttl.isZero()){
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
@@ -312,7 +312,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<byte[]> getAndRemoveFront(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        getStub(timeout).getAndRemoveFront(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
+        getStub(timeout).getAndRemoveFront(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId)).build(),
                                                          new DecompressingObserver(future));
         return future;
     }
@@ -320,7 +320,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<byte[]> getFront(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        getStub(timeout).getHead(buildGetReq(key, getKeyHint(key,hint), clientId), new DecompressingObserver(future));
+        getStub(timeout).getHead(buildGetReq(key, hint, clientId), new DecompressingObserver(future));
         return future;
     }
 
@@ -331,7 +331,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                        int clientId,
                                                        Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        AddToRequest.Builder b = AddToRequest.newBuilder().setKey(buildKey(key, getKeyHint(key,hint), clientId));
+        AddToRequest.Builder b = AddToRequest.newBuilder().setKey(buildKey(key, hint, clientId));
         data.stream().map(CompressionUtils::compressIfNeeded).forEach(b::addValue);
         getStub(timeout).addElementToTail(b.build(), new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
@@ -345,7 +345,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                           Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         KeyPositionRequest req = KeyPositionRequest.newBuilder()
-                .setKey(buildKey(key, getKeyHint(key,hint), clientId))
+                .setKey(buildKey(key, hint, clientId))
                 .setPos(pos)
                 .build();
         getStub(timeout).getElementAtPosition(req, new DecompressingObserver(future));
@@ -397,7 +397,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                                 int clientId,
                                                                 Duration timeout) {
         KeyPositionRequest request = KeyPositionRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId))
+                .setKey(KeyUtils.createKey(key, hint, clientId))
                 .setPos(start)
                 .setEnd(end)
                 .build();
@@ -413,7 +413,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<List<byte[]>> streamVector(byte[] key, KeyHint hint, int clientId, Duration timeout) {
-        GetRequest request = GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build();
+        GetRequest request = GetRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId)).build();
         CompletableFuture<List<byte[]>> future = new CompletableFuture<>();
         getStub(timeout).getVector(request, new StreamBatchObserver(future));
         return future;
@@ -428,7 +428,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                                    Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         KeyPositionRequest request = KeyPositionRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId))
+                .setKey(KeyUtils.createKey(key, hint, clientId))
                 .setPos(pos)
                 .build();
         getStub(timeout).getAndRemoveElementAtPosition(request, new DecompressingObserver(future));
@@ -442,7 +442,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                        int clientId,
                                                        Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId));
+        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId));
         if (data != null) {
             data.stream().map(KeyUtils::createValue).forEach(builder::addValue);
         }
@@ -459,7 +459,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                            int clientId,
                                                            Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        AddToRequest.Builder builder = AddToRequest.newBuilder().setPos(pos).setKey(buildKey(key, getKeyHint(key,hint), clientId));
+        AddToRequest.Builder builder = AddToRequest.newBuilder().setPos(pos).setKey(buildKey(key, hint, clientId));
         if (data != null) {
             data.stream().map(KeyUtils::createValue).forEach(builder::addValue);
         }
@@ -471,7 +471,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<Boolean> removeTail(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        getStub(timeout).removeTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
+        getStub(timeout).removeTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId)).build(),
                                                   new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
     }
@@ -479,7 +479,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<Boolean> removeHead(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        getStub(timeout).removeHead(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
+        getStub(timeout).removeHead(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId)).build(),
                                                   new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
     }
@@ -508,7 +508,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<byte[]> getHead(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        getStub(timeout).getHead(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
+        getStub(timeout).getHead(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId)).build(),
                                                new DecompressingObserver(future));
         return future;
     }
@@ -516,7 +516,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<byte[]> getTail(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        getStub(timeout).getTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
+        getStub(timeout).getTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId)).build(),
                                                new DecompressingObserver(future));
         return future;
     }
@@ -524,7 +524,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<byte[]> getAndRemoveTail(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        getStub(timeout).getAndRemoveTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
+        getStub(timeout).getAndRemoveTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, hint, clientId)).build(),
                                  new DecompressingObserver(future));
         return future;
     }
@@ -537,7 +537,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     private GetRequest buildGetReq(byte[] key, KeyHint hint, Integer clientId) {
-        return GetRequest.newBuilder().setKey(buildKey(key, getKeyHint(key,hint), clientId)).build();
+        return GetRequest.newBuilder().setKey(buildKey(key, hint, clientId)).build();
     }
 
     private HurriCacheGrpcServiceGrpc.HurriCacheGrpcServiceStub getStub(Duration timeout) {

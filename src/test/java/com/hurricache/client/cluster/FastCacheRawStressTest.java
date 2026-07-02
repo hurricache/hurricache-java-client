@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FastCacheRawStressTest {
 
     private final static String prefix = UUID.randomUUID()+"-"+System.currentTimeMillis()+":::";
-    private final int THREAD_COUNT = 32; // Optimized for i9
+    private final int THREAD_COUNT = 64; // Optimized for i9
     private final int OPERATIONS_PER_THREAD = 100000;
     private final int PIPELINE_BATCH_SIZE = 100; // Pipeline requests to saturate C++ engine
     private String serverName;

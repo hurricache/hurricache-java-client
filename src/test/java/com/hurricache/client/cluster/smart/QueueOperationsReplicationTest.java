@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -45,7 +46,7 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Assertions.assertEquals(second, new String(newHeadData));
 
         // 6. removeHead (Delete without returning data)
-        boolean removed = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeHead(qKey).get();
+        boolean removed = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeHead(qKey,keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist
@@ -107,11 +108,11 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(qKey,keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
         Thread.sleep(500);
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertEquals("1", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey).get()));
+        Assertions.assertEquals("1", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey,keyHint).get()));
         Thread.sleep(500);
-        Assertions.assertEquals("2", new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey).get()));
+        Assertions.assertEquals("2", new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey,keyHint).get()));
         Thread.sleep(500);
-        Assertions.assertEquals("3", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey).get()));
+        Assertions.assertEquals("3", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey,keyHint).get()));
     }
 
     @Test
@@ -123,12 +124,18 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Thread.sleep(500);
         client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(qKey,keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
         Thread.sleep(500);
+        ArrayList<String> out = new ArrayList<>();
+        out.add(new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey,keyHint).get()));
+        Thread.sleep(500);
+        out.add(new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey,keyHint).get()));
+        Thread.sleep(500);
+        out.add(new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey,keyHint).get()));
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertEquals("1", new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey).get()));
+        Assertions.assertEquals("1", out.get(0),out.toString());
         Thread.sleep(500);
-        Assertions.assertEquals("2", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey).get()));
+        Assertions.assertEquals("2", out.get(1),out.toString());
         Thread.sleep(500);
-        Assertions.assertEquals("3", new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey).get()));
+        Assertions.assertEquals("3", out.get(2),out.toString());
     }
 
     @Test
