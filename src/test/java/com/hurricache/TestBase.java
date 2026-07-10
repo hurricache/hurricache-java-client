@@ -231,7 +231,7 @@ public abstract class TestBase {
             String key = keyToString(request.getKey());
             List<Value> list = listStore.get(key);
             if (list != null && !list.isEmpty()) {
-                responseObserver.onNext(ValueResponse.newBuilder().setValue(list.getLast()).build());
+                responseObserver.onNext(ValueResponse.newBuilder().setValue(list.get(list.size() - 1)).build());
             } else {
                 Deque<Value> queue = queueStore.get(key);
                 if (queue != null && !queue.isEmpty()) {
@@ -248,7 +248,7 @@ public abstract class TestBase {
             String key = keyToString(request.getKey());
             List<Value> list = listStore.get(key);
             if (list != null && !list.isEmpty()) {
-                responseObserver.onNext(ValueResponse.newBuilder().setValue(list.getFirst()).build());
+                responseObserver.onNext(ValueResponse.newBuilder().setValue(list.iterator().next()).build());
             } else {
                 Deque<Value> queue = queueStore.get(key);
                 if (queue != null && !queue.isEmpty()) {
@@ -280,7 +280,7 @@ public abstract class TestBase {
             String key = keyToString(request.getKey());
             List<Value> list = listStore.get(key);
             if (list != null && !list.isEmpty()) {
-                list.removeFirst();
+                list.iterator().remove();
             } else {
                 Deque<Value> queue = queueStore.get(key);
                 if (queue != null && !queue.isEmpty()) {

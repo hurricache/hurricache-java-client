@@ -86,7 +86,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertArrayEquals(item3, rangeData.getFirst());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next());
     }
 
     @Test
@@ -112,7 +112,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertArrayEquals(item3, rangeData.getFirst());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next());
     }
 
     @Test
@@ -138,7 +138,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertArrayEquals(item3, rangeData.getFirst());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next());
     }
 
     @Test
@@ -164,7 +164,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertArrayEquals(item3, rangeData.getFirst());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next());
     }
 
     @Test
@@ -228,7 +228,7 @@ public class CollectionsTest extends TestBaseCluster {
         List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
-        Assertions.assertArrayEquals(zero, results.getFirst());
+        Assertions.assertArrayEquals(zero, results.iterator().next());
     }
 
     @Test
@@ -248,7 +248,7 @@ public class CollectionsTest extends TestBaseCluster {
         List<byte[]> results = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
-        Assertions.assertArrayEquals(zero, results.getFirst());
+        Assertions.assertArrayEquals(zero, results.iterator().next());
     }
 
     @Test

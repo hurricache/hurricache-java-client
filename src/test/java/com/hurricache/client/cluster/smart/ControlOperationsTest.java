@@ -51,7 +51,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         Assertions.assertTrue(success);
 
         // Verify TTL
-        Long res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getTtl(key).get();
+        Long res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getTtl(key,keyHint).get();
         Assertions.assertTrue(res > 0 && res <= 100, () -> res + " " + key);
     }
 
