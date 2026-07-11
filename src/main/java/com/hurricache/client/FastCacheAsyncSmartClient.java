@@ -138,7 +138,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     private HurriCacheClientInterface newFastCacheClient(String target) {
-        return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target)
+        return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target).maxInboundMessageSize(64 * 1024 * 1024)
                 .usePlaintext()
                 .directExecutor()
                 .build(), defaultClientId, defaultTimeout) {

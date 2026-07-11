@@ -22,7 +22,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     private final int defaultClientId;
     private final Duration defaultTimeout;
     private final String target;
-
+    private static final long MAX_RPC_SIZE = 4 * 1024 * 1024 - 1024 * 1024/2;
+    private enum AddType { TAIL, HEAD, POSITION }
     public FastCacheAsyncSimpleClient(String host, int port, int defaultClientId, Duration timeout) {
         this.channel = ManagedChannelBuilder.forAddress(host, port).directExecutor().usePlaintext().build();
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
@@ -260,16 +261,45 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                   Duration ttl,
                                                   int clientId,
                                                   Duration timeout) {
-        CompletableFuture<KeyHint> future = new CompletableFuture<>();
-        CreateQueueRequest.Builder builder = CreateQueueRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key), clientId));
-        if (initialValue != null) {
-            initialValue.forEach(elem -> builder.addValue(CompressionUtils.compressIfNeeded(elem)));
-        }
+        CreateQueueRequest.Builder builder = CreateQueueRequest.newBuilder();
         if (ttl != null && !ttl.isZero()) {
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
-        getStub(timeout).createQueue(builder.build(), new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
-        return future;
+        Key protoKey = KeyUtils.createKey(key, clientId);
+        builder.setKey(protoKey);
+
+        long currentChunkSize = protoKey.getSerializedSize();
+        int splitIndex = 0;
+
+        if (initialValue != null) {
+            for (byte[] bytes : initialValue) {
+                Value.Builder compressedValue = CompressionUtils.compressIfNeeded(bytes);
+                int elemSize = compressedValue.build().getSerializedSize();
+
+                if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
+                    break;
+                }
+
+                builder.addValue(compressedValue);
+                currentChunkSize += elemSize;
+                splitIndex++;
+            }
+        }
+
+        CompletableFuture<KeyHint> createFuture = new CompletableFuture<>();
+        getStub(timeout).createQueue(builder.build(), new CompletableFutureObserver<>(createFuture, KeyHintResponse::getKeyHint));
+
+        List<byte[]> remainingTail = initialValue != null
+                                     ? initialValue.subList(splitIndex, initialValue.size())
+                                     : List.of();
+
+        return createFuture.thenCompose(keyHint -> {
+            if (remainingTail.isEmpty()) {
+                return CompletableFuture.completedFuture(keyHint);
+            } else {
+                return sendTailInChunks(protoKey, keyHint, remainingTail, timeout);
+            }
+        });
     }
 
     @Override
@@ -278,16 +308,45 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                  Duration ttl,
                                                  int clientId,
                                                  Duration timeout) {
-        CompletableFuture<KeyHint> future = new CompletableFuture<>();
-        CreateListRequest.Builder builder = CreateListRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key, getKeyHint(key), clientId))
-                .setAsArray(false);
+        CreateListRequest.Builder builder = CreateListRequest.newBuilder();
         if (ttl != null && !ttl.isZero()) {
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
-        initialValue.forEach(elem -> builder.addValue(CompressionUtils.compressIfNeeded(elem)));
-        getStub(timeout).createList(builder.build(), new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
-        return future;
+        Key protoKey = KeyUtils.createKey(key, clientId);
+        builder.setAsArray(false).setKey(protoKey);
+
+        long currentChunkSize = protoKey.getSerializedSize();
+        int splitIndex = 0;
+
+        if (initialValue != null) {
+            for (byte[] bytes : initialValue) {
+                Value.Builder compressedValue = CompressionUtils.compressIfNeeded(bytes);
+                int elemSize = compressedValue.build().getSerializedSize();
+
+                if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
+                    break;
+                }
+
+                builder.addValue(compressedValue);
+                currentChunkSize += elemSize;
+                splitIndex++;
+            }
+        }
+
+        CompletableFuture<KeyHint> createFuture = new CompletableFuture<>();
+        getStub(timeout).createList(builder.build(), new CompletableFutureObserver<>(createFuture, KeyHintResponse::getKeyHint));
+
+        List<byte[]> remainingTail = initialValue != null
+                                     ? initialValue.subList(splitIndex, initialValue.size())
+                                     : List.of();
+
+        return createFuture.thenCompose(keyHint -> {
+            if (remainingTail.isEmpty()) {
+                return CompletableFuture.completedFuture(keyHint);
+            } else {
+                return sendTailInChunks(protoKey, keyHint, remainingTail, timeout);
+            }
+        });
     }
 
     @Override
@@ -296,18 +355,51 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                    Duration ttl,
                                                    int clientId,
                                                    Duration timeout) {
-        CompletableFuture<KeyHint> future = new CompletableFuture<>();
-        CreateListRequest.Builder builder = CreateListRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key, getKeyHint(key), clientId))
-                .setAsArray(true);
+        CreateListRequest.Builder builder = CreateListRequest.newBuilder();
         if (ttl != null && !ttl.isZero()) {
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
-        initialValue.forEach(elem -> builder.addValue(CompressionUtils.compressIfNeeded(elem)));
-        getStub(timeout).createList(builder.build(), new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
-        return future;
+        Key protoKey = KeyUtils.createKey(key,  clientId);
+        builder.setAsArray(true).setKey(protoKey);
+        long currentChunkSize = protoKey.getSerializedSize();
+        int splitIndex = getSplitIndex(initialValue, currentChunkSize, builder, 0);
+
+        // 1. Собираем первый батч для createList (до 10 МБ)
+
+
+        CompletableFuture<KeyHint> createFuture = new CompletableFuture<>();
+        getStub(timeout).createList(builder.build(), new CompletableFutureObserver<>(createFuture,KeyHintResponse::getKeyHint));
+
+        List<byte[]> remainingTail = initialValue.subList(splitIndex, initialValue.size());
+
+        // 2. Связываем фьючерсы: берем Hint из первого ответа и фиксируем его для всего хвоста
+        return createFuture.thenCompose(keyHint -> {
+            if (remainingTail.isEmpty()) {
+                return CompletableFuture.completedFuture(keyHint);
+            } else {
+                return sendTailInChunks(protoKey,keyHint, remainingTail, timeout);
+            }
+        });
     }
 
+    private static int getSplitIndex(List<byte[]> initialValue,
+                                     long currentChunkSize,
+                                     CreateListRequest.Builder builder,
+                                     int splitIndex) {
+        for (byte[] bytes : initialValue) {
+            Value.Builder compressedValue = CompressionUtils.compressIfNeeded(bytes);
+            int elemSize = compressedValue.build().getSerializedSize();
+
+            if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
+                break;
+            }
+
+            builder.addValue(compressedValue);
+            currentChunkSize += elemSize;
+            splitIndex++;
+        }
+        return splitIndex;
+    }
 
     @Override
     public CompletableFuture<byte[]> getAndRemoveFront(byte[] key, KeyHint hint, int clientId, Duration timeout) {
@@ -330,11 +422,11 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                        List<byte[]> data,
                                                        int clientId,
                                                        Duration timeout) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        AddToRequest.Builder b = AddToRequest.newBuilder().setKey(buildKey(key, getKeyHint(key, hint), clientId));
-        data.stream().map(CompressionUtils::compressIfNeeded).forEach(b::addValue);
-        getStub(timeout).addElementToTail(b.build(), new CompletableFutureObserver<>(future, BoolResponse::getValue));
-        return future;
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
+        }
+        Key protoKey = buildKey(key, getKeyHint(key, hint), clientId);
+        return sendAddRequestInChunks(protoKey, data, -1, AddType.TAIL, timeout);
     }
 
     @Override
@@ -441,14 +533,13 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                        List<byte[]> data,
                                                        int clientId,
                                                        Duration timeout) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key, hint), clientId));
-        if (data != null) {
-            data.stream().map(KeyUtils::createValue).forEach(builder::addValue);
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
         }
-        AddToRequest request = builder.build();
-        getStub(timeout).addElementToHead(request, new CompletableFutureObserver<>(future, BoolResponse::getValue));
-        return future;
+        Key protoKey = KeyUtils.createKey(key, getKeyHint(key, hint), clientId);
+        // Для сохранения исходного порядка при добавлении в HEAD чанками,
+        // мы шлем пакеты по очереди.
+        return sendAddRequestInChunks(protoKey, data, -1, AddType.HEAD, timeout);
     }
 
     @Override
@@ -458,14 +549,11 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                            int pos,
                                                            int clientId,
                                                            Duration timeout) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        AddToRequest.Builder builder = AddToRequest.newBuilder().setPos(pos).setKey(buildKey(key, getKeyHint(key, hint), clientId));
-        if (data != null) {
-            data.stream().map(KeyUtils::createValue).forEach(builder::addValue);
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
         }
-        getStub(timeout).addElementToPosition(builder.build(),
-                new CompletableFutureObserver<>(future, BoolResponse::getValue));
-        return future;
+        Key protoKey = buildKey(key, getKeyHint(key, hint), clientId);
+        return sendAddRequestInChunks(protoKey, data, pos, AddType.POSITION, timeout);
     }
 
     @Override
@@ -559,5 +647,104 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public int hashCode() {
         return Objects.hashCode(target);
+    }
+
+    private CompletableFuture<KeyHint> sendTailInChunks(Key protoKey, KeyHint originalHint,
+                                                        List<byte[]> tail,
+                                                        Duration timeout) {
+        long currentChunkSize = originalHint.getSerializedSize() + 32;
+
+        AddToRequest.Builder builder = AddToRequest.newBuilder()
+                .setKey(protoKey.toBuilder().setKeyHint(originalHint).build());
+
+        int splitIndex = 0;
+        for (byte[] bytes : tail) {
+            Value.Builder compressedValue = CompressionUtils.compressIfNeeded(bytes);
+            int elemSize = compressedValue.build().getSerializedSize();
+
+            if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
+                break;
+            }
+
+            builder.addValue(compressedValue);
+            currentChunkSize += elemSize;
+            splitIndex++;
+        }
+
+        CompletableFuture<BoolResponse> tailFuture = new CompletableFuture<>();
+        getStub(timeout).addElementToTail(builder.build(), new CompletableFutureObserver<>(tailFuture));
+
+        List<byte[]> nextTail = tail.subList(splitIndex, tail.size());
+
+        // Рекурсивно склеиваем цепочку. В самом конце возвращаем именно оригинальный hint
+        return tailFuture.thenCompose(response -> {
+            if (nextTail.isEmpty() && response.getValue()) {
+                return CompletableFuture.completedFuture(originalHint); // Возвращаем первый hint наружу
+            } else {
+                // Пробрасываем оригинальный hint на следующий шаг рекурсии
+                return sendTailInChunks(protoKey, originalHint, nextTail, timeout);
+            }
+        });
+    }
+
+    private CompletableFuture<Boolean> sendAddRequestInChunks(Key protoKey,
+                                                              List<byte[]> data,
+                                                              int currentPos,
+                                                              AddType type,
+                                                              Duration timeout) {
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
+        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
+
+        if (type == AddType.POSITION) {
+            builder.setPos(currentPos);
+        }
+
+        int splitIndex = 0;
+        for (byte[] datum : data) {
+            Value.Builder compressedValue = (type == AddType.TAIL)
+                                            ? CompressionUtils.compressIfNeeded(datum)
+                                            : KeyUtils.createValue(datum); // Исходная обертка для HEAD/POSITION
+
+            int elemSize = compressedValue.build().getSerializedSize();
+            if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
+                break;
+            }
+            builder.addValue(compressedValue);
+            currentChunkSize += elemSize;
+            splitIndex++;
+        }
+
+        CompletableFuture<Boolean> chunkFuture = new CompletableFuture<>();
+
+        // Вызываем соответствующую RPC-процедуру
+        switch (type) {
+            case TAIL:
+                getStub(timeout).addElementToTail(builder.build(), new CompletableFutureObserver<>(chunkFuture, BoolResponse::getValue));
+                break;
+            case HEAD:
+                getStub(timeout).addElementToHead(builder.build(), new CompletableFutureObserver<>(chunkFuture, BoolResponse::getValue));
+                break;
+            case POSITION:
+                getStub(timeout).addElementToPosition(builder.build(), new CompletableFutureObserver<>(chunkFuture, BoolResponse::getValue));
+                break;
+        }
+
+        List<byte[]> nextTail = data.subList(splitIndex, data.size());
+
+        int finalSplitIndex = splitIndex;
+        return chunkFuture.thenCompose(success -> {
+            if (!success) {
+                return CompletableFuture.completedFuture(false);
+            }
+            if (nextTail.isEmpty()) {
+                return CompletableFuture.completedFuture(true);
+            }
+
+            // Сдвигаем позицию для следующего куска (применяется только к инкрементальному добавлению по индексу)
+            int nextPos = (type == AddType.POSITION) ? currentPos + finalSplitIndex
+                                                     : currentPos;
+
+            return sendAddRequestInChunks(protoKey, nextTail, nextPos, type, timeout);
+        });
     }
 }
