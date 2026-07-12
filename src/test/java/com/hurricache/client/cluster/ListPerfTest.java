@@ -26,9 +26,9 @@ public class ListPerfTest {
     private static final int MESSAGE_SIZE = 100;
 
     // Конфигурация нагрузки
-    private static final int WRITER_THREADS = 2;
-    private static final int READER_THREADS = 2;
-    private static final int DURATION_SECONDS = 150;
+    private static final int WRITER_THREADS = 8;
+    private static final int READER_THREADS = 8;
+    private static final int DURATION_SECONDS = 60;
 
     // Ограничитель очереди in-flight асинхронных запросов на один поток
     // Позволяет утилизировать сеть, не забивая RAM бесконечными тасками
@@ -53,7 +53,6 @@ public class ListPerfTest {
                 return Duration.ofMinutes(15);
             }
         };
-
         queueKeyHint = client.createList(LIST_NAME).get();
         assertNotNull(queueKeyHint, "Queue must be created");
     }
@@ -66,7 +65,7 @@ public class ListPerfTest {
     }
 
     @Test
-    void testConcurrentQueueProducerConsumer() throws Exception {
+    void testConcurrentListProducerConsumer() throws Exception {
         PerfMetrics metrics = new PerfMetrics();
         ExecutorService pool = Executors.newFixedThreadPool(WRITER_THREADS + READER_THREADS);
 

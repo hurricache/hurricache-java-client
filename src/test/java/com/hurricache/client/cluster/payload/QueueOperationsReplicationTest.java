@@ -1,7 +1,7 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -24,35 +24,35 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         byte[] second = createLargePayload(VALUE_SIZE);
 
         // 1. createQueue with initial value
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createQueue(qKey, List.of(first)).get();
+        KeyHint keyHint = client.setMode(Mode.MASTER).createQueue(qKey, List.of(first)).get();
         Assertions.assertNotNull(keyHint);
 
         Thread.sleep(500);
         // 2. addElementToTail
-        boolean added = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(qKey, keyHint, Arrays.asList(second)).get();
+        boolean added = client.setMode(Mode.BACKUP).addElementToTail(qKey, keyHint, Arrays.asList(second)).get();
 
         Assertions.assertTrue(added);
 
         // 3. getHead (Peek without removing)
-        byte[] headData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(qKey, keyHint).get();
+        byte[] headData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, headData);
 
         // 4. getAndRemoveFront (Atomic pop from head)
-        byte[] popped = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
+        byte[] popped = client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped);
 
         // 5. Verify the new head is the second message
-        byte[] newHeadData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(qKey, keyHint).get();
+        byte[] newHeadData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(second, newHeadData);
 
         // 6. removeHead (Delete without returning data)
-        boolean removed = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.BACKUP).removeHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist
         Thread.sleep(500);
-        byte[] emptyB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(qKey, keyHint).get();
-        byte[] emptyM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(qKey, keyHint).get();
+        byte[] emptyB = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
+        byte[] emptyM = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertEquals(0, emptyM.length);
         Assertions.assertEquals(0, emptyB.length);
 
@@ -65,35 +65,35 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         byte[] second = createLargePayload(VALUE_SIZE);
 
         // 1. createQueue with initial value
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createQueue(qKey, List.of(first)).get();
+        KeyHint keyHint = client.setMode(Mode.MASTER).createQueue(qKey, List.of(first)).get();
         Assertions.assertNotNull(keyHint);
 
         Thread.sleep(500);
         // 2. addElementToTail
-        boolean added = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(qKey, keyHint, List.of(second)).get();
+        boolean added = client.setMode(Mode.MASTER).addElementToTail(qKey, keyHint, List.of(second)).get();
 
         Assertions.assertTrue(added);
 
         // 3. getHead (Peek without removing)
-        byte[] headData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(qKey, keyHint).get();
+        byte[] headData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, headData);
 
         // 4. getAndRemoveFront (Atomic pop from head)
-        byte[] popped = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
+        byte[] popped = client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped);
 
         // 5. Verify the new head is the second message
-        byte[] newHeadData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(qKey, keyHint).get();
+        byte[] newHeadData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(second, newHeadData);
 
         // 6. removeHead (Delete without returning data)
-        boolean removed = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.MASTER).removeHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist
         Thread.sleep(500);
-        byte[] emptyB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(qKey, keyHint).get();
-        byte[] emptyM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(qKey, keyHint).get();
+        byte[] emptyB = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
+        byte[] emptyM = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertEquals(0, emptyM.length);
         Assertions.assertEquals(0, emptyB.length);
 
@@ -103,46 +103,46 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
     void testQueueOrderPersistenceCMGB() throws ExecutionException, InterruptedException {
         byte[] qKey = createLargePayload(KEY_SIZE);
         byte[] zero = createLargePayload(VALUE_SIZE);
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createQueue(qKey, List.of(zero))
                 .get();
         Thread.sleep(500);
         byte[] one = createLargePayload(VALUE_SIZE);
         byte[] two = createLargePayload(VALUE_SIZE);
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(qKey, keyHint, Arrays.asList(one,
-                two)).get();
+        client.setMode(Mode.BACKUP).addElementToTail(qKey, keyHint, Arrays.asList(one,
+                                                                                  two)).get();
         Thread.sleep(500);
         // FIFO verification: 1 -> 2 -> 3
         byte[] three = createLargePayload(VALUE_SIZE);
         client.addElementToTail(qKey, keyHint, List.of(three)).get();
-        Assertions.assertArrayEquals(zero, client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get());
+        Assertions.assertArrayEquals(zero, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(one, client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get());
+        Assertions.assertArrayEquals(one, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(two, client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get());
+        Assertions.assertArrayEquals(two, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get());
     }
 
     @Test
     void testQueueOrderPersistenceCBGM() throws ExecutionException, InterruptedException {
         byte[] qKey = createLargePayload(KEY_SIZE);
         byte[] zero = createLargePayload(VALUE_SIZE);
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createQueue(qKey, List.of(zero))
                 .get();
         Thread.sleep(500);
         byte[] one = createLargePayload(VALUE_SIZE);
         byte[] two = createLargePayload(VALUE_SIZE);
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(qKey, keyHint, Arrays.asList(one,
-                two)).get();
+        client.setMode(Mode.MASTER).addElementToTail(qKey, keyHint, Arrays.asList(one,
+                                                                                  two)).get();
         Thread.sleep(500);
         // FIFO verification: 1 -> 2 -> 3
         byte[] three = createLargePayload(VALUE_SIZE);
         client.addElementToTail(qKey, keyHint, List.of(three)).get();
-        Assertions.assertArrayEquals(zero, client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get());
+        Assertions.assertArrayEquals(zero, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(one, client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get());
+        Assertions.assertArrayEquals(one, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(two, client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get());
+        Assertions.assertArrayEquals(two, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get());
     }
 
     @Test

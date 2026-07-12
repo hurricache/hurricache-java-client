@@ -1,6 +1,7 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import org.jspecify.annotations.NonNull;
 
@@ -70,7 +71,7 @@ public class Test {
 
     static void highConcurrencyCreateLoadTest(FastCacheAsyncSmartClient client, String prefix,  String attempt) throws InterruptedException {
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
-        client.setMode(FastCacheAsyncSmartClient.Mode.LB_SMART);
+        client.setMode(Mode.LB_SMART);
 
         while (!client.getReadyFlag()) {
             Thread.sleep(100);

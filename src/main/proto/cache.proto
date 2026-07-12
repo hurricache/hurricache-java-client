@@ -4,290 +4,337 @@ option java_multiple_files = true;
 option java_package = "com.hurricache.grpc";
 option java_outer_classname = "HurriCache";
 option objc_class_prefix = "HurriCache";
+option cc_enable_arenas = true;
+
 package hurricache;
 
 message BinaryPayload {
-    bytes payload = 1;
-    uint32 size = 2;
+  bytes payload = 1;
+  uint32 size = 2;
 }
 
 message KeyHint{
-    optional uint32 week_hash = 1;
-    optional uint32 strong_hash = 2;
+  optional uint32 week_hash = 1;
+  optional uint32 strong_hash = 2;
 }
 
 message CompressedInfo{
-    bool enabled = 1;
-    optional uint32 rawSize = 2;
+  bool enabled = 1;
+  optional uint32 rawSize = 2;
 }
 
 message Key{
-    BinaryPayload payload = 1;
-    optional CompressedInfo compressionInfo = 2;
-    optional KeyHint keyHint = 3;
-    optional uint32 clientId=4;
+  BinaryPayload payload = 1;
+  optional CompressedInfo compressionInfo = 2;
+  optional KeyHint keyHint = 3;
+  optional uint32 clientId = 4;
 }
 
 message LockInfo{
-    LockType type = 1;
-    optional uint32 lockedBy=2;
-    optional uint64 lockedTill=3;
+  LockType type = 1;
+  optional uint32 lockedBy = 2;
+  optional uint64 lockedTill = 3;
 }
 
 message Value{
-    BinaryPayload value = 1;
-    optional CompressedInfo compressionInfo = 2;
-    optional uint64 ttl=3;
-    optional LockInfo lock_info = 4;
+  BinaryPayload value = 1;
+  optional CompressedInfo compressionInfo = 2;
+  optional uint64 ttl = 3;
+  optional LockInfo lock_info = 4;
 }
 
 message GetRequest{
-    Key key = 1;
+  Key key = 1;
 }
 
 message TtlRequest{
-    Key key = 1;
-    optional uint64 ttl=2;
+  Key key = 1;
+  optional uint64 ttl = 2;
 }
 
 message TtlResponse{
-    optional uint64 ttl=1;
+  optional uint64 ttl = 1;
 }
 
 
 message CreateRequest{
-    Key key = 1;
-    Value value = 2;
+  Key key = 1;
+  Value value = 2;
 }
 
 message UpdateRequest{
-    Key key = 1;
-    Value value = 2;    
+  Key key = 1;
+  Value value = 2;
 }
 
 
 message DeleteRequest{
-    Key key = 1;
+  Key key = 1;
 }
 
 message ExistRequest{
-    Key key = 1;
+  Key key = 1;
 }
 
 message BoolResponse{
-    bool value = 1;
-    optional string message = 2;
+  bool value = 1;
+  optional string message = 2;
 }
 
 message IntResponse{
-    uint32 size = 1;
+  uint32 size = 1;
 }
 
 
 message ValueResponse {
-   Value value = 1;
-   optional KeyHint keyHint = 2;
+  Value value = 1;
+  optional KeyHint keyHint = 2;
 }
 
 message BatchValueResponse {
-   repeated Value value = 1; 
+  repeated Value value = 1;
 }
 
 
 message UpdateValueResponse {
-   bool result = 1;
-   optional Value value = 2;
+  bool result = 1;
+  optional Value value = 2;
 }
 
 
 message KeyHintResponse {
-   KeyHint keyHint = 1;
+  KeyHint keyHint = 1;
 }
 
 message KeyRangeRequest {
-    Key key = 1;
-    uint32 start = 3;
-    uint32 end = 4;
+  Key key = 1;
+  uint32 start = 3;
+  uint32 end = 4;
 }
 
 message KeyPositionRequest {
-    Key key = 1;
-    uint32 pos = 3;
-    optional uint32 end = 4;
+  Key key = 1;
+  uint32 pos = 3;
+  optional uint32 end = 4;
 }
 
 message CreateQueueRequest {
-    Key key = 1;
-    optional uint64 ttl=2;
-    repeated  Value value = 3;
+  Key key = 1;
+  optional uint64 ttl = 2;
+  repeated  Value value = 3;
+  optional LockInfo lock_info = 4;
 }
 
 message CreateListRequest {
-    Key key = 1;
-    optional bool asArray = 2;
-    optional uint64 ttl=3;
-    repeated Value value = 4;
+  Key key = 1;
+  optional bool asArray = 2;
+  optional uint64 ttl = 3;
+  repeated Value value = 4;
+  optional LockInfo lock_info = 5;
 }
 
 message AddToRequest {
-    Key key = 1;
-    optional bool asArray = 2;
-    optional uint64 ttl=3;
-    optional uint32 pos = 4;
-    repeated Value value = 5;
+  Key key = 1;
+  optional bool asArray = 2;
+  optional uint64 ttl = 3;
+  optional uint32 pos = 4;
+  repeated Value value = 5;
 }
 
 
-enum LockType{    
-    NO_LOCK=0;
-    WRITE_LOCK=1;
-    READ_LOCK=2;
-    GLOBAL=3;
+enum LockType{
+  NO_LOCK = 0;
+  WRITE_LOCK = 1;
+  READ_LOCK = 2;
+  GLOBAL = 3;
 
 }
 
 message LockRequest {
-    Key key = 1;
-    LockType lockType = 2;
-    optional uint32 clientId = 3;
-    optional uint32 lockDuration = 4;
+  Key key = 1;
+  LockType lockType = 2;
+  optional uint32 clientId = 3;
+  optional uint32 lockDuration = 4;
 }
 
 message UnLockRequest {
-    Key key = 1;
-    optional uint32 clientId = 2;
+  Key key = 1;
+  optional uint32 clientId = 2;
 }
 
 
 enum LockStatus {
-    OK = 0;
-    CANT_LOCK=1;
-    CANT_UNLOCK=2;
-    GENERIC_ERROR=3;
+  OK = 0;
+  CANT_LOCK = 1;
+  CANT_UNLOCK = 2;
+  GENERIC_ERROR = 3;
 }
 
 message LockResponse {
-    LockStatus  result = 1;
-    optional string message = 2;
+  LockStatus  result = 1;
+  optional string message = 2;
 }
 
 message UnlockResponse {
-    LockStatus  result = 1;
-    optional string message = 2;
+  LockStatus  result = 1;
+  optional string message = 2;
 }
+message AtomicValue{
+  int64 val = 1;
+  optional KeyHint keyHint = 2;
+};
+message AtomicCreate{
+  Key key = 1;
+  optional AtomicValue val = 2;
+  optional uint64 ttl = 3;
+  optional LockInfo lock_info = 4;
+};
+
+message AtomicCas{
+  Key key = 1;
+  AtomicValue expected = 2;
+  AtomicValue toSet = 3;
+  optional uint64 ttl = 4;
+  optional LockInfo lock_info = 5;
+};
+
+message AtomicCasRes{
+  bool result = 1;
+  AtomicValue expected = 2;
+  optional KeyHint keyHint = 3;
+};
 
 
 enum ReplicationCommandType {
-    LOCK_REQUEST =0;
-    UNLOCK_REQUEST =1;
-    REMOVE =2;
-    CREATE_VALUE =3;
-    UPDATE_VALUE =4;
-    CREATE_QUEUE =5;
-    CREATE_LIST =6;
-    REMOVE_FRONT =7;
-    REMOVE_TAIL =8;
-    REMOVE_AT_POSITION =9;
-    ADD_TO_TAIL =10;
-    ADD_TO_FRONT =11;
+  LOCK_REQUEST = 0;
+  UNLOCK_REQUEST = 1;
+  REMOVE = 2;
+  CREATE_VALUE = 3;
+  UPDATE_VALUE = 4;
+  CREATE_QUEUE = 5;
+  CREATE_LIST = 6;
+  REMOVE_FRONT = 7;
+  REMOVE_TAIL = 8;
+  REMOVE_AT_POSITION = 9;
+  ADD_TO_TAIL = 10;
+  ADD_TO_FRONT = 11;
+  SET_TTL = 12;
+  ADD_TO_POSITION = 13;
+  REMOVE_FROM_POSITION = 14;
+  ATOMIC_CREATE = 15;
+  ATOMIC_STORE = 16;
+  ATOMIC_EXCHANGE = 17;
+  ATOMIC_ADD = 18;
+  ATOMIC_SUB = 19;
+  ATOMIC_OR = 20;
+  ATOMIC_AND = 21;
+  ATOMIC_XOR = 22;
+  ATOMIC_COMPARE_AND_SET = 23;
+  UNKNOWN = 24;
 };
 
 
 message BatchCommand {
-    optional LockRequest lock_request = 1;
-    optional UnLockRequest un_lock_request = 2;
-    optional TtlRequest ttl_request = 3;
-    optional UpdateRequest update_request = 4;
-    optional CreateRequest create_request = 5;
-    optional GetRequest get_request = 6;
-    optional CreateListRequest create_list_request = 7;
-    optional CreateQueueRequest create_queue_request = 8;
-    optional KeyPositionRequest key_position_request = 9;
-    optional KeyRangeRequest key_range_request = 10;
-    optional AddToRequest add_to_list_request = 11;
+  optional LockRequest lock_request = 1;
+  optional UnLockRequest un_lock_request = 2;
+  optional TtlRequest ttl_request = 3;
+  optional UpdateRequest update_request = 4;
+  optional CreateRequest create_request = 5;
+  optional GetRequest get_request = 6;
+  optional CreateListRequest create_list_request = 7;
+  optional CreateQueueRequest create_queue_request = 8;
+  optional KeyPositionRequest key_position_request = 9;
+  optional KeyRangeRequest key_range_request = 10;
+  optional AddToRequest add_to_list_request = 11;
+  optional AtomicCreate atomic_request = 12;
+  optional AtomicCas atomic_cas = 13;
 }
 
 message BatchSingleMessage{
-    ReplicationCommandType replication_command_type = 1;
-    BatchCommand batch_command = 2;
+  ReplicationCommandType replication_command_type = 1;
+  BatchCommand batch_command = 2;
 }
 
 message BatchMessage{
-    repeated BatchSingleMessage batch_single_messages = 1;
+  repeated BatchSingleMessage batch_single_messages = 1;
 }
-//
-//service RelayService{
-//    rpc lockObject(LockRequest)returns (LockResponse){}
-//    rpc unlockObject(UnLockRequest)returns (UnlockResponse){}
-//    rpc setTtl(TtlRequest)returns (BoolResponse){}
-//    rpc updateValue(UpdateRequest) returns (UpdateValueResponse){}
-//    rpc createKeyValue(CreateRequest) returns (KeyHintResponse){}
-//    rpc remove(GetRequest) returns (BoolResponse){}
-//    rpc getAndDeleteValue(GetRequest) returns (ValueResponse){}
-//    rpc createList(CreateListRequest) returns (KeyHintResponse){}
-//    rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){}
-//    rpc removeTail(GetRequest) returns (BoolResponse){}
-//    rpc removeHead(GetRequest) returns (BoolResponse){}
-//    rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
-//    rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse){}
-//    rpc addElementToTail(AddToRequest) returns (BoolResponse){}
-//    rpc addElementToHead(AddToRequest) returns (BoolResponse){}
-//    rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
-//    rpc getAndRemoveFront(GetRequest) returns (ValueResponse){}
-//    rpc getAndRemoveTail(GetRequest) returns (ValueResponse){}
-//    rpc getAndRemoveElementAtPosition(KeyPositionRequest) returns (ValueResponse){}
-//}
+
 service DataReplicationService{
-    rpc batchMessage(BatchMessage) returns (BoolResponse){}
-    rpc lockObject(LockRequest)returns (BoolResponse){}
-    rpc unlockObject(UnLockRequest)returns (BoolResponse){}
-    rpc setTtl(TtlRequest)returns (BoolResponse){}
-    rpc updateValue(UpdateRequest) returns (BoolResponse){}
-    rpc createKeyValue(CreateRequest) returns (BoolResponse){}
-    rpc remove(GetRequest) returns (BoolResponse){}
-    rpc createList(CreateListRequest) returns (BoolResponse){}
-    rpc createQueue(CreateQueueRequest) returns (BoolResponse){}
-    rpc removeTail(GetRequest) returns (BoolResponse){}
-    rpc removeHead(GetRequest) returns (BoolResponse){}
-    rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
-    rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse){}
-    rpc addElementToTail(AddToRequest) returns (BoolResponse){}
-    rpc addElementToHead(AddToRequest) returns (BoolResponse){}
-    rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
+  rpc batchMessage(BatchMessage) returns (BoolResponse){}
+  rpc lockObject(LockRequest)returns (BoolResponse){}
+  rpc unlockObject(UnLockRequest)returns (BoolResponse){}
+  rpc setTtl(TtlRequest)returns (BoolResponse){}
+  rpc updateValue(UpdateRequest) returns (BoolResponse){}
+  rpc createKeyValue(CreateRequest) returns (BoolResponse){}
+  rpc remove(GetRequest) returns (BoolResponse){}
+  rpc createList(CreateListRequest) returns (BoolResponse){}
+  rpc createQueue(CreateQueueRequest) returns (BoolResponse){}
+  rpc removeTail(GetRequest) returns (BoolResponse){}
+  rpc removeHead(GetRequest) returns (BoolResponse){}
+  rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
+  rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse){}
+  rpc addElementToTail(AddToRequest) returns (BoolResponse){}
+  rpc addElementToHead(AddToRequest) returns (BoolResponse){}
+  rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
+
+  rpc atomicCreate(AtomicCreate)  returns (BoolResponse){}
+  rpc atomicStore (AtomicCreate)  returns (BoolResponse){}
+  rpc atomicExchange (AtomicCreate)  returns (BoolResponse){}
+  rpc atomicAdd (AtomicCreate)  returns (BoolResponse){}
+  rpc atomicSub (AtomicCreate)  returns (BoolResponse){}
+  rpc atomicOr (AtomicCreate)  returns (BoolResponse){}
+  rpc atomicAnd (AtomicCreate)  returns (BoolResponse){}
+  rpc atomicXor (AtomicCreate)  returns (BoolResponse){}
+  rpc atomicCompareAndSet (AtomicCas)  returns (BoolResponse){}
 }
+
+
 
 service HurriCacheGrpcService{
-    rpc lockObject(LockRequest)returns (LockResponse){}
-    rpc unlockObject(UnLockRequest)returns (UnlockResponse){}
-    rpc setTtl(TtlRequest)returns (BoolResponse){}    
-    rpc getTtl(GetRequest)returns (TtlResponse){}
-    rpc getValue(GetRequest) returns (ValueResponse){}
-    rpc getAndDeleteValue(GetRequest) returns (ValueResponse){}
-    rpc existKey(GetRequest) returns (BoolResponse){}
-    rpc updateValue(UpdateRequest) returns (UpdateValueResponse){}
-    rpc createKeyValue(CreateRequest) returns (KeyHintResponse){}
-    rpc remove(GetRequest) returns (BoolResponse){}
-    
-    rpc createList(CreateListRequest) returns (KeyHintResponse){} 
-    rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){} 
-    rpc getList(GetRequest) returns (stream BatchValueResponse){}
-    rpc getSize(GetRequest) returns (IntResponse){}
-    rpc getVector(GetRequest) returns (stream BatchValueResponse){}
-    rpc getAndRemoveFront(GetRequest) returns (ValueResponse){}
-    rpc getTail(GetRequest) returns (ValueResponse){}
-    rpc getHead(GetRequest) returns (ValueResponse){}
-    rpc getAndRemoveTail(GetRequest) returns (ValueResponse){}
-    rpc getElementAtPosition(KeyPositionRequest) returns (ValueResponse){}
-    rpc getAndRemoveElementAtPosition(KeyPositionRequest) returns (ValueResponse){}
-    rpc getElementInRange(KeyPositionRequest) returns (stream BatchValueResponse){}
-    rpc getElementInRangeVector(KeyPositionRequest) returns (stream BatchValueResponse){}
-    rpc removeTail(GetRequest) returns (BoolResponse){}
-    rpc removeHead(GetRequest) returns (BoolResponse){}
-    rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
-    rpc addElementToTail(AddToRequest) returns (BoolResponse){}
-    rpc addElementToHead(AddToRequest) returns (BoolResponse){}
-    rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
-    
-    
+  rpc lockObject(LockRequest)returns (LockResponse){}
+  rpc unlockObject(UnLockRequest)returns (UnlockResponse){}
+  rpc setTtl(TtlRequest)returns (BoolResponse){}
+  rpc getTtl(GetRequest)returns (TtlResponse){}
+  rpc getValue(GetRequest) returns (ValueResponse){}
+  rpc getAndDeleteValue(GetRequest) returns (ValueResponse){}
+  rpc existKey(GetRequest) returns (BoolResponse){}
+  rpc updateValue(UpdateRequest) returns (UpdateValueResponse){}
+  rpc createKeyValue(CreateRequest) returns (KeyHintResponse){}
+  rpc remove(GetRequest) returns (BoolResponse){}
 
+  rpc createList(CreateListRequest) returns (KeyHintResponse){}
+  rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){}
+  rpc getList(GetRequest) returns (stream BatchValueResponse){}
+  rpc getSize(GetRequest) returns (IntResponse){}
+  rpc getVector(GetRequest) returns (stream BatchValueResponse){}
+  rpc getAndRemoveFront(GetRequest) returns (ValueResponse){}
+  rpc getTail(GetRequest) returns (ValueResponse){}
+  rpc getHead(GetRequest) returns (ValueResponse){}
+  rpc getAndRemoveTail(GetRequest) returns (ValueResponse){}
+  rpc getAndRemoveElementAtPosition(KeyPositionRequest) returns (ValueResponse){}
+
+
+  rpc getElementAtPosition(KeyPositionRequest) returns (ValueResponse){}
+  rpc getElementInRange(KeyPositionRequest) returns (stream BatchValueResponse){}
+  rpc getElementInRangeVector(KeyPositionRequest) returns (stream BatchValueResponse){}
+
+  rpc removeTail(GetRequest) returns (BoolResponse){}
+  rpc removeHead(GetRequest) returns (BoolResponse){}
+  rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
+
+  rpc addElementToTail(AddToRequest) returns (BoolResponse){}
+  rpc addElementToHead(AddToRequest) returns (BoolResponse){}
+  rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
+
+  rpc atomicLoad (GetRequest)  returns (AtomicValue){}
+  rpc atomicLoadAndDelete (GetRequest)  returns (AtomicValue){}
+  rpc atomicCreate(AtomicCreate)  returns (KeyHintResponse){}
+  rpc atomicStore (AtomicCreate)  returns (KeyHintResponse){}
+  rpc atomicExchange (AtomicCreate)  returns (AtomicValue){}
+  rpc atomicAdd (AtomicCreate)  returns (AtomicValue){}
+  rpc atomicSub (AtomicCreate)  returns (AtomicValue){}
+  rpc atomicOr (AtomicCreate)  returns (AtomicValue){}
+  rpc atomicAnd (AtomicCreate)  returns (AtomicValue){}
+  rpc atomicXor (AtomicCreate)  returns (AtomicValue){}
+  rpc atomicCompareAndSet (AtomicCas)  returns (AtomicCasRes){}
 }

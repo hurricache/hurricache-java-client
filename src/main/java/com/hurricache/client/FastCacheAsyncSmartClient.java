@@ -1,6 +1,8 @@
 package com.hurricache.client;
 
 import com.hurricache.client.intf.HurriCacheClientInterface;
+import com.hurricache.client.intf.Mode;
+import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -38,6 +40,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     // ThreadLocalRandom eliminates global CPU cache contention entirely during LB_SMART routing
     private final Mode mode = Mode.MASTER_THAN_BACKUP;
     private Mode configuredMode = Mode.MASTER_THAN_BACKUP;
+    private final ThreadLocal<Mode> currentModeOverride = new ThreadLocal<>();
 
     record RoutingInfo(int max_shards,
                        ConcurrentHashMap<Pair<NodeRole, Integer>, HurriCacheClientInterface> routingTable,
@@ -178,65 +181,81 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return defaultTimeout;
     }
 
-    // --- PIPELINED CORE EXECUTION GATEWAY ---
+    private <T> CompletableFuture<T> executeWrite(KeyHint hint,
+                                                  Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
+        return execute(hint,Mode.MASTER_THAN_BACKUP, action);
+    }
+
+    // 1. Основной шлюз теперь принимает override-режим для вызова (если он есть)
     private <T> CompletableFuture<T> execute(KeyHint hint,
+                                             Mode methodDefaultMode,
                                              Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
-        if (!readyFlag.get()) {
+
+        // Сначала проверяем явный вызов .setCurrentMode(Mode) от пользователя
+        Mode baseMode = currentModeOverride.get();
+
+        // Гарантированно чистим ThreadLocal СРАЗУ, чтобы ни при каких эксепшенах
+        // ниже по коду он не остался в потоке
+        currentModeOverride.remove();
+
+        if (baseMode == null) {
+            // Если пользователь не задал режим вручную, берем специфичный для метода (MASTER_THAN_BACKUP для атомиков)
+            // или откатываемся к глобальному configuredMode
+            baseMode = (methodDefaultMode != null) ? methodDefaultMode : configuredMode;
+        }
+
+        if (!readyFlag.get()) { // cite: 5
             try {
-                if (!readyLatch.await(readyTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                    throw new RuntimeException("FastCacheClient boot timeout reached.");
+                if (!readyLatch.await(readyTimeout.toMillis(), TimeUnit.MILLISECONDS)) { // cite: 5
+                    return CompletableFuture.failedFuture(new RuntimeException("FastCacheClient boot timeout reached."));
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(e);
+            } catch (InterruptedException e) { // cite: 5
+                Thread.currentThread().interrupt(); // cite: 5
+                return CompletableFuture.failedFuture(new RuntimeException(e));
             }
         }
 
-        RoutingInfo routingInfo = routing_info.get();
-        int shard = (hint == null)
-                ? (randomShard.incrementAndGet() & Integer.MAX_VALUE) % routingInfo.max_shards
-                : (int) (Integer.toUnsignedLong(hint.getWeekHash()) % routingInfo.max_shards);
+        RoutingInfo routingInfo = routing_info.get(); // cite: 5
+        int shard = (hint == null) // cite: 5
+                    ? (randomShard.incrementAndGet() & Integer.MAX_VALUE) % routingInfo.max_shards // cite: 5
+                    : (int) (Integer.toUnsignedLong(hint.getWeekHash()) % routingInfo.max_shards); // cite: 5
 
-        HurriCacheClientInterface master = getRoute(routingInfo, shard, MASTER);
-        HurriCacheClientInterface backup = getRoute(routingInfo, shard, BACKUP);
+        HurriCacheClientInterface master = getRoute(routingInfo, shard, MASTER); // cite: 5
+        HurriCacheClientInterface backup = getRoute(routingInfo, shard, BACKUP); // cite: 5
 
-        if (master == null && backup == null) {
-            return CompletableFuture.failedFuture(new RuntimeException(
-                    "No healthy endpoints available for shard allocation"));
+        if (master == null && backup == null) { // cite: 5
+            return CompletableFuture.failedFuture(new RuntimeException( // cite: 5
+                    "No healthy endpoints available for shard allocation")); // cite: 5
         }
 
-        Mode effectiveMode = configuredMode;
-        if (master == null) {
-            effectiveMode = Mode.BACKUP;
-        }
-        if (backup == null) {
-            effectiveMode = Mode.MASTER;
-        }
+        Mode effectiveMode = baseMode;
+        if (master == null) effectiveMode = Mode.BACKUP; // cite: 5
+        if (backup == null) effectiveMode = Mode.MASTER; // cite: 5
 
-        return switch (effectiveMode) {
-            case MASTER -> action.apply(master)
-                    .handle(fallbackGuard(shard, routingInfo, action, master, null))
-                    .thenCompose(Function.identity());
-            case BACKUP -> action.apply(backup)
-                    .handle(fallbackGuard(shard, routingInfo, action, backup, null))
-                    .thenCompose(Function.identity());
-            case MASTER_THAN_BACKUP -> action.apply(master)
-                    .handle(fallbackGuard(shard, routingInfo, action, master, backup))
-                    .thenCompose(Function.identity());
-            case LB_SMART -> {
-                // Completely lock-free load balancing execution sequence
-                boolean tryMasterFirst = ThreadLocalRandom.current().nextBoolean();
-                HurriCacheClientInterface primary = tryMasterFirst
-                        ? master
-                        : backup;
-                HurriCacheClientInterface secondary = tryMasterFirst
-                        ? backup
-                        : master;
-                yield action.apply(primary)
-                        .handle(fallbackGuard(shard, routingInfo, action, primary, secondary))
-                        .thenCompose(Function.identity());
+        return switch (effectiveMode) { // cite: 5
+            case MASTER -> action.apply(master) // cite: 5
+                    .handle(fallbackGuard(shard, routingInfo, action, master, null)) // cite: 5
+                    .thenCompose(Function.identity()); // cite: 5
+            case BACKUP -> action.apply(backup) // cite: 5
+                    .handle(fallbackGuard(shard, routingInfo, action, backup, null)) // cite: 5
+                    .thenCompose(Function.identity()); // cite: 5
+            case MASTER_THAN_BACKUP -> action.apply(master) // cite: 5
+                    .handle(fallbackGuard(shard, routingInfo, action, master, backup)) // cite: 5
+                    .thenCompose(Function.identity()); // cite: 5
+            case LB_SMART -> { // cite: 5
+                boolean tryMasterFirst = ThreadLocalRandom.current().nextBoolean(); // cite: 5
+                HurriCacheClientInterface primary = tryMasterFirst ? master : backup; // cite: 5
+                HurriCacheClientInterface secondary = tryMasterFirst ? backup : master; // cite: 5
+                yield action.apply(primary) // cite: 5
+                        .handle(fallbackGuard(shard, routingInfo, action, primary, secondary)) // cite: 5
+                        .thenCompose(Function.identity()); // cite: 5
             }
         };
+    }
+
+    // 2. Старый метод execute просто вызывает новый с null (что означает "используй глобальный configuredMode")
+    private <T> CompletableFuture<T> execute(KeyHint hint, Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
+        return execute(hint, null, action);
     }
 
     // Centrally managed, highly performant unified routing exception fallback pipeline
@@ -358,12 +377,12 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<byte[]> getAndRemoveTail(byte[] key, KeyHint hint, int clientId, Duration timeout) {
-        return execute(hint, c -> c.getAndRemoveTail(key, hint, clientId, timeout));
+        return executeWrite(hint, c -> c.getAndRemoveTail(key, hint, clientId, timeout));
     }
 
     @Override
     public CompletableFuture<byte[]> getAndRemoveFront(byte[] key, KeyHint hint, int clientId, Duration timeout) {
-        return execute(hint, c -> c.getAndRemoveFront(key, hint, clientId, timeout));
+        return executeWrite(hint, c -> c.getAndRemoveFront(key, hint, clientId, timeout));
     }
 
     @Override
@@ -377,7 +396,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                        List<byte[]> data,
                                                        int clientId,
                                                        Duration timeout) {
-        return execute(hint, c -> c.addElementToTail(key, hint, data, clientId, timeout));
+        return executeWrite(hint, c -> c.addElementToTail(key, hint, data, clientId, timeout));
     }
 
     @Override
@@ -431,7 +450,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                                    int pos,
                                                                    int clientId,
                                                                    Duration timeout) {
-        return execute(hint, c -> c.getAndRemoveElementAtPosition(key, hint, pos, clientId, timeout));
+        return executeWrite(hint, c -> c.getAndRemoveElementAtPosition(key, hint, pos, clientId, timeout));
     }
 
     @Override
@@ -440,7 +459,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                        List<byte[]> data,
                                                        int clientId,
                                                        Duration timeout) {
-        return execute(hint, c -> c.addElementToHead(key, hint, data, clientId, timeout));
+        return executeWrite(hint, c -> c.addElementToHead(key, hint, data, clientId, timeout));
     }
 
     @Override
@@ -450,17 +469,17 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                            int pos,
                                                            int clientId,
                                                            Duration timeout) {
-        return execute(hint, c -> c.addElementToPosition(key, hint, data, pos, clientId, timeout));
+        return executeWrite(hint, c -> c.addElementToPosition(key, hint, data, pos, clientId, timeout));
     }
 
     @Override
     public CompletableFuture<Boolean> removeTail(byte[] key, KeyHint hint, int clientId, Duration timeout) {
-        return execute(hint, c -> c.removeTail(key, hint, clientId, timeout));
+        return executeWrite(hint, c -> c.removeTail(key, hint, clientId, timeout));
     }
 
     @Override
     public CompletableFuture<Boolean> removeHead(byte[] key, KeyHint hint, int clientId, Duration timeout) {
-        return execute(hint, c -> c.removeHead(key, hint, clientId, timeout));
+        return executeWrite(hint, c -> c.removeHead(key, hint, clientId, timeout));
     }
 
     @Override
@@ -470,7 +489,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                               int endPos,
                                                               int clientId,
                                                               Duration timeout) {
-        return execute(hint, c -> c.removeElementAtPosition(key, hint, pos, endPos, clientId, timeout));
+        return executeWrite(hint, c -> c.removeElementAtPosition(key, hint, pos, endPos, clientId, timeout));
     }
 
     @Override
@@ -485,9 +504,17 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     @Override
     public void shutdown() {
-        channel.shutdown();
         scheduledExecutorService.shutdown();
-        routing_info.get().routingTable.values().forEach(HurriCacheClientInterface::shutdown);
+        try {
+            if (!scheduledExecutorService.awaitTermination(3, TimeUnit.SECONDS)) {
+                scheduledExecutorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduledExecutorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        channel.shutdown(); // cite: 5
+        routing_info.get().routingTable.values().forEach(HurriCacheClientInterface::shutdown); // cite: 5
     }
 
     private HurriCacheClientInterface getRoute(RoutingInfo info, int shard, NodeRole role) {
@@ -530,16 +557,59 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         }
         return null;
     }
+    // =========================================================================
+    // ATOMIC OPERATIONS DISPATCH IMPLEMENTATION
+    // =========================================================================
 
+    @Override
+    public CompletableFuture<KeyHint> atomicCreate(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicCreate(key, hint, value, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<KeyHint> atomicStore(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicStore(key, hint, value, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicExchange(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicExchange(key, hint, value, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicAdd(byte[] key, KeyHint hint, long delta, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicAdd(key, hint, delta, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicSub(byte[] key, KeyHint hint, long delta, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicSub(key, hint, delta, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicAnd(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicAnd(key, hint, mask, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicOr(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicOr(key, hint, mask, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicXor(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicXor(key, hint, mask, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHint hint, long expectedValue, long newValue, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicCompareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout));
+    }
     public FastCacheAsyncSmartClient setMode(Mode mode) {
-        this.configuredMode = mode;
+        this.currentModeOverride.set(mode);
         return this;
     }
 
-    public enum Mode {
-        MASTER,
-        MASTER_THAN_BACKUP,
-        BACKUP,
-        LB_SMART
-    }
+
+
 }

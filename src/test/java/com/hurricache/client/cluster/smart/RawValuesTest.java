@@ -1,7 +1,7 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -18,10 +18,10 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
-        KeyHint hint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] bytesM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey, hint).get();
+        KeyHint hint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, hint).get();
         Thread.sleep(100);
-        byte[] bytesB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey, hint).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, hint).get();
         Assertions.assertNotNull(hint);
         Assertions.assertEquals(testValue, new String(bytesM));
         Assertions.assertEquals(testValue, new String(bytesB));
@@ -32,10 +32,10 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateValueBackup() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
-        KeyHint hint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] bytesB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey, hint).get();
+        KeyHint hint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, hint).get();
         Thread.sleep(100);
-        byte[] bytesM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey, hint).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, hint).get();
         Assertions.assertNotNull(hint);
         Assertions.assertEquals(testValue, new String(bytesM));
         Assertions.assertEquals(testValue, new String(bytesB));
@@ -47,12 +47,12 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue" + UUID.randomUUID();
         String testValue = "singleCreateExistValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] bytesM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey, KeyHint).get();
+        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
         Thread.sleep(100);
-        byte[] bytesB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey, KeyHint).get();
-        Boolean isExistM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).existKey(testKey, KeyHint).get();
-        Boolean isExistB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).existKey(testKey, KeyHint).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytesM));
         Assertions.assertEquals(testValue, new String(bytesB));
@@ -64,12 +64,12 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistValueBackup() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue" + UUID.randomUUID();
         String testValue = "singleCreateExistValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHint KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(100);
-        byte[] bytesM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey, KeyHint).get();
-        byte[] bytesB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey, KeyHint).get();
-        Boolean isExistM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).existKey(testKey, KeyHint).get();
-        Boolean isExistB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).existKey(testKey, KeyHint).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytesM));
         Assertions.assertEquals(testValue, new String(bytesB));
@@ -81,12 +81,12 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistHintValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistHintValue" + UUID.randomUUID();
         String testValue = "singleCreateExistHintValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] bytesM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey).get();
-        Boolean isExistM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).existKey(testKey, KeyHint).get();
+        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey,KeyHint).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
         Thread.sleep(100);
-        byte[] bytesB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey).get();
-        Boolean isExistB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).existKey(testKey, KeyHint).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey).get();
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytesM));
         Assertions.assertTrue(isExistM);
@@ -98,12 +98,12 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistHintValueBackup() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistHintValue" + UUID.randomUUID();
         String testValue = "singleCreateExistHintValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHint KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(100);
-        byte[] bytesM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey).get();
-        Boolean isExistM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).existKey(testKey, KeyHint).get();
-        byte[] bytesB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey).get();
-        Boolean isExistB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).existKey(testKey, KeyHint).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey).get();
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytesM));
         Assertions.assertTrue(isExistM);
@@ -115,19 +115,19 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateGetAndDeleteValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         String testValue = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(100);
-        byte[] bytesB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndDeleteValue(testKey, KeyHint).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getAndDeleteValue(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytesB));
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndDeleteValue(testKey, KeyHint).get();
+            client.setMode(Mode.MASTER).getAndDeleteValue(testKey, KeyHint).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndDeleteValue(testKey, KeyHint).get();
+            client.setMode(Mode.BACKUP).getAndDeleteValue(testKey, KeyHint).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -139,7 +139,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         String testValue = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] bytes = client.getAndDeleteValue(testKey).get();
+        byte[] bytes = client.getAndDeleteValue(testKey,KeyHint).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
         try {
@@ -154,7 +154,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleGenNonExistValueMaster() throws InterruptedException {
         String testKey = "singleGenNonExistValue" + UUID.randomUUID();
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey).get();
+            client.setMode(Mode.MASTER).getValue(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -165,7 +165,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleGenNonExistValueBackup() throws InterruptedException {
         String testKey = "singleGenNonExistValue" + UUID.randomUUID();
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey).get();
+            client.setMode(Mode.BACKUP).getValue(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -176,7 +176,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleNonExistValueMaster() throws InterruptedException {
         String testKey = "singleNonExistValue" + UUID.randomUUID();
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).existKey(testKey).get();
+            client.setMode(Mode.MASTER).existKey(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -187,7 +187,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleNonExistValueBackup() throws InterruptedException {
         String testKey = "singleNonExistValue" + UUID.randomUUID();
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).existKey(testKey).get();
+            client.setMode(Mode.BACKUP).existKey(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -199,16 +199,16 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
         String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] bytes = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey, keyHint).get();
+        KeyHint keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Assertions.assertNotNull(keyHint);
         Assertions.assertEquals(testValue, new String(bytes));
-        byte[] oldVal = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey, keyHint, testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] newValM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey, keyHint).get();
+        byte[] oldVal = client.setMode(Mode.MASTER).updateKeyValue(testKey, keyHint, testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] newValM = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newValM));
         Thread.sleep(100);
-        byte[] newValB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey, keyHint).get();
+        byte[] newValB = client.setMode(Mode.BACKUP).getValue(testKey, keyHint).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newValB));
     }

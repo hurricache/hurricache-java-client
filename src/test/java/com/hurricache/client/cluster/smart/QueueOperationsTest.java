@@ -1,7 +1,7 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -23,7 +23,7 @@ public class QueueOperationsTest extends TestBaseCluster {
         String second = "message2";
 
         // 1. createQueue with initial value on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createQueue(qKey, List.of(first.getBytes(StandardCharsets.UTF_8)))
                 .get();
         KeyHint createRes = keyHint;
@@ -32,28 +32,28 @@ public class QueueOperationsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // 2. addElementToTail on backup
-        boolean added = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(qKey, keyHint, List.of(second.getBytes(StandardCharsets.UTF_8))).get();
+        boolean added = client.setMode(Mode.BACKUP).addElementToTail(qKey, keyHint, List.of(second.getBytes(StandardCharsets.UTF_8))).get();
 
         Assertions.assertTrue(added);
 
         // 3. getHead (Peek without removing) on backup
-        byte[] headData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(qKey, keyHint).get();
+        byte[] headData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertEquals(first, new String(headData));
 
         // 4. getAndRemoveFront (Atomic pop from head) on backup
-        byte[] popped = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
+        byte[] popped = client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
         Assertions.assertEquals(first, new String(popped));
 
         // 5. Verify the new head is the second message on backup
-        byte[] newHeadData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(qKey, keyHint).get();
+        byte[] newHeadData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertEquals(second, new String(newHeadData));
 
         // 6. removeHead (Delete without returning data) on backup
-        boolean removed = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.BACKUP).removeHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist on backup
-        byte[] empty = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(qKey, keyHint).get();
+        byte[] empty = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertEquals(0, empty.length);
     }
 
@@ -64,34 +64,34 @@ public class QueueOperationsTest extends TestBaseCluster {
         String second = "message2";
 
         // 1. createQueue with initial value on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).createQueue(qKey, List.of(first.getBytes(StandardCharsets.UTF_8))).get();
+        KeyHint keyHint = client.setMode(Mode.BACKUP).createQueue(qKey, List.of(first.getBytes(StandardCharsets.UTF_8))).get();
         Assertions.assertNotNull(keyHint);
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // 2. addElementToTail on master
-        boolean added = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(qKey, keyHint, List.of(second.getBytes(StandardCharsets.UTF_8))).get();
+        boolean added = client.setMode(Mode.MASTER).addElementToTail(qKey, keyHint, List.of(second.getBytes(StandardCharsets.UTF_8))).get();
 
         Assertions.assertTrue(added);
 
         // 3. getHead (Peek without removing) on master
-        byte[] headData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(qKey, keyHint).get();
+        byte[] headData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertEquals(first, new String(headData));
 
         // 4. getAndRemoveFront (Atomic pop from head) on master
-        byte[] popped = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
+        byte[] popped = client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
         Assertions.assertEquals(first, new String(popped));
 
         // 5. Verify the new head is the second message on master
-        byte[] newHeadData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(qKey, keyHint).get();
+        byte[] newHeadData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertEquals(second, new String(newHeadData));
 
         // 6. removeHead (Delete without returning data) on master
-        boolean removed = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.MASTER).removeHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist on master
-        byte[] empty = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(qKey, keyHint).get();
+        byte[] empty = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertEquals(0, empty.length);
     }
 
@@ -99,36 +99,36 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testQueueOrderPersistenceCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String qKey = "orderTestQueue" + UUID.randomUUID();
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createQueue(qKey, List.of("1".getBytes()))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(qKey, keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
+        client.setMode(Mode.BACKUP).addElementToTail(qKey, keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
 
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertEquals("1", new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get()));
-        Assertions.assertEquals("2", new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get()));
-        Assertions.assertEquals("3", new String(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get()));
+        Assertions.assertEquals("1", new String(client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get()));
+        Assertions.assertEquals("2", new String(client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get()));
+        Assertions.assertEquals("3", new String(client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get()));
     }
 
     @Test
     void testQueueOrderPersistenceCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String qKey = "orderTestQueue" + UUID.randomUUID();
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createQueue(qKey, List.of("1".getBytes()))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(qKey, keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
+        client.setMode(Mode.MASTER).addElementToTail(qKey, keyHint, Arrays.asList("2".getBytes(), "3".getBytes())).get();
 
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertEquals("1", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get()));
-        Assertions.assertEquals("2", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get()));
-        Assertions.assertEquals("3", new String(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getAndRemoveFront(qKey, keyHint).get()));
+        Assertions.assertEquals("1", new String(client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get()));
+        Assertions.assertEquals("2", new String(client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get()));
+        Assertions.assertEquals("3", new String(client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get()));
     }
 
     @Test
