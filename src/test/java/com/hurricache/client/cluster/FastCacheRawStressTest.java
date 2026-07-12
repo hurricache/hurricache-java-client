@@ -2,6 +2,7 @@ package com.hurricache.client.cluster;
 
 import com.hurricache.TestBase;
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.inprocess.InProcessServerBuilder;
 import org.jspecify.annotations.NonNull;
@@ -46,7 +47,7 @@ public class FastCacheRawStressTest {
                 return Duration.ofMinutes(15);
             }
         };
-        client.setMode(FastCacheAsyncSmartClient.Mode.LB_SMART);
+        client.setMode(Mode.LB_SMART);
 
         while (!client.getReadyFlag()) {
             Thread.sleep(100);

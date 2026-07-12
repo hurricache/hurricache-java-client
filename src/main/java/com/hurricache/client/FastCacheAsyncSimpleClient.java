@@ -629,10 +629,10 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     private HurriCacheGrpcServiceGrpc.HurriCacheGrpcServiceStub getStub(Duration timeout) {
-        if (timeout != null) {
-            return asyncStub.withDeadlineAfter(timeout);
+        if (timeout == null || timeout.isZero()) {
+            return asyncStub;
         }
-        return asyncStub;
+        return asyncStub.withDeadlineAfter(timeout);
     }
 
     @Override
@@ -746,5 +746,110 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
             return sendAddRequestInChunks(protoKey, nextTail, nextPos, type, timeout);
         });
+    }
+
+
+    // =========================================================================
+    // ATOMIC OPERATIONS IMPLEMENTATION (WITH ATOMIC_VALUE)
+    // =========================================================================
+
+    private AtomicCreate buildAtomicCreateReq(byte[] key, KeyHint hint, long value, Duration ttl, int clientId) {
+        AtomicValue atomicVal = AtomicValue.newBuilder()
+                .setVal(value)
+                .build();
+
+        AtomicCreate.Builder builder = AtomicCreate.newBuilder()
+                .setKey(buildKey(key, getKeyHint(key, hint), clientId))
+                .setVal(atomicVal); // Передаем структуру AtomicValue напрямую
+
+        if (ttl != null && !ttl.isZero()) {
+            builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
+        return builder.build();
+    }
+
+    @Override
+    public CompletableFuture<KeyHint> atomicCreate(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<KeyHint> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, value, ttl, clientId);
+        getStub(timeout).atomicCreate(req, new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<KeyHint> atomicStore(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<KeyHint> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, value, ttl, clientId);
+        getStub(timeout).atomicStore(req, new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicExchange(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, value, ttl, clientId);
+        // Сервер возвращает AtomicValueResponse или сам AtomicValue, вытаскиваем через getVal()
+        getStub(timeout).atomicExchange(req, new CompletableFutureObserver<>(future, AtomicValue::getVal));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicAdd(byte[] key, KeyHint hint, long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, delta, ttl, clientId);
+        getStub(timeout).atomicAdd(req, new CompletableFutureObserver<>(future, AtomicValue::getVal));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicSub(byte[] key, KeyHint hint, long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, delta, ttl, clientId);
+        getStub(timeout).atomicSub(req, new CompletableFutureObserver<>(future, AtomicValue::getVal));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicAnd(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, mask, ttl, clientId);
+        getStub(timeout).atomicAnd(req, new CompletableFutureObserver<>(future, AtomicValue::getVal));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicOr(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, mask, ttl, clientId);
+        getStub(timeout).atomicOr(req, new CompletableFutureObserver<>(future, AtomicValue::getVal));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> atomicXor(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        AtomicCreate req = buildAtomicCreateReq(key, hint, mask, ttl, clientId);
+        getStub(timeout).atomicXor(req, new CompletableFutureObserver<>(future, AtomicValue::getVal));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHint hint, long expectedValue, long newValue, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+
+        AtomicValue expectedAtomic = AtomicValue.newBuilder().setVal(expectedValue).build();
+        AtomicValue newAtomic = AtomicValue.newBuilder().setVal(newValue).build();
+
+        AtomicCas.Builder builder = AtomicCas.newBuilder()
+                .setKey(buildKey(key, getKeyHint(key, hint), clientId))
+                .setExpected(expectedAtomic)
+                .setToSet(newAtomic);
+
+        if (ttl != null && !ttl.isZero()) {
+            builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
+
+        getStub(timeout).atomicCompareAndSet(builder.build(), new CompletableFutureObserver<>(future));
+        return future;
     }
 }

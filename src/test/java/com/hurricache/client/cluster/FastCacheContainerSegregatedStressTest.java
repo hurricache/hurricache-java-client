@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
@@ -43,7 +44,7 @@ public class FastCacheContainerSegregatedStressTest {
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(5);
             }
-        }.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        }.setMode(Mode.MASTER_THAN_BACKUP);
 
         while (!client.getReadyFlag()) {
             Thread.sleep(100);

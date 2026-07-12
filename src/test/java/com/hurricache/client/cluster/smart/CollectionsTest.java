@@ -1,7 +1,7 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -22,20 +22,20 @@ public class CollectionsTest extends TestBaseCluster {
     void testListEdgeOperationsCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String listKey = "testVector" + UUID.randomUUID();
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createVector(listKey, List.of("middle".getBytes()))
                 .get();// Assume server allows create as list or use createList
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(listKey, keyHint, List.of("tail".getBytes())).get();
+        client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint, List.of("tail".getBytes())).get();
 
         // Get Position
-        byte[] posVal = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
+        byte[] posVal = client.setMode(Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
         Assertions.assertEquals("tail", new String(posVal));
 
         // Remove Head
-        Boolean headRemoved = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeHead(listKey, keyHint).get();
+        Boolean headRemoved = client.setMode(Mode.BACKUP).removeHead(listKey, keyHint).get();
         Assertions.assertTrue(headRemoved);
     }
 
@@ -43,20 +43,20 @@ public class CollectionsTest extends TestBaseCluster {
     void testListEdgeOperationsCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String listKey = "testVector" + UUID.randomUUID();
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createVector(listKey, List.of("middle".getBytes()))
                 .get();// Assume server allows create as list or use createList
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(listKey, keyHint, List.of("tail".getBytes())).get();
+        client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint, List.of("tail".getBytes())).get();
 
         // Get Position
-        byte[] posVal = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
+        byte[] posVal = client.setMode(Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
         Assertions.assertEquals("tail", new String(posVal));
 
         // Remove Head
-        Boolean headRemoved = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeHead(listKey, keyHint).get();
+        Boolean headRemoved = client.setMode(Mode.MASTER).removeHead(listKey, keyHint).get();
         Assertions.assertTrue(headRemoved);
     }
 
@@ -64,17 +64,17 @@ public class CollectionsTest extends TestBaseCluster {
     void testRangeStreamingCreateOnMasterValidateOnBackup() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeList" + UUID.randomUUID();
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createList(rangeKey, List.of("0".getBytes()))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 10; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(Mode.BACKUP).streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -85,17 +85,17 @@ public class CollectionsTest extends TestBaseCluster {
     void testRangeStreamingCreateOnBackupValidateOnMaster() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeList" + UUID.randomUUID();
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createList(rangeKey, List.of("0".getBytes()))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 10; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(Mode.MASTER).streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -106,17 +106,17 @@ public class CollectionsTest extends TestBaseCluster {
     void testRangeStreamingVectorCreateOnMasterValidateOnBackup() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeVector" + UUID.randomUUID();
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createVector(rangeKey, List.of("0".getBytes()))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 10; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(Mode.BACKUP).streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -127,17 +127,17 @@ public class CollectionsTest extends TestBaseCluster {
     void testRangeStreamingVectorCreateOnBackupValidateOnMaster() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeVector" + UUID.randomUUID();
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createVector(rangeKey, List.of("0".getBytes()))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 10; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
+        List<byte[]> rangeData = client.setMode(Mode.MASTER).streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
@@ -151,15 +151,15 @@ public class CollectionsTest extends TestBaseCluster {
         String val2 = "item2";
 
         // Create List with first element on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createList(key, List.of(val1.getBytes(StandardCharsets.UTF_8)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add second element on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
+        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
 
-        List<String> results = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamList(key, keyHint).get().stream().map(String::new).toList();
+        List<String> results = client.setMode(Mode.BACKUP).streamList(key, keyHint).get().stream().map(String::new).toList();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertEquals(val1, results.get(0));
@@ -173,15 +173,15 @@ public class CollectionsTest extends TestBaseCluster {
         String val2 = "item2";
 
         // Create List with first element on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createList(key, List.of(val1.getBytes(StandardCharsets.UTF_8)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add second element on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
+        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
 
-        List<String> results = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamList(key, keyHint).get().stream().map(String::new).toList();
+        List<String> results = client.setMode(Mode.MASTER).streamList(key, keyHint).get().stream().map(String::new).toList();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertEquals(val1, results.get(0));
@@ -192,15 +192,15 @@ public class CollectionsTest extends TestBaseCluster {
     void testCreateAndStreamVectorCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String key = "vectorTestKey" + UUID.randomUUID();
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createVector(key, List.of("v1".getBytes(StandardCharsets.UTF_8)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
+        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
 
-        List<String> results = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).streamVector(key, keyHint).get().stream().map(String::new).toList();
+        List<String> results = client.setMode(Mode.BACKUP).streamVector(key, keyHint).get().stream().map(String::new).toList();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertTrue(results.contains("v1"));
@@ -210,15 +210,15 @@ public class CollectionsTest extends TestBaseCluster {
     void testCreateAndStreamVectorCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String key = "vectorTestKey" + UUID.randomUUID();
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createVector(key, List.of("v1".getBytes(StandardCharsets.UTF_8)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
+        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
 
-        List<String> results = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).streamVector(key, keyHint).get().stream().map(String::new).toList();
+        List<String> results = client.setMode(Mode.MASTER).streamVector(key, keyHint).get().stream().map(String::new).toList();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertTrue(results.contains("v1"));
@@ -228,22 +228,22 @@ public class CollectionsTest extends TestBaseCluster {
     void testFrontBackOperationsCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String key = "edgeTestKey" + UUID.randomUUID();
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createList(key, List.of("head".getBytes(StandardCharsets.UTF_8)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
+        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get Head/Front
-        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(key, keyHint).get();
-        byte[] front = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getFront(key, keyHint).get();
+        byte[] head = client.setMode(Mode.BACKUP).getHead(key, keyHint).get();
+        byte[] front = client.setMode(Mode.BACKUP).getFront(key, keyHint).get();
         Assertions.assertEquals("head", new String(head));
         Assertions.assertEquals("head", new String(front));
 
         // Get Tail
-        byte[] tail = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getTail(key, keyHint).get();
+        byte[] tail = client.setMode(Mode.BACKUP).getTail(key, keyHint).get();
         Assertions.assertEquals("tail", new String(tail));
     }
 
@@ -251,22 +251,22 @@ public class CollectionsTest extends TestBaseCluster {
     void testFrontBackOperationsCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String key = "edgeTestKey" + UUID.randomUUID();
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createList(key, List.of("head".getBytes(StandardCharsets.UTF_8)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
+        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get Head/Front
-        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(key, keyHint).get();
-        byte[] front = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getFront(key, keyHint).get();
+        byte[] head = client.setMode(Mode.MASTER).getHead(key, keyHint).get();
+        byte[] front = client.setMode(Mode.MASTER).getFront(key, keyHint).get();
         Assertions.assertEquals("head", new String(head));
         Assertions.assertEquals("head", new String(front));
 
         // Get Tail
-        byte[] tail = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getTail(key, keyHint).get();
+        byte[] tail = client.setMode(Mode.MASTER).getTail(key, keyHint).get();
         Assertions.assertEquals("tail", new String(tail));
     }
 

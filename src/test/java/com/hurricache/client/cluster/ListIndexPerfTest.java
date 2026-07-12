@@ -27,7 +27,7 @@ public class ListIndexPerfTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     // Настройки параллелизма для чтения
-    private static final int READER_THREADS = 4;
+    private static final int READER_THREADS = 16;
     private static final int DURATION_PER_STAGE_SECONDS = 5;
     private static final int MAX_IN_FLIGHT_PER_THREAD = 100;
 

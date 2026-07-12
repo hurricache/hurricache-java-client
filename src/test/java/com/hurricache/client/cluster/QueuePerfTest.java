@@ -20,9 +20,9 @@ public class QueuePerfTest {
     private static final int MESSAGE_SIZE = 100;
 
     // Конфигурация нагрузки
-    private static final int WRITER_THREADS = 2;
-    private static final int READER_THREADS = 2;
-    private static final int DURATION_SECONDS = 150;
+    private static final int WRITER_THREADS = 8;
+    private static final int READER_THREADS = 8;
+    private static final int DURATION_SECONDS = 60;
 
     // Ограничитель очереди in-flight асинхронных запросов на один поток
     // Позволяет утилизировать сеть, не забивая RAM бесконечными тасками
@@ -47,6 +47,7 @@ public class QueuePerfTest {
                 return Duration.ofMinutes(15);
             }
         };
+//        client.setMode(LB_SMART);
 
         queueKeyHint = client.createQueue(QUEUE_NAME).get();
         assertNotNull(queueKeyHint, "Queue must be created");

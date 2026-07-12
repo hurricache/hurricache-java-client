@@ -1,7 +1,7 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -23,23 +23,23 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Start with a list: [Middle]
         // Create on master
         byte[] middle = createLargePayload(VALUE_SIZE);
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).createList(listKey, List.of(middle)).get();
+        KeyHint keyHint = client.setMode(Mode.MASTER).createList(listKey, List.of(middle)).get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // addElementToHead -> [Head, Middle]
         byte[] head = createLargePayload(VALUE_SIZE);
-        Boolean boolResponse = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToHead(listKey, keyHint, List.of(
+        Boolean boolResponse = client.setMode(Mode.BACKUP).addElementToHead(listKey, keyHint, List.of(
                 head)).get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         byte[] newPos1 = createLargePayload(VALUE_SIZE);
-        Boolean boolResponse1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToPosition(listKey, keyHint,
-                List.of(newPos1),
-                1).get();
+        Boolean boolResponse1 = client.setMode(Mode.BACKUP).addElementToPosition(listKey, keyHint,
+                                                                                 List.of(newPos1),
+                                                                                 1).get();
 
-        byte[] head1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getHead(listKey, keyHint).get();
-        byte[] pos1 = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
+        byte[] head1 = client.setMode(Mode.BACKUP).getHead(listKey, keyHint).get();
+        byte[] pos1 = client.setMode(Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
 
         Assertions.assertArrayEquals(head1, head);
         Assertions.assertArrayEquals(pos1, newPos1);
@@ -51,24 +51,24 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Start with a list: [Middle]
         // Create on backup
         byte[] middle1 = createLargePayload(VALUE_SIZE);
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).createList(listKey, List.of(middle1)).get();
+        KeyHint keyHint = client.setMode(Mode.BACKUP).createList(listKey, List.of(middle1)).get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // addElementToHead -> [Head, Middle]
         byte[] head1 = createLargePayload(VALUE_SIZE);
-        Boolean boolResponse = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToHead(listKey, keyHint, List.of(
+        Boolean boolResponse = client.setMode(Mode.MASTER).addElementToHead(listKey, keyHint, List.of(
                 head1)).get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         byte[] newPos1 = createLargePayload(VALUE_SIZE);
-        Boolean boolResponse1 = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToPosition(listKey, keyHint,
-                List.of(newPos1),
-                1).get();
+        Boolean boolResponse1 = client.setMode(Mode.MASTER).addElementToPosition(listKey, keyHint,
+                                                                                 List.of(newPos1),
+                                                                                 1).get();
 
         Assertions.assertTrue(boolResponse1);
-        byte[] head = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getHead(listKey, keyHint).get();
-        byte[] pos1 = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
+        byte[] head = client.setMode(Mode.MASTER).getHead(listKey, keyHint).get();
+        byte[] pos1 = client.setMode(Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
 
         Assertions.assertArrayEquals(head1, head);
         Assertions.assertArrayEquals(newPos1, pos1);
@@ -80,23 +80,23 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Setup Vector: [0, 1, 2]
         // Create on master
         byte[] zero = createLargePayload(VALUE_SIZE);
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createVector(vecKey, List.of(zero))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         byte[] first = createLargePayload(VALUE_SIZE);
         byte[] second = createLargePayload(VALUE_SIZE);
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(vecKey, keyHint, Arrays.asList(
+        client.setMode(Mode.BACKUP).addElementToTail(vecKey, keyHint, Arrays.asList(
                 first, second)).get();
 
         // removeTail -> [0, 1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeTail(vecKey, keyHint).get();
+        client.setMode(Mode.BACKUP).removeTail(vecKey, keyHint).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeElementAtPosition(vecKey, keyHint, 0).get();
+        client.setMode(Mode.BACKUP).removeElementAtPosition(vecKey, keyHint, 0).get();
 
-        byte[] remaining = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getElementAtPosition(vecKey, keyHint, 0).get();
+        byte[] remaining = client.setMode(Mode.BACKUP).getElementAtPosition(vecKey, keyHint, 0).get();
         Assertions.assertArrayEquals(first, remaining);
     }
 
@@ -106,23 +106,23 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Setup Vector: [0, 1, 2]
         // Create on backup
         byte[] zero = createLargePayload(VALUE_SIZE);
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createVector(vecKey, List.of(zero))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         byte[] first = createLargePayload(VALUE_SIZE);
         byte[] second = createLargePayload(VALUE_SIZE);
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(vecKey, keyHint, Arrays.asList(
+        client.setMode(Mode.MASTER).addElementToTail(vecKey, keyHint, Arrays.asList(
                 first, second)).get();
 
         // removeTail -> [0, 1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeTail(vecKey, keyHint).get();
+        client.setMode(Mode.MASTER).removeTail(vecKey, keyHint).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeElementAtPosition(vecKey, keyHint, 0).get();
+        client.setMode(Mode.MASTER).removeElementAtPosition(vecKey, keyHint, 0).get();
 
-        byte[] remaining = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getElementAtPosition(vecKey, keyHint, 0).get();
+        byte[] remaining = client.setMode(Mode.MASTER).getElementAtPosition(vecKey, keyHint, 0).get();
         Assertions.assertArrayEquals(first, remaining);
     }
 
@@ -130,17 +130,17 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
     void testRemoveElementInRangeSuccessCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         byte[] key = createLargePayload(KEY_SIZE);
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createVector(key, List.of(createLargePayload(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(key, keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
+            client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
         }
 
         // Remove indices 0 to 2
-        Boolean statusList = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).removeElementAtPosition(key, keyHint, 0).get();
+        Boolean statusList = client.setMode(Mode.BACKUP).removeElementAtPosition(key, keyHint, 0).get();
 
         Assertions.assertTrue(statusList);
     }
@@ -149,17 +149,17 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
     void testRemoveElementInRangeSuccessCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         byte[] key = createLargePayload(KEY_SIZE);
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createVector(key, List.of(createLargePayload(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(key, keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
+            client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(createLargePayload(VALUE_SIZE))).get();
         }
 
         // Remove indices 0 to 2
-        Boolean statusList = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).removeElementAtPosition(key, keyHint, 0).get();
+        Boolean statusList = client.setMode(Mode.MASTER).removeElementAtPosition(key, keyHint, 0).get();
 
         Assertions.assertTrue(statusList);
     }
@@ -168,7 +168,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
     void testQueueTypeSafetyCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         byte[] qKey = createLargePayload(KEY_SIZE);
         // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
+        KeyHint keyHint = client.setMode(Mode.MASTER)
                 .createQueue(qKey, List.of(createLargePayload(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -177,7 +177,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Queues typically don't support positional addition in many implementations.
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToPosition(qKey, keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
+            client.setMode(Mode.BACKUP).addElementToPosition(qKey, keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Expecting an error code if Queues are strictly FIFO
@@ -189,7 +189,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
     void testQueueTypeSafetyCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         byte[] qKey = createLargePayload(KEY_SIZE);
         // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
+        KeyHint keyHint = client.setMode(Mode.BACKUP)
                 .createQueue(qKey, List.of(createLargePayload(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -198,7 +198,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // Queues typically don't support positional addition in many implementations.
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
-            client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToPosition(qKey, keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
+            client.setMode(Mode.MASTER).addElementToPosition(qKey, keyHint, List.of(createLargePayload(VALUE_SIZE)), 1).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Expecting an error code if Queues are strictly FIFO
