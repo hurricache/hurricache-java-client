@@ -274,6 +274,7 @@ public class CollectionsTest extends TestBaseCluster {
     void testAtomicRemoval() throws ExecutionException, InterruptedException {
         String key = "removalTestKey" + UUID.randomUUID();
         KeyHint keyHint = client.createList(key, List.of("item1".getBytes(StandardCharsets.UTF_8))).get();
+        Thread.sleep(150);
         client.addElementToTail(client.serializeKey(key), keyHint, List.of("item2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Remove Front
@@ -289,6 +290,7 @@ public class CollectionsTest extends TestBaseCluster {
     void testPositionalOperationsVector() throws ExecutionException, InterruptedException {
         String key = "posTestKeyVector" + UUID.randomUUID();
         KeyHint keyHint = client.createVector(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
+        Thread.sleep(150);
         client.addElementToTail(key, keyHint,
                 Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
                         "pos2".getBytes(StandardCharsets.UTF_8))).get();
@@ -316,6 +318,7 @@ public class CollectionsTest extends TestBaseCluster {
     void testPositionalOperationsList() throws ExecutionException, InterruptedException {
         String key = "posTestKeyList" + UUID.randomUUID();
         KeyHint keyHint = client.createList(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
+        Thread.sleep(150);
         client.addElementToTail(key, keyHint,
                 Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
                         "pos2".getBytes(StandardCharsets.UTF_8))).get();

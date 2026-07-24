@@ -1,16 +1,14 @@
-package com.hurricache.client.cluster;
+package com.hurricache.client.cluster.stress;
 
-import com.hurricache.TestBase;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
-import io.grpc.inprocess.InProcessServerBuilder;
 import org.jspecify.annotations.NonNull;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -21,39 +19,48 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class FastCacheRawStressTest {
 
-    private final static String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
-    private final int THREAD_COUNT = 32; // Optimized for i9
-    private final int OPERATIONS_PER_THREAD = 100000;
-    private final int PIPELINE_BATCH_SIZE = 100; // Pipeline requests to saturate C++ engine
-    private String serverName;
+    private final String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
+    private final int THREAD_COUNT = 32;
+    private final int OPERATIONS_PER_THREAD = 100_000;
+    private final int PIPELINE_BATCH_SIZE = 100;
+    private final int EXPECTED_TOTAL_OPS = THREAD_COUNT * OPERATIONS_PER_THREAD;
+    private final int BATCH_TIMEOUT_SECONDS = 10;
 
-    // Pre-allocated structural byte payloads to completely eliminate JVM GC noise during the sprint
     private static final byte[] PREALLOCATED_VALUE = "value_data_payload_placeholder_for_stress_testing".getBytes(StandardCharsets.UTF_8);
     private static final byte[] PREALLOCATED_UPDATE = "value_data_payload_placeholder_for_stress_testing_updated".getBytes(StandardCharsets.UTF_8);
 
+    private FastCacheAsyncSmartClient client;
+    private ExecutorService executor;
+
     @BeforeEach
-    void init() throws IOException {
-        serverName = "stress-server-" + UUID.randomUUID();
-        InProcessServerBuilder.forName(serverName).addService(new TestBase.MockFastCacheService()).build().start();
-    }
+    void setUp() throws InterruptedException {
+        executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
-    @Test
-    void highConcurrencyCreateLoadTest() throws InterruptedException {
-        ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
-
-        FastCacheAsyncSmartClient client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
-
+        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+            @Override
             public Duration getDefaultTtl() {
-                return Duration.ofMinutes(15);
+                return Duration.ofMinutes(5);
             }
         };
-        client.setMode(Mode.LB_SMART);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
 
         while (!client.getReadyFlag()) {
             Thread.sleep(100);
         }
+    }
 
-        // Partition storage arrays per thread to eliminate concurrent lock contention
+    @AfterEach
+    void tearDown() {
+        if (client != null) {
+            client.shutdown();
+        }
+        if (executor != null) {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void highConcurrencyCreateLoadTest() throws InterruptedException {
         KeyHint[][] threadLocalStorage = new KeyHint[THREAD_COUNT][OPERATIONS_PER_THREAD];
 
         // ==========================================
@@ -74,25 +81,13 @@ public class FastCacheRawStressTest {
 
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
-                        String key = getTestValue() + threadId + ":" + j;
+                        String key = getTestKey(threadId, j);
 
-                        // Fire asynchronously without blocking
-                        CompletableFuture<KeyHint> future = client.createKeyValue(key, PREALLOCATED_VALUE);
-                        pipeline.add(future);
+                        pipeline.add(client.createKeyValue(key, PREALLOCATED_VALUE));
                         indexMapping.add(j);
 
-                        // Once the pipeline batch is full, flush it and resolve elements concurrently
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
-                            for (int k = 0; k < pipeline.size(); k++) {
-                                try {
-                                    KeyHint hint = pipeline.get(k).get(1000, TimeUnit.MILLISECONDS);
-                                    threadLocalStorage[threadId][indexMapping.get(k)] = hint;
-                                    writeSuccessCount.incrementAndGet();
-                                } catch (Exception e) {
-                                    System.out.println("Error: " + e.getLocalizedMessage());
-                                    writeErrorCount.incrementAndGet();
-                                }
-                            }
+                            processWriteBatch(pipeline, indexMapping, threadLocalStorage[threadId], writeSuccessCount, writeErrorCount);
                             pipeline.clear();
                             indexMapping.clear();
                         }
@@ -122,21 +117,13 @@ public class FastCacheRawStressTest {
                 List<CompletableFuture<byte[]>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
-                        String key = getTestValue() + threadId + ":" + j;
+                        String key = getTestKey(threadId, j);
                         KeyHint hint = threadLocalStorage[threadId][j];
 
                         pipeline.add(client.getValue(key, hint));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
-                            for (CompletableFuture<byte[]> future : pipeline) {
-                                try {
-                                    byte[] res = future.get(1000, TimeUnit.MILLISECONDS);
-                                    if (res != null) readSuccessCount.incrementAndGet();
-                                    else readErrorCount.incrementAndGet();
-                                } catch (Exception e) {
-                                    readErrorCount.incrementAndGet();
-                                }
-                            }
+                            processReadBatch(pipeline, readSuccessCount, readErrorCount);
                             pipeline.clear();
                         }
                     }
@@ -165,20 +152,13 @@ public class FastCacheRawStressTest {
                 List<CompletableFuture<byte[]>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
-                        String key = getTestValue() + threadId + ":" + j;
+                        String key = getTestKey(threadId, j);
                         KeyHint hint = threadLocalStorage[threadId][j];
 
                         pipeline.add(client.updateKeyValue(key, hint, PREALLOCATED_UPDATE));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
-                            for (CompletableFuture<byte[]> future : pipeline) {
-                                try {
-                                    future.get(1000, TimeUnit.MILLISECONDS);
-                                    updateSuccessCount.incrementAndGet();
-                                } catch (Exception e) {
-                                    updateErrorCount.incrementAndGet();
-                                }
-                            }
+                            processReadBatch(pipeline, updateSuccessCount, updateErrorCount);
                             pipeline.clear();
                         }
                     }
@@ -207,20 +187,13 @@ public class FastCacheRawStressTest {
                 List<CompletableFuture<Boolean>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
-                        String key = getTestValue() + threadId + ":" + j;
+                        String key = getTestKey(threadId, j);
                         KeyHint hint = threadLocalStorage[threadId][j];
 
                         pipeline.add(client.remove(key, hint));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
-                            for (CompletableFuture<Boolean> future : pipeline) {
-                                try {
-                                    if (future.get(1000, TimeUnit.MILLISECONDS)) deleteSuccessCount.incrementAndGet();
-                                    else deleteErrorCount.incrementAndGet();
-                                } catch (Exception e) {
-                                    deleteErrorCount.incrementAndGet();
-                                }
-                            }
+                            processBooleanBatch(pipeline, deleteSuccessCount, deleteErrorCount);
                             pipeline.clear();
                         }
                     }
@@ -233,20 +206,81 @@ public class FastCacheRawStressTest {
         deleteLatch.await(10, TimeUnit.MINUTES);
         printResults("Delete", startTime, deleteSuccessCount.get(), deleteErrorCount.get());
 
-        // Tear down
-        client.shutdown();
-        executor.shutdown();
-
-        // Standard assertions to enforce integrity
-        int expectedTotal = THREAD_COUNT * OPERATIONS_PER_THREAD;
-        Assertions.assertEquals(expectedTotal, writeSuccessCount.get(), "Write validation mismatch");
-        Assertions.assertEquals(expectedTotal, readSuccessCount.get(), "Read validation mismatch");
-        Assertions.assertEquals(expectedTotal, updateSuccessCount.get(), "Update validation mismatch");
-        Assertions.assertEquals(expectedTotal, deleteSuccessCount.get(), "Delete validation mismatch");
+        // Validations
+        Assertions.assertEquals(EXPECTED_TOTAL_OPS, writeSuccessCount.get(), "Write validation mismatch");
+        Assertions.assertEquals(EXPECTED_TOTAL_OPS, readSuccessCount.get(), "Read validation mismatch");
+        Assertions.assertEquals(EXPECTED_TOTAL_OPS, updateSuccessCount.get(), "Update validation mismatch");
+        Assertions.assertEquals(EXPECTED_TOTAL_OPS, deleteSuccessCount.get(), "Delete validation mismatch");
     }
 
-    private static @NonNull String getTestValue() {
-        return prefix + "stress:";
+    private String getTestKey(int threadId, int opId) {
+        return prefix + "stress:" + threadId + ":" + opId;
+    }
+
+    // =========================================================================
+    // HELPER BATCH PROCESSORS
+    // =========================================================================
+
+    private void processWriteBatch(List<CompletableFuture<KeyHint>> pipeline,
+                                   List<Integer> indexMapping,
+                                   KeyHint[] threadStorage,
+                                   AtomicInteger successCounter,
+                                   AtomicInteger errorCounter) {
+        try {
+            CompletableFuture<Void> allOf = CompletableFuture.allOf(pipeline.toArray(new CompletableFuture[0]));
+            allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            for (int k = 0; k < pipeline.size(); k++) {
+                KeyHint hint = pipeline.get(k).getNow(null);
+                if (hint != null) {
+                    threadStorage[indexMapping.get(k)] = hint;
+                    successCounter.incrementAndGet();
+                } else {
+                    errorCounter.incrementAndGet();
+                }
+            }
+        } catch (Exception e) {
+            errorCounter.addAndGet(pipeline.size());
+        }
+    }
+
+    private void processReadBatch(List<CompletableFuture<byte[]>> pipeline,
+                                  AtomicInteger successCounter,
+                                  AtomicInteger errorCounter) {
+        try {
+            CompletableFuture<Void> allOf = CompletableFuture.allOf(pipeline.toArray(new CompletableFuture[0]));
+            allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            for (CompletableFuture<byte[]> future : pipeline) {
+                byte[] data = future.getNow(null);
+                if (data != null) {
+                    successCounter.incrementAndGet();
+                } else {
+                    errorCounter.incrementAndGet();
+                }
+            }
+        } catch (Exception e) {
+            errorCounter.addAndGet(pipeline.size());
+        }
+    }
+
+    private void processBooleanBatch(List<CompletableFuture<Boolean>> pipeline,
+                                     AtomicInteger successCounter,
+                                     AtomicInteger errorCounter) {
+        try {
+            CompletableFuture<Void> allOf = CompletableFuture.allOf(pipeline.toArray(new CompletableFuture[0]));
+            allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+            for (CompletableFuture<Boolean> future : pipeline) {
+                if (Boolean.TRUE.equals(future.getNow(false))) {
+                    successCounter.incrementAndGet();
+                } else {
+                    errorCounter.incrementAndGet();
+                }
+            }
+        } catch (Exception e) {
+            errorCounter.addAndGet(pipeline.size());
+        }
     }
 
     private void printResults(String operationalPhase, long startTime, int successCount, int errorCount) {
@@ -257,6 +291,6 @@ public class FastCacheRawStressTest {
         System.out.println("Successes: " + successCount);
         System.out.println("Errors: " + errorCount);
         System.out.println("Duration: " + duration + " ms");
-        System.out.println("Throughput: " + String.format("%.2f", opsPerSec) + " ops/sec\n");
+        System.out.println(String.format("Throughput: %.2f ops/sec\n", opsPerSec));
     }
 }

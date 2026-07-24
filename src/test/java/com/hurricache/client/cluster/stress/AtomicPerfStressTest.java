@@ -1,4 +1,4 @@
-package com.hurricache.client.cluster;
+package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.grpc.KeyHint;
@@ -77,7 +77,7 @@ public class AtomicPerfStressTest {
         }
         initLatch.await();
         initPool.shutdown();
-
+        Thread.sleep(1000); // Ждем завершения репликации
         // 2. Подготовка инфраструктуры для нагрузки[cite: 6]
         AtomicMetrics metrics = new AtomicMetrics();
         ExecutorService workersPool = Executors.newFixedThreadPool(WORKER_THREADS); // cite: 6

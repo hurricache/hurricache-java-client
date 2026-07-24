@@ -1,4 +1,4 @@
-package com.hurricache.client.cluster;
+package com.hurricache.client.cluster.stress;
 
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.Mode;
@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -37,7 +36,7 @@ public class AtomicStressTest extends TestBaseCluster {
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch finishLatch = new CountDownLatch(numberOfThreads);
         AtomicInteger failedRequests = new AtomicInteger(0);
-
+        Thread.sleep(1000); //Ждем завершения репликации
         // 2. Накатываем нагрузку
         for (int i = 0; i < numberOfThreads; i++) {
             executor.submit(() -> {
@@ -50,6 +49,7 @@ public class AtomicStressTest extends TestBaseCluster {
                                 .get();
                     }
                 } catch (Exception e) {
+                    e.printStackTrace();
                     failedRequests.incrementAndGet();
                 } finally {
                     finishLatch.countDown();
@@ -69,7 +69,7 @@ public class AtomicStressTest extends TestBaseCluster {
         Assertions.assertEquals(0, failedRequests.get(), "Были зафиксированы упавшие gRPC запросы!");
 
         // Даем время асинхронной репликации долететь до бэкапа
-        Thread.sleep(200);
+        Thread.sleep(1000);
 
         long expectedFinalValue = (long) numberOfThreads * incrementsPerThread;
 

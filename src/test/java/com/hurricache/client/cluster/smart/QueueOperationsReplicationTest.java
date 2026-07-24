@@ -64,7 +64,7 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         String second = "message2" + UUID.randomUUID();
 
         // 1. createQueue with initial value
-        KeyHint keyHint = client.setMode(Mode.MASTER).createQueue(qKey, List.of(first.getBytes(StandardCharsets.UTF_8))).get();
+        KeyHint keyHint = client.createQueue(qKey, List.of(first.getBytes(StandardCharsets.UTF_8))).get();
         Assertions.assertNotNull(keyHint);
 
         Thread.sleep(500);

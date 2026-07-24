@@ -1,4 +1,4 @@
-package com.hurricache.client.cluster;
+package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import org.junit.jupiter.api.AfterAll;

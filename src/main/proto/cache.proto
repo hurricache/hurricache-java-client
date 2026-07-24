@@ -3,15 +3,19 @@ syntax = "proto3";
 option java_multiple_files = true;
 option java_package = "com.hurricache.grpc";
 option java_outer_classname = "HurriCache";
-option objc_class_prefix = "HurriCache";
-option cc_enable_arenas = true;
+
 
 package hurricache;
 
 message BinaryPayload {
+  bytes payload = 1 [ctype = CORD];
+  uint32 size = 2;
+}
+message KeyBinaryPayload {
   bytes payload = 1;
   uint32 size = 2;
 }
+
 
 message KeyHint{
   optional uint32 week_hash = 1;
@@ -24,7 +28,7 @@ message CompressedInfo{
 }
 
 message Key{
-  BinaryPayload payload = 1;
+  KeyBinaryPayload payload = 1;
   optional CompressedInfo compressionInfo = 2;
   optional KeyHint keyHint = 3;
   optional uint32 clientId = 4;
@@ -121,16 +125,16 @@ message KeyPositionRequest {
 message CreateQueueRequest {
   Key key = 1;
   optional uint64 ttl = 2;
-  repeated  Value value = 3;
-  optional LockInfo lock_info = 4;
+  optional LockInfo lock_info = 3;
+  repeated  Value value = 4;
 }
 
 message CreateListRequest {
   Key key = 1;
   optional bool asArray = 2;
   optional uint64 ttl = 3;
-  repeated Value value = 4;
-  optional LockInfo lock_info = 5;
+  optional LockInfo lock_info = 4;
+  repeated Value value = 5;
 }
 
 message AddToRequest {
@@ -138,6 +142,14 @@ message AddToRequest {
   optional bool asArray = 2;
   optional uint64 ttl = 3;
   optional uint32 pos = 4;
+  repeated Value value = 5;
+}
+
+message AddToValRequest {
+  Key key = 1;
+  optional uint64 ttl = 2;
+  bool isBefore = 3;
+  Value pos = 4;
   repeated Value value = 5;
 }
 
@@ -200,7 +212,7 @@ message AtomicCas{
 
 message AtomicCasRes{
   bool result = 1;
-  AtomicValue expected = 2;
+  optional AtomicValue expected = 2;
   optional KeyHint keyHint = 3;
 };
 
@@ -230,7 +242,8 @@ enum ReplicationCommandType {
   ATOMIC_AND = 21;
   ATOMIC_XOR = 22;
   ATOMIC_COMPARE_AND_SET = 23;
-  UNKNOWN = 24;
+  ADD_TO_POSITION_BY_VAL = 24;
+  UNKNOWN = 25;
 };
 
 
@@ -248,6 +261,7 @@ message BatchCommand {
   optional AddToRequest add_to_list_request = 11;
   optional AtomicCreate atomic_request = 12;
   optional AtomicCas atomic_cas = 13;
+  optional AddToValRequest add_to_pos_by_val = 14;
 }
 
 message BatchSingleMessage{
@@ -276,6 +290,7 @@ service DataReplicationService{
   rpc addElementToTail(AddToRequest) returns (BoolResponse){}
   rpc addElementToHead(AddToRequest) returns (BoolResponse){}
   rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
+  rpc addElementToPositionByValue(AddToValRequest) returns (BoolResponse){}
 
   rpc atomicCreate(AtomicCreate)  returns (BoolResponse){}
   rpc atomicStore (AtomicCreate)  returns (BoolResponse){}
@@ -325,6 +340,7 @@ service HurriCacheGrpcService{
   rpc addElementToTail(AddToRequest) returns (BoolResponse){}
   rpc addElementToHead(AddToRequest) returns (BoolResponse){}
   rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
+  rpc addElementToPositionByValue(AddToValRequest) returns (BoolResponse){}
 
   rpc atomicLoad (GetRequest)  returns (AtomicValue){}
   rpc atomicLoadAndDelete (GetRequest)  returns (AtomicValue){}

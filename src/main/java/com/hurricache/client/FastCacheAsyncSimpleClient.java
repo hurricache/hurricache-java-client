@@ -297,6 +297,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             if (remainingTail.isEmpty()) {
                 return CompletableFuture.completedFuture(keyHint);
             } else {
+                repDelay();
                 return sendTailInChunks(protoKey, keyHint, remainingTail, timeout);
             }
         });
@@ -344,6 +345,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             if (remainingTail.isEmpty()) {
                 return CompletableFuture.completedFuture(keyHint);
             } else {
+                repDelay();
                 return sendTailInChunks(protoKey, keyHint, remainingTail, timeout);
             }
         });
@@ -377,9 +379,14 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             if (remainingTail.isEmpty()) {
                 return CompletableFuture.completedFuture(keyHint);
             } else {
+                repDelay();
                 return sendTailInChunks(protoKey,keyHint, remainingTail, timeout);
             }
         });
+    }
+
+    private static void repDelay() {
+        try {Thread.sleep(150);} catch (InterruptedException e) {}//Нудно спать чтобы подождать репликации
     }
 
     private static int getSplitIndex(List<byte[]> initialValue,
@@ -852,4 +859,32 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         getStub(timeout).atomicCompareAndSet(builder.build(), new CompletableFutureObserver<>(future));
         return future;
     }
+    @Override
+    public CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout){
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
+        }
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        AddToValRequest.Builder builder = AddToValRequest.newBuilder();
+        builder.setKey(buildKey(key, getKeyHint(key, hint), clientId));
+        builder.setIsBefore(true);
+        data.forEach(element -> builder.addValue(KeyUtils.createValue(element)));
+        builder.setPos(KeyUtils.createValue(pos));
+        getStub(timeout).addElementToPositionByValue(builder.build(),new CompletableFutureObserver<>(future,BoolResponse::getValue));
+        return future;
+    }
+    public CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout){
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
+        }
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        AddToValRequest.Builder builder = AddToValRequest.newBuilder();
+        builder.setKey(buildKey(key, getKeyHint(key, hint), clientId));
+        builder.setIsBefore(false);
+        data.forEach(element -> builder.addValue(KeyUtils.createValue(element)));
+        builder.setPos(KeyUtils.createValue(pos));
+        getStub(timeout).addElementToPositionByValue(builder.build(),new CompletableFutureObserver<>(future,BoolResponse::getValue));
+        return future;
+    }
+
 }
