@@ -2,7 +2,9 @@ package com.hurricache.client;
 
 import com.hurricache.client.intf.HurriCacheClientInterface;
 import com.hurricache.client.intf.Mode;
+import com.hurricache.grpc.AddToValRequest;
 import com.hurricache.grpc.AtomicCasRes;
+import com.hurricache.grpc.BoolResponse;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -10,6 +12,7 @@ import com.hurricache.grpc.coordinator.CoordinatorServiceGrpc;
 import com.hurricache.grpc.coordinator.NodeRole;
 import com.hurricache.grpc.coordinator.PeerRouting;
 import com.hurricache.grpc.coordinator.Void;
+import com.hurricache.utils.CompletableFutureObserver;
 import com.hurricache.utils.Pair;
 import com.hurricache.utils.RoutingObserver;
 import io.grpc.ManagedChannel;
@@ -363,7 +366,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                  Duration ttl,
                                                  int clientId,
                                                  Duration timeout) {
-        return execute(getKeyHint(key), c -> c.createList(key, initialValue, ttl, clientId, timeout));
+        return execute(null, c -> c.createList(key, initialValue, ttl, clientId, timeout));
     }
 
     @Override
@@ -372,7 +375,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                    Duration ttl,
                                                    int clientId,
                                                    Duration timeout) {
-        return execute(getKeyHint(key), c -> c.createVector(key, initialValue, ttl, clientId, timeout));
+        return execute(null, c -> c.createVector(key, initialValue, ttl, clientId, timeout));
     }
 
     @Override
@@ -610,6 +613,12 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return this;
     }
 
-
+    @Override
+    public CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout){
+        return executeWrite(hint,c -> c.addElementToPositionBefore(key,hint, data, pos, clientId,timeout));
+    }
+    public CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout){
+        return executeWrite(hint,c -> c.addElementToPositionAfter(key,hint, data, pos, clientId,timeout));
+    }
 
 }

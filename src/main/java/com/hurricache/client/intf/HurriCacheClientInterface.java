@@ -173,7 +173,7 @@ public interface HurriCacheClientInterface {
     CompletableFuture<KeyHint> createKeyValue(byte[] key, KeyHint hint, byte[] value, Duration ttl, int clientId, Duration timeout);
 
     default CompletableFuture<KeyHint> createKeyValue(byte[] key, byte[] value, int clientId, Duration timeout) {
-        return createKeyValue(key, getKeyHint(key), value, getDefaultTtl(), clientId, timeout);
+        return createKeyValue(key, null, value, getDefaultTtl(), clientId, timeout);
     }
 
     default CompletableFuture<KeyHint> createKeyValue(String key, byte[] value) {
@@ -208,7 +208,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<byte[]> getValue(byte[] key) {
-        return getValue(key, getKeyHint(key), getDefaultClientId(), getDefaultTimeout());
+        return getValue(key,null, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> getValue(String key, KeyHint hint) {
@@ -284,7 +284,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<Boolean> existKey(byte[] key) {
-        return existKey(key, getKeyHint(key), getDefaultClientId(), getDefaultTimeout());
+        return existKey(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Boolean> existKey(String key, KeyHint hint) {
@@ -747,7 +747,7 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos) {
         byte[] key1 = serializeKey(key);
-        return addElementToPosition(key1, getKeyHint(key1), data, pos, getDefaultClientId(), getDefaultTimeout());
+        return addElementToPosition(key1, null, data, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Boolean> addElementToPosition(String key, KeyHint hint, List<byte[]> data, int pos) {
@@ -756,7 +756,7 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos, int clientId) {
         byte[] key1 = serializeKey(key);
-        return addElementToPosition(key1, getKeyHint(key1), data, pos, clientId, getDefaultTimeout());
+        return addElementToPosition(key1, null, data, pos, clientId, getDefaultTimeout());
     }
 
     default CompletableFuture<Boolean> addElementToPosition(byte[] key, KeyHint hint, List<byte[]> data, int pos) {
@@ -977,7 +977,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<KeyHint> atomicCreate(byte[] key, long value) {
-        return atomicCreate(key, getKeyHint(key), value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+        return atomicCreate(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHint> atomicCreate(String key, long value, int clientId) {
@@ -1006,7 +1006,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<KeyHint> atomicStore(byte[] key, long value) {
-        return atomicStore(key, getKeyHint(key), value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+        return atomicStore(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHint> atomicStore(String key, KeyHint keyHint, long value, int clientId) {
@@ -1035,7 +1035,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<Long> atomicExchange(byte[] key, long value) {
-        return atomicExchange(key, getKeyHint(key), value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+        return atomicExchange(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -1060,7 +1060,7 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<Long> atomicAdd(byte[] key, long delta) {
-        return atomicAdd(key, getKeyHint(key), delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+        return atomicAdd(key, null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -1172,4 +1172,74 @@ public interface HurriCacheClientInterface {
     default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHint hint, long expectedValue, long newValue, int clientId) {
         return atomicCompareAndSet(serializeKey(key), hint, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
+
+
+    /**
+     * Inserts a list of elements into a sequential collection (List or Vector) directly before a specified pivot element.
+     *
+     * <p>The method searches for the first occurrence matching {@code pivotVal}. If found, all items in {@code data}
+     * are inserted in order immediately preceding the pivot, shifting the pivot and all subsequent elements to the right.
+     *
+     * @param key      the collection key.
+     * @param hint     the key hint for routing optimization.
+     * @param data     the sequence of byte payloads to insert.
+     * @param pos      the target pivot element before which the new elements will be inserted.
+     * @param clientId the identifier of the invoking client.
+     * @param timeout  the operation execution timeout.
+     * @return a {@link CompletableFuture} wrapping {@code true} if the insertion succeeded, or {@code false} if the key/pivot was not found or type mismatched.
+     */    CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout);
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<byte[]> data, byte[] pos) {
+        byte[] key1 = serializeKey(key);
+        return addElementToPositionBefore(key1, null, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key, KeyHint hint, List<byte[]> data, byte[] pos) {
+        return addElementToPositionBefore(serializeKey(key), hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<byte[]> data, byte[] pos, int clientId) {
+        byte[] key1 = serializeKey(key);
+        return addElementToPositionBefore(key1, null, data, pos, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos) {
+        return addElementToPositionBefore(key, hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+
+    /**
+     * Inserts a list of elements into a sequential collection (List or Vector) directly after a specified pivot element.
+     *
+     * <p>The method searches for the first occurrence matching {@code pivotVal}. If found, all items in {@code data}
+     * are inserted in order immediately following the pivot, shifting subsequent elements to the right.
+     *
+     * @param key      the collection key.
+     * @param hint     the key hint for routing optimization.
+     * @param data     the sequence of byte payloads to insert.
+     * @param pos    the target pivot element after which the new elements will be inserted.
+     * @param clientId the identifier of the invoking client.
+     * @param timeout  the operation execution timeout.
+     * @return a {@link CompletableFuture} wrapping {@code true} if the insertion succeeded, or {@code false} if the key/pivot was not found or type mismatched.
+     */
+    CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout);
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<byte[]> data, byte[] pos) {
+        byte[] key1 = serializeKey(key);
+        return addElementToPositionAfter(key1, null, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key, KeyHint hint, List<byte[]> data, byte[] pos) {
+        return addElementToPositionAfter(serializeKey(key), hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<byte[]> data, byte[] pos, int clientId) {
+        byte[] key1 = serializeKey(key);
+        return addElementToPositionAfter(key1, null, data, pos, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos) {
+        return addElementToPositionAfter(key, hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
 }

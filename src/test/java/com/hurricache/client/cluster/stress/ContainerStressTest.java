@@ -1,22 +1,13 @@
-package com.hurricache.client.cluster;
+package com.hurricache.client.cluster.stress;
 
-import com.hurricache.TestBase;
-import com.hurricache.client.FastCacheAsyncSimpleClient;
-import com.hurricache.client.intf.HurriCacheClientInterface;
+import com.hurricache.TestBaseCluster;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockType;
-import io.grpc.inprocess.InProcessChannelBuilder;
-import io.grpc.inprocess.InProcessServerBuilder;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -29,28 +20,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ContainerStressTest {
+public class ContainerStressTest extends TestBaseCluster {
 
     private final int THREAD_COUNT = 32; // Matching i9 logical cores
     private final int OPS_PER_THREAD = 5000;
     private final String QUEUE_KEY = "stress_queue_01";
     private final String LIST_KEY = "stress_list_01";
-    private HurriCacheClientInterface client;
 
-    @BeforeEach
-    void init() throws IOException {
-        String serverName = "stress-server-" + UUID.randomUUID();
-        var server = InProcessServerBuilder.forName(serverName)
-                .addService(new TestBase.MockFastCacheService())
-                .build()
-                .start();
-        client = new FastCacheAsyncSimpleClient(InProcessChannelBuilder.forName(serverName).build(), 999);
-    }
 
-    @AfterEach
-    void stop() throws InterruptedException {
-        client.shutdown();
-    }
 
     /**
      * STRESS: Producer-Consumer on a Single Queue
@@ -76,7 +53,7 @@ public class ContainerStressTest {
                             byte[] data = ("val-" + threadId + "-" + j).getBytes();
                             client.addElementToTail(QUEUE_KEY, keyHint, List.of(data)).get();
                         } else {
-                            client.getAndRemoveFront(QUEUE_KEY).get();
+                            client.getAndRemoveFront(QUEUE_KEY, keyHint).get();
                         }
                         successCount.incrementAndGet();
                     }
@@ -116,7 +93,7 @@ public class ContainerStressTest {
 
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
         List<CompletableFuture<?>> futures = new ArrayList<>();
-
+        Thread.sleep(1000);
         long start = System.currentTimeMillis();
 
         for (int i = 0; i < THREAD_COUNT * OPS_PER_THREAD; i++) {
@@ -159,7 +136,7 @@ public class ContainerStressTest {
                             byte[] data = ("val-" + threadId + "-" + j).getBytes();
                             client.addElementToTail(LIST_KEY, keyHint, List.of(data)).get();
                         } else {
-                            client.getAndRemoveFront(LIST_KEY).get();
+                            client.getAndRemoveFront(LIST_KEY,keyHint).get();
                         }
                         successCount.incrementAndGet();
                     }
@@ -185,10 +162,10 @@ public class ContainerStressTest {
     @Test
     void testLockPermissionStress() throws Exception {
         String lockKey = "permission_stress";
-        client.createKeyValue(lockKey, "data".getBytes()).get();
-
+        KeyHint keyHint = client.createKeyValue(lockKey, "data".getBytes()).get();
+        Thread.sleep(150);
         // 1. Owner locks the object
-        client.lockObject(lockKey, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
+        client.lockObject(lockKey, keyHint,LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();
 
         // 2. 32 threads try to "break" the lock simultaneously
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
@@ -201,7 +178,7 @@ public class ContainerStressTest {
                     for (int j = 0; j < 1000; j++) {
                         try {
                             // Intruder (ID 999) tries to update a write-locked object
-                            client.updateKeyValue(lockKey, "fail".getBytes(), 999).get();
+                            client.updateKeyValue(lockKey,keyHint, "fail".getBytes(), 999).get();
                         } catch (ExecutionException e) {
                             blockedCount.incrementAndGet();
                         }

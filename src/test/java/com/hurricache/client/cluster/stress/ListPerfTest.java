@@ -1,6 +1,7 @@
-package com.hurricache.client.cluster;
+package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -154,7 +155,7 @@ public class ListPerfTest {
                 inFlightWindow.acquire(); // Ждем свободного слота в окне отправки
 
                 byte[] payload = generate100ByteString(writerId + "-" + i++);
-                client.addElementToTail(LIST_NAME, queueKeyHint, List.of(payload)).whenComplete((success, ex) -> {
+                client.setMode(Mode.LB_SMART).addElementToTail(LIST_NAME, queueKeyHint, List.of(payload)).whenComplete((success, ex) -> {
                     inFlightWindow.release(); // Освобождаем слот сразу по завершению сетевой операции
                     if (ex == null && success) {
                         metrics.produced.increment();

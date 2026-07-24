@@ -19,6 +19,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
         KeyHint hint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, hint).get();
         Thread.sleep(100);
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, hint).get();
@@ -33,6 +34,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
         KeyHint hint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, hint).get();
         Thread.sleep(100);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, hint).get();
@@ -48,6 +50,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateExistValue" + UUID.randomUUID();
         String testValue = "singleCreateExistValue123" + UUID.randomUUID();
         KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
         Thread.sleep(100);
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
@@ -82,6 +85,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateExistHintValue" + UUID.randomUUID();
         String testValue = "singleCreateExistHintValue123" + UUID.randomUUID();
         KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey,KeyHint).get();
         Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
         Thread.sleep(100);
@@ -139,6 +143,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         String testValue = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
         byte[] bytes = client.getAndDeleteValue(testKey,KeyHint).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
@@ -200,6 +205,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
         String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
         KeyHint keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
         byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Assertions.assertNotNull(keyHint);
         Assertions.assertEquals(testValue, new String(bytes));
@@ -213,5 +219,33 @@ public class RawValuesTest extends TestBaseCluster {
         Assertions.assertEquals(testValueUpdate, new String(newValB));
     }
 
+
+    @Test
+    void singleCreateDelete() throws ExecutionException, InterruptedException {
+        String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
+        String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
+        String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
+        KeyHint keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
+        byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
+        Assertions.assertEquals(testValue, new String(bytes));
+        Boolean b = client.remove(testKey, keyHint).get();
+        Assertions.assertTrue(b);
+    }
+
+    @Test
+    void singleCreateGetDelete() throws ExecutionException, InterruptedException {
+        String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
+        String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
+        String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
+        KeyHint keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
+        byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
+        Assertions.assertEquals(testValue, new String(bytes));
+        byte[] bytes1 = client.getAndDeleteValue(testKey, keyHint).get();
+        Assertions.assertEquals(testValue, new String(bytes1));
+    }
 
 }

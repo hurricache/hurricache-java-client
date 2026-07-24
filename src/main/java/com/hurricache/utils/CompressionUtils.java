@@ -3,6 +3,7 @@ package com.hurricache.utils;
 import com.hurricache.grpc.BinaryPayload;
 import com.hurricache.grpc.CompressedInfo;
 import com.hurricache.grpc.Key;
+import com.hurricache.grpc.KeyBinaryPayload;
 import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
@@ -17,7 +18,7 @@ public class CompressionUtils {
 
 
     public static Key.Builder compressKeyIfNeeded(byte[] data, Integer clientId) {
-        BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
+        KeyBinaryPayload.Builder payloadBuilder = KeyBinaryPayload.newBuilder();
         Key.Builder keyBuilder = Key.newBuilder();
         if (data.length > COMPRESSION_THRESHOLD) {
             LZ4Compressor compressor = factory.fastCompressor();

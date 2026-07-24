@@ -1,6 +1,7 @@
-package com.hurricache.client.cluster;
+package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,17 +17,17 @@ import java.util.concurrent.atomic.LongAdder;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class QueueDrainPerfTest {
+public class VectorIndexPerfTest {
 
     private static final int MESSAGE_SIZE = 100; // байт
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
-    // Настройки параллелизма для чтения (выгребания)
+    // Настройки параллелизма для чтения
     private static final int READER_THREADS = 16;
     private static final int DURATION_PER_STAGE_SECONDS = 5;
     private static final int MAX_IN_FLIGHT_PER_THREAD = 100;
 
-    // НАСТРОЙКА РАЗМЕРОВ: дефолтные значения количества элементов в очереди
+    // НАСТРОЙКА РАЗМЕРОВ: дефолтные значения, если ничего не передано снаружи
     private static final int[] DEFAULT_SIZES = {16, 64, 512, 4096, 32768, 262144};
 
     private static FastCacheAsyncSmartClient client;
@@ -48,11 +49,11 @@ public class QueueDrainPerfTest {
     }
 
     /**
-     * Парсит размеры очередей из системного свойства "queue.sizes".
+     * Парсит размеры векторов из системного свойства "vector.sizes".
      * Если свойство не задано, возвращает дефолтный набор.
      */
     private int[] parseTargetSizes() {
-        String sizesProp = System.getProperty("queue.sizes");
+        String sizesProp = System.getProperty("vector.sizes");
         if (sizesProp == null || sizesProp.trim().isEmpty()) {
             return DEFAULT_SIZES;
         }
@@ -62,17 +63,18 @@ public class QueueDrainPerfTest {
                     .mapToInt(Integer::parseInt)
                     .toArray();
         } catch (NumberFormatException e) {
-            System.err.println("[WARN] Invalid format for queue.sizes property. Falling back to defaults.");
+            System.err.println("[WARN] Invalid format for vector.sizes property. Falling back to defaults.");
             return DEFAULT_SIZES;
         }
     }
 
     @Test
-    void benchmarkQueueDrainAtDifferentSizes() throws Exception {
+    void benchmarkVectorAccessAtDifferentSizes() throws Exception {
+        // Получаем динамически настроенный массив размеров векторов
         int[] targetSizes = parseTargetSizes();
 
         System.out.println("===============================================================");
-        System.out.println(" STARTING QUEUE DRAIN (GET AND REMOVE FRONT) BENCHMARK ");
+        System.out.println(" STARTING VECTOR INDEX ACCESS BENCHMARK ");
         System.out.println(" Target sizes to test: " + Arrays.toString(targetSizes));
         System.out.println(" Threads: " + READER_THREADS + " | In-flight window per thread: " + MAX_IN_FLIGHT_PER_THREAD);
         System.out.println("===============================================================");
@@ -82,56 +84,54 @@ public class QueueDrainPerfTest {
         }
     }
 
-    private void runBenchmarkForSize(int queueSize) throws Exception {
-        String queueKeyStr = "perf-queue-" + queueSize + "-" + System.currentTimeMillis();
-        byte[] queueKey = queueKeyStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    private void runBenchmarkForSize(int vectorSize) throws Exception {
+        String vectorKeyStr = "perf-vector-" + vectorSize + "-" + System.currentTimeMillis();
+        byte[] vectorKey = vectorKeyStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         // 1. Подготовка данных нужного размера
-        List<byte[]> initialData = new ArrayList<>(queueSize);
-        for (int i = 0; i < queueSize; i++) {
+        List<byte[]> initialData = new ArrayList<>(vectorSize);
+        for (int i = 0; i < vectorSize; i++) {
             initialData.add(generate100ByteString("val-" + i));
         }
 
-        // 2. Создание очереди на сервере с автоматическим рекурсивным чанкованием хвоста
-        KeyHint queueHint = client.createQueue(
-                queueKey,
+        // 2. Создание вектора на сервере
+        KeyHint vectorHint = client.createVector(
+                vectorKey,
                 initialData,
                 Duration.ofMinutes(15),
                 0,
                 TIMEOUT
         ).get();
 
-        assertNotNull(queueHint, "Queue must be created successfully for size: " + queueSize);
+        assertNotNull(vectorHint, "Vector must be created successfully for size: " + vectorSize);
 
-        // 3. Запуск потоков чтения (выгребания)
+        // 3. Запуск потоков чтения
         ExecutorService pool = Executors.newFixedThreadPool(READER_THREADS);
         LongAdder readOps = new LongAdder();
         LongAdder readErrors = new LongAdder();
 
         AtomicBoolean running = new AtomicBoolean(true);
-        AtomicBoolean queueIsEmpty = new AtomicBoolean(false);
         CountDownLatch startLatch = new CountDownLatch(1);
 
         for (int i = 0; i < READER_THREADS; i++) {
+            AtomicBoolean finalRunning = running;
             pool.submit(() -> {
                 try {
                     startLatch.await();
+                    ThreadLocalRandom random = ThreadLocalRandom.current();
                     Semaphore inFlightWindow = new Semaphore(MAX_IN_FLIGHT_PER_THREAD);
 
-                    // Выгребаем пока работает таймер бенчмарка И в очереди еще что-то есть
-                    while (running.get() && !queueIsEmpty.get()) {
+                    while (finalRunning.get()) {
                         inFlightWindow.acquire();
 
-                        client.getAndRemoveFront(queueKey, queueHint, 0, TIMEOUT)
+                        // Случайный индекс в рамках текущего размера вектора
+                        int randomIdx = random.nextInt(vectorSize);
+
+                        client.setMode(Mode.LB_SMART).getElementAtPosition(vectorKey, vectorHint, randomIdx, 0, TIMEOUT)
                                 .whenComplete((res, ex) -> {
                                     inFlightWindow.release();
-                                    if (ex == null) {
-                                        // Если сервер вернул пустоту — значит очередь полностью выгребли
-                                        if (res == null || res.length == 0) {
-                                            queueIsEmpty.set(true);
-                                        } else {
-                                            readOps.increment();
-                                        }
+                                    if (ex == null && res != null) {
+                                        readOps.increment();
                                     } else {
                                         readErrors.increment();
                                     }
@@ -143,22 +143,17 @@ public class QueueDrainPerfTest {
             });
         }
 
-        // Старт! (Прогрев убран, так как элементы удаляются физически, меряем чистую скорость опустошения)
-        long startTime = System.nanoTime();
+        // Прогрев 500 мс
         startLatch.countDown();
+        Thread.sleep(500);
 
-        // Ждем окончания времени теста или полного опустошения очереди
-        long maxWaitTimeMs = DURATION_PER_STAGE_SECONDS * 1000L;
-        long checkIntervalMs = 50;
-        long spentTimeMs = 0;
+        readOps.reset();
+        readErrors.reset();
+        long startTime = System.nanoTime();
 
-        while (spentTimeMs < maxWaitTimeMs && !queueIsEmpty.get()) {
-            Thread.sleep(checkIntervalMs);
-            spentTimeMs += checkIntervalMs;
-        }
-
-        // Останавливаем сбор данных
-        running.set(false);
+        // Замер
+        Thread.sleep(DURATION_PER_STAGE_SECONDS * 1000L);
+        running.getAndSet(false);
 
         pool.shutdown();
         pool.awaitTermination(5, TimeUnit.SECONDS);
@@ -168,10 +163,8 @@ public class QueueDrainPerfTest {
         long totalReads = readOps.sum();
         double tps = totalReads / elapsedTimeSec;
 
-        String terminationReason = queueIsEmpty.get() ? "QUEUE EMPTIED" : "TIME OUT";
-
-        System.out.printf("Queue Size: %-7d | Drained: %-7d | Drained TPS: %-10.2f | Errors: %-3d | Status: %s%n",
-                          queueSize, totalReads, tps, readErrors.sum(), terminationReason);
+        System.out.printf("Vector Size: %-7d | Elements | Read TPS: %-10.2f | Errors: %d%n",
+                          vectorSize, tps, readErrors.sum());
     }
 
     private byte[] generate100ByteString(String prefix) {
