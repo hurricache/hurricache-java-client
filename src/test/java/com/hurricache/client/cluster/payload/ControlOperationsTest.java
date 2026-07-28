@@ -1,8 +1,8 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import org.junit.jupiter.api.Assertions;
@@ -21,7 +21,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         byte[] key = createLargePayload(KEY_SIZE);
 
         // Create should be done on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -41,7 +41,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         byte[] key = createLargePayload(KEY_SIZE);
 
         // Create should be done on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -61,7 +61,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         byte[] lockKey = createLargePayload(KEY_SIZE);
 
         // Create should be done on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -82,7 +82,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         byte[] lockKey = createLargePayload(KEY_SIZE);
 
         // Create should be done on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster

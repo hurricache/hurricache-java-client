@@ -1,7 +1,7 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.client.KeyUtils;
 import com.hurricache.grpc.AtomicCasRes;
+import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -10,117 +10,111 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Client interface for interacting with the HurriCache distributed cache system.
- * Provides asynchronous operations for key-value manipulation, collection structures
- * (Queues, Lists, Vectors), object locking, and atomic numerical/bitwise operations.
- *
- * <p>Most methods provide asynchronous execution returning a {@link CompletableFuture}.
- * Overloaded methods exist to provide convenient defaults for {@code clientId},
- * {@code timeout}, and {@code KeyHint} serialization.
+ * Asynchronous client interface for interacting with the HurriCache distributed caching system.
+ * <p>
+ * Provides high-performance async methods for managing atomic counters/values, standard Key-Value pairs,
+ * distributed locks, as well as ordered ({@link OrderedPayload}) and unordered ({@link Payload}) 
+ * data structures (Queue, List, Vector, Set, Map).
  */
 public interface HurriCacheClientInterface {
 
     /**
-     * Gets the default client identifier used for tracking requests.
+     * Gets the default client identifier used for routing and locking metadata.
      *
-     * @return the default client ID.
+     * @return default client ID.
      */
     int getDefaultClientId();
 
     /**
-     * Gets the default timeout duration for operations.
+     * Gets the default timeout duration applied to RPC invocations.
      *
-     * @return the default operation timeout {@link Duration}.
+     * @return default timeout as a {@link Duration}.
      */
     Duration getDefaultTimeout();
 
     /**
-     * Gets the default Time-To-Live (TTL) duration for newly created keys.
+     * Gets the default Time-To-Live (TTL) duration applied to created entries.
      *
-     * @return the default TTL duration, or {@code null} if no default is specified.
+     * @return default TTL {@link Duration}, or {@code null} if entries do not expire by default.
      */
     default Duration getDefaultTtl() {
         return null;
     }
 
     /**
-     * Gets the connection target address of the HurriCache server/cluster.
+     * Gets the target server connection endpoint string.
      *
-     * @return the target connection string.
+     * @return connection target (e.g., "host:port").
      */
     String getTarget();
 
     /**
-     * Serializes a string key into a byte array using UTF-8 encoding.
+     * Serializes a string key into a UTF-8 byte array representation.
      *
-     * @param key the string key to serialize.
-     * @return the byte array representation of the key.
+     * @param key target key string.
+     * @return byte array representation of the key.
      */
     default byte[] serializeKey(String key) {
         return key.getBytes(StandardCharsets.UTF_8);
     }
+    
+
+    // =========================================================================
+    // TTL & BASIC KEY-VALUE OPERATIONS
+    // =========================================================================
 
     /**
-     * Generates a routing or partitioning hint based on the weak hash of the key.
+     * Updates or sets the Time-To-Live (TTL) for an existing key.
      *
-     * @param key the byte array representing the cache key.
-     * @return a {@link KeyHint} instance wrapping the generated hash.
+     * @param key      target key in byte array form.
+     * @param hint     optional routing hint for partition key localization.
+     * @param ttl      TTL value in milliseconds/seconds as configured by protocol.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration for this RPC call.
+     * @return a {@link CompletableFuture} resolving to {@code true} if TTL was successfully set.
      */
-    default KeyHint getKeyHint(byte[] key) {
-        return KeyHint.newBuilder().setWeekHash(KeyUtils.weakHash(key, key.length, 0)).build();
-    }
+    CompletableFuture<Boolean> setTtl(byte[] key, KeyHintData hint, long ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<Boolean> setTtl(String key, KeyHint hint, long ttl) {
+    default CompletableFuture<Boolean> setTtl(String key, KeyHintData hint, long ttl) {
         return setTtl(key, hint, ttl, getDefaultClientId());
     }
 
-    default CompletableFuture<Boolean> setTtl(byte[] key, KeyHint hint, long ttl, int clientId) {
+    default CompletableFuture<Boolean> setTtl(byte[] key, KeyHintData hint, long ttl, int clientId) {
         return setTtl(key, hint, ttl, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> setTtl(String key, KeyHint hint, long ttl, int clientId) {
+    default CompletableFuture<Boolean> setTtl(String key, KeyHintData hint, long ttl, int clientId) {
         return setTtl(serializeKey(key), hint, ttl, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> setTtl(byte[] key, KeyHint hint, long ttl) {
+    default CompletableFuture<Boolean> setTtl(byte[] key, KeyHintData hint, long ttl) {
         return setTtl(key, hint, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Explicitly sets or updates the Time-To-Live (TTL) expiration for a given key.
+     * Retrieves the remaining TTL duration for the specified key.
      *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param ttl      the expiration duration in seconds or milliseconds depending on implementation.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if the TTL was successfully applied, otherwise {@code false}.
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} returning remaining TTL in milliseconds, or {@code -1} if non-expiring.
      */
-    CompletableFuture<Boolean> setTtl(byte[] key, KeyHint hint, long ttl, int clientId, Duration timeout);
-
-    /**
-     * Retrieves the remaining Time-To-Live (TTL) expiration of a given key.
-     *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the remaining TTL value, or a negative value if it does not expire or exist.
-     */
-    CompletableFuture<Long> getTtl(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<Long> getTtl(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
     default CompletableFuture<Long> getTtl(String key) {
         return getTtl(key, getDefaultClientId());
     }
 
-    default CompletableFuture<Long> getTtl(String key, KeyHint hint) {
+    default CompletableFuture<Long> getTtl(String key, KeyHintData hint) {
         return getTtl(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> getTtl(byte[] key, KeyHint hint) {
+    default CompletableFuture<Long> getTtl(byte[] key, KeyHintData hint) {
         return getTtl(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -129,25 +123,25 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Atomically retrieves the payload value of a key and deletes it from the cache.
+     * Atomically retrieves the value associated with the key and removes the key from the cache.
      *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the byte array value before deletion, or {@code null} if missing.
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} containing deleted value bytes, or {@code null} if not found.
      */
-    CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
     default CompletableFuture<byte[]> getAndDeleteValue(String key) {
         return getAndDeleteValue(key, getDefaultClientId());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHint hint) {
+    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint) {
         return getAndDeleteValue(key, hint, getDefaultClientId());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHint hint) {
+    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint) {
         return getAndDeleteValue(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -155,112 +149,112 @@ public interface HurriCacheClientInterface {
         return getAndDeleteValue(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHint hint, int clientId) {
+    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint, int clientId) {
         return getAndDeleteValue(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
     /**
-     * Creates a new key-value pair in the cache.
+     * Creates a standard Key-Value entry in the cache storage.
      *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param value    the byte array data payload to store.
-     * @param ttl      the expiration duration for the entry.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the confirmed {@link KeyHint}.
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param value    payload bytes to store.
+     * @param ttl      entry expiration duration.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} containing assigned or calculated {@link KeyHint}.
      */
-    CompletableFuture<KeyHint> createKeyValue(byte[] key, KeyHint hint, byte[] value, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<KeyHintData> createKeyValue(byte[] key, KeyHintData hint, byte[] value, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<KeyHint> createKeyValue(byte[] key, byte[] value, int clientId, Duration timeout) {
+    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value, int clientId, Duration timeout) {
         return createKeyValue(key, null, value, getDefaultTtl(), clientId, timeout);
     }
 
-    default CompletableFuture<KeyHint> createKeyValue(String key, byte[] value) {
+    default CompletableFuture<KeyHintData> createKeyValue(String key, byte[] value) {
         return createKeyValue(key, value, getDefaultClientId());
     }
 
-    default CompletableFuture<KeyHint> createKeyValue(byte[] key, byte[] value) {
+    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value) {
         return createKeyValue(key, value, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createKeyValue(String key, byte[] value, int clientId) {
+    default CompletableFuture<KeyHintData> createKeyValue(String key, byte[] value, int clientId) {
         return createKeyValue(serializeKey(key), value, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createKeyValue(byte[] key, byte[] value, int clientId) {
+    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value, int clientId) {
         return createKeyValue(key, value, clientId, getDefaultTimeout());
     }
 
     /**
-     * Retrieves the byte payload value corresponding to the specified key.
+     * Fetches payload value associated with the specified key.
      *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the byte array value, or {@code null} if not found.
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} with value bytes, or {@code null} if the key does not exist.
      */
-    CompletableFuture<byte[]> getValue(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<byte[]> getValue(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
     default CompletableFuture<byte[]> getValue(String key) {
         return getValue(key, getDefaultClientId());
     }
 
     default CompletableFuture<byte[]> getValue(byte[] key) {
-        return getValue(key,null, getDefaultClientId(), getDefaultTimeout());
+        return getValue(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(String key, KeyHint hint) {
+    default CompletableFuture<byte[]> getValue(String key, KeyHintData hint) {
         return getValue(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(byte[] key, KeyHint hint) {
+    default CompletableFuture<byte[]> getValue(byte[] key, KeyHintData hint) {
         return getValue(key, hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint hint, byte[] value) {
-        return updateKeyValue(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> getValue(String key, int clientId) {
         return getValue(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(byte[] key, KeyHint keyhint, int clientId) {
+    default CompletableFuture<byte[]> getValue(byte[] key, KeyHintData keyhint, int clientId) {
         return getValue(key, keyhint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(String key, KeyHint keyhint, int clientId) {
+    default CompletableFuture<byte[]> getValue(String key, KeyHintData keyhint, int clientId) {
         return getValue(serializeKey(key), keyhint, clientId, getDefaultTimeout());
     }
 
     /**
-     * Updates an existing key-value record with a new value payload and refreshes its TTL.
+     * Replaces payload value of an existing Key-Value entry.
      *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param value    the new byte array payload to set.
-     * @param ttl      the updated expiration duration.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the old byte array value prior to modification.
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param value    new payload bytes.
+     * @param ttl      updated TTL duration.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} with previous value bytes if configured, or acknowledgment bytes.
      */
-    CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint hint, byte[] value, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData hint, byte[] value, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData hint, byte[] value) {
+        return updateKeyValue(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
 
     default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value) {
         return updateKeyValue(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint keyHint, byte[] value, int clientID) {
+    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData keyHint, byte[] value, int clientID) {
         return updateKeyValue(key, keyHint, value, getDefaultTtl(), clientID, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHint keyHint, byte[] value, int clientID) {
+    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData keyHint, byte[] value, int clientID) {
         return updateKeyValue(serializeKey(key), keyHint, value, getDefaultTtl(), clientID, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHint hint, byte[] value) {
+    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData hint, byte[] value) {
         return updateKeyValue(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -269,15 +263,15 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Checks whether the specified key exists in the cache.
+     * Checks whether the specified key exists in the storage.
      *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if the key exists, otherwise {@code false}.
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} returning {@code true} if key exists, {@code false} otherwise.
      */
-    CompletableFuture<Boolean> existKey(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<Boolean> existKey(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
     default CompletableFuture<Boolean> existKey(String key) {
         return existKey(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
@@ -287,11 +281,11 @@ public interface HurriCacheClientInterface {
         return existKey(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existKey(String key, KeyHint hint) {
+    default CompletableFuture<Boolean> existKey(String key, KeyHintData hint) {
         return existKey(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existKey(byte[] key, KeyHint hint) {
+    default CompletableFuture<Boolean> existKey(byte[] key, KeyHintData hint) {
         return existKey(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -300,21 +294,21 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Deletes and removes a record from the cache by its key.
+     * Deletes an object associated with the specified key.
      *
-     * @param key      the byte array key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if the element was removed successfully, otherwise {@code false}.
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} returning {@code true} if deletion succeeded.
      */
-    CompletableFuture<Boolean> remove(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<Boolean> remove(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
     default CompletableFuture<Boolean> remove(String key) {
         return remove(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> remove(String key, KeyHint hint) {
+    default CompletableFuture<Boolean> remove(String key, KeyHintData hint) {
         return remove(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -322,273 +316,562 @@ public interface HurriCacheClientInterface {
         return remove(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> remove(byte[] key, KeyHint hint) {
+    default CompletableFuture<Boolean> remove(byte[] key, KeyHintData hint) {
         return remove(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> remove(byte[] key, KeyHint hint, int clientid) {
+    default CompletableFuture<Boolean> remove(byte[] key, KeyHintData hint, int clientid) {
         return remove(key, hint, clientid, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> remove(String key, KeyHint hint, int clientid) {
+    default CompletableFuture<Boolean> remove(String key, KeyHintData hint, int clientid) {
         return remove(serializeKey(key), hint, clientid, getDefaultTimeout());
     }
 
-    /**
-     * Initializes a FIFO Queue structure under the specified key.
-     *
-     * @param key          the byte array key representing the queue.
-     * @param initialValue initial list of byte payloads to enqueue during creation.
-     * @param ttl          the structure expiration timeout.
-     * @param clientId     the identifier of the invoking client.
-     * @param timeout      the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the confirmed {@link KeyHint}.
-     */
-    CompletableFuture<KeyHint> createQueue(byte[] key, List<byte[]> initialValue, Duration ttl, int clientId, Duration timeout);
+    // =========================================================================
+    // UNORDERED CONTAINERS (Payload)
+    // =========================================================================
 
-    default CompletableFuture<KeyHint> createQueue(byte[] key, List<byte[]> initialValue, Duration ttl) {
+    /**
+     * Creates a Queue container.
+     *
+     * @param key          target container key.
+     * @param initialValue initial sequence of {@link Payload} elements.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} with created {@link KeyHint}.
+     */
+    CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue, Duration ttl) {
         return createQueue(key, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createQueue(String key) {
+    default CompletableFuture<KeyHintData> createQueue(String key) {
         return createQueue(serializeKey(key), Collections.emptyList(), getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createQueue(String key, List<byte[]> initialValue) {
+    default CompletableFuture<KeyHintData> createQueue(String key, List<Payload> initialValue) {
         return createQueue(serializeKey(key), initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createQueue(byte[] key, List<byte[]> initialValue) {
+    default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue) {
         return createQueue(key, initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Initializes a sequential List structure under the specified key.
-     *
-     * @param key          the byte array key representing the list.
-     * @param initialValue initial collection of items to seed the list with.
-     * @param ttl          the structure expiration timeout.
-     * @param clientId     the identifier of the invoking client.
-     * @param timeout      the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the confirmed {@link KeyHint}.
+     * Creates a List container (linked sequence).
      */
-    CompletableFuture<KeyHint> createList(byte[] key, List<byte[]> initialValue, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<KeyHint> createList(byte[] key, List<byte[]> initialValue, Duration ttl) {
+    default CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue, Duration ttl) {
         return createList(key, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createList(String key) {
+    default CompletableFuture<KeyHintData> createList(String key) {
         return createList(key, Collections.emptyList());
     }
 
-    default CompletableFuture<KeyHint> createList(String key, List<byte[]> initialValue) {
+    default CompletableFuture<KeyHintData> createList(String key, List<Payload> initialValue) {
         return createList(key, initialValue, getDefaultClientId());
     }
 
-    default CompletableFuture<KeyHint> createList(byte[] key, List<byte[]> initialValue) {
+    default CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue) {
         return createList(key, initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createList(String key, List<byte[]> initialValue, int clientId) {
+    default CompletableFuture<KeyHintData> createList(String key, List<Payload> initialValue, int clientId) {
         return createList(serializeKey(key), initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
-     * Initializes an indexable Vector structure under the specified key.
-     *
-     * @param key          the byte array key representing the vector.
-     * @param initialValue initial collection of items to seed the vector with.
-     * @param ttl          the structure expiration timeout.
-     * @param clientId     the identifier of the invoking client.
-     * @param timeout      the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the confirmed {@link KeyHint}.
+     * Creates a Vector container (dynamic indexed array).
      */
-    CompletableFuture<KeyHint> createVector(byte[] key, List<byte[]> initialValue, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<KeyHintData> createVector(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<KeyHint> createVector(byte[] key, List<byte[]> initialValue, Duration ttl) {
+    default CompletableFuture<KeyHintData> createVector(byte[] key, List<Payload> initialValue, Duration ttl) {
         return createVector(key, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createVector(String key) {
+    default CompletableFuture<KeyHintData> createVector(String key) {
         return createVector(key, Collections.emptyList());
     }
 
-    default CompletableFuture<KeyHint> createVector(String key, List<byte[]> initialValue) {
+    default CompletableFuture<KeyHintData> createVector(String key, List<Payload> initialValue) {
         return createVector(key, initialValue, getDefaultClientId());
     }
 
-    default CompletableFuture<KeyHint> createVector(byte[] key, List<byte[]> initialValue) {
+    default CompletableFuture<KeyHintData> createVector(byte[] key, List<Payload> initialValue) {
         return createVector(key, initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> createVector(String key, List<byte[]> initialValue, int clientId) {
+    default CompletableFuture<KeyHintData> createVector(String key, List<Payload> initialValue, int clientId) {
         return createVector(serializeKey(key), initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
-     * Pops and removes the head (front) item from a structure (e.g., Queue or List).
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the extracted front byte array element.
+     * Creates a Set container (unordered unique collection).
      */
-    CompletableFuture<byte[]> getAndRemoveFront(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<KeyHintData> createSet(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<byte[]> getAndRemoveFront(String key) {
+    default CompletableFuture<KeyHintData> createSet(String key, List<Payload> initialValue) {
+        return createSet(serializeKey(key), initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createSet(byte[] key, List<Payload> initialValue) {
+        return createSet(key, initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Creates an Unordered Map container using standard {@link Payload} entries.
+     */
+    CompletableFuture<KeyHintData> createMap(byte[] key, Map<Payload, Payload> initialValue, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<KeyHintData> createMap(String key, Map<Payload, Payload> initialValue) {
+        return createMap(serializeKey(key), initialValue == null ? Collections.emptyMap() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createMap(byte[] key, Map<Payload, Payload> initialValue) {
+        return createMap(key, initialValue == null ? Collections.emptyMap() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Atomically retrieves and removes the front element of a container (Pop Front / Dequeue).
+     */
+    CompletableFuture<Payload> getAndRemoveFront(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Payload> getAndRemoveFront(String key) {
         return getAndRemoveFront(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndRemoveFront(String key, KeyHint hint) {
+    default CompletableFuture<Payload> getAndRemoveFront(String key, KeyHintData hint) {
         return getAndRemoveFront(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndRemoveFront(String key, int clientId) {
+    default CompletableFuture<Payload> getAndRemoveFront(String key, int clientId) {
         return getAndRemoveFront(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndRemoveFront(byte[] key, KeyHint hint) {
+    default CompletableFuture<Payload> getAndRemoveFront(byte[] key, KeyHintData hint) {
         return getAndRemoveFront(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Looks at the front element of a structure without removing it.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the front byte array element.
+     * Reads the front element of a container without modifying structure (Peek Front).
      */
-    CompletableFuture<byte[]> getFront(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<Payload> getFront(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<byte[]> getFront(String key) {
+    default CompletableFuture<Payload> getFront(String key) {
         return getFront(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getFront(byte[] key) {
+    default CompletableFuture<Payload> getFront(byte[] key) {
         return getFront(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getFront(String key, KeyHint hint) {
+    default CompletableFuture<Payload> getFront(String key, KeyHintData hint) {
         return getFront(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getFront(String key, KeyHint hint, int clientId) {
+    default CompletableFuture<Payload> getFront(String key, KeyHintData hint, int clientId) {
         return getFront(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getFront(String key, int clientId) {
+    default CompletableFuture<Payload> getFront(String key, int clientId) {
         return getFront(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getFront(byte[] key, KeyHint hint) {
+    default CompletableFuture<Payload> getFront(byte[] key, KeyHintData hint) {
         return getFront(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Appends an array of data elements to the end (tail) of the target collection structure.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param data     the sequence of byte arrays to insert.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if successful, otherwise {@code false}.
+     * Gets the element at the head of a sequence.
      */
-    CompletableFuture<Boolean> addElementToTail(byte[] key, KeyHint hint, List<byte[]> data, int clientId, Duration timeout);
+    CompletableFuture<Payload> getHead(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Boolean> addElementToTail(String key, KeyHint hint, List<byte[]> data) {
+    default CompletableFuture<Payload> getHead(String key) {
+        return getHead(key, getDefaultClientId());
+    }
+
+    default CompletableFuture<Payload> getHead(String key, int clientId) {
+        return getHead(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Payload> getHead(String key, KeyHintData hint) {
+        return getHead(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Payload> getHead(byte[] key, KeyHintData hint) {
+        return getHead(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Gets the element at the tail of a sequence.
+     */
+    CompletableFuture<Payload> getTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Payload> getTail(String key) {
+        return getTail(key, getDefaultClientId());
+    }
+
+    default CompletableFuture<Payload> getTail(String key, KeyHintData hint) {
+        return getTail(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Payload> getTail(byte[] key, KeyHintData hint) {
+        return getTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Payload> getTail(String key, int clientId) {
+        return getTail(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Atomically retrieves and removes the tail element of a container (Pop Back).
+     */
+    CompletableFuture<Payload> getAndRemoveTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Payload> getAndRemoveTail(String key) {
+        return getAndRemoveTail(key, getDefaultClientId());
+    }
+
+    default CompletableFuture<Payload> getAndRemoveTail(String key, KeyHintData hint) {
+        return getAndRemoveTail(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Payload> getAndRemoveTail(byte[] key, KeyHintData hint) {
+        return getAndRemoveTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Payload> getAndRemoveTail(String key, int clientId) {
+        return getAndRemoveTail(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Appends a collection of elements to the tail of a container (Push Back).
+     */
+    CompletableFuture<Boolean> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout);
+
+    default CompletableFuture<Boolean> addElementToTail(String key, KeyHintData hint, List<Payload> data) {
         return addElementToTail(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToTail(String key, KeyHint hint, List<byte[]> data, int clientId) {
+    default CompletableFuture<Boolean> addElementToTail(String key, KeyHintData hint, List<Payload> data, int clientId) {
         return addElementToTail(serializeKey(key), hint, data, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToTail(byte[] key, KeyHint hint, List<byte[]> data) {
+    default CompletableFuture<Boolean> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data) {
         return addElementToTail(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Fetches a single entry located at a specific index location within a List or Vector structure.
-     *
-     * @param key      the target collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param pos      the positional index (0-based) to request.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the element's byte array, or {@code null} if out of bounds.
+     * Prepends a collection of elements to the head of a container (Push Front).
      */
-    CompletableFuture<byte[]> getElementAtPosition(byte[] key, KeyHint hint, int pos, int clientId, Duration timeout);
+    CompletableFuture<Boolean> addElementToHead(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout);
 
-    default CompletableFuture<byte[]> getElementAtPosition(String key, int pos) {
+    default CompletableFuture<Boolean> addElementToHead(String key, List<Payload> data) {
+        return addElementToHead(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToHead(String key, KeyHintData hint, List<Payload> data) {
+        return addElementToHead(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToHead(byte[] key, KeyHintData keyHint, List<Payload> data) {
+        return addElementToHead(key, keyHint, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Adds elements to an unordered container (e.g., Set).
+     */
+    CompletableFuture<Boolean> addElement(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout);
+
+    default CompletableFuture<Boolean> addElement(String key, List<Payload> data) {
+        return addElement(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElement(String key, KeyHintData hint, List<Payload> data) {
+        return addElement(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElement(byte[] key, KeyHintData hint, List<Payload> data) {
+        return addElement(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Retrieves an element located at a specific index/position.
+     */
+    CompletableFuture<Payload> getElementAtPosition(byte[] key, KeyHintData hint, int pos, int clientId, Duration timeout);
+
+    default CompletableFuture<Payload> getElementAtPosition(String key, int pos) {
         return getElementAtPosition(serializeKey(key), null, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getElementAtPosition(String key, KeyHint hint, int pos) {
+    default CompletableFuture<Payload> getElementAtPosition(String key, KeyHintData hint, int pos) {
         return getElementAtPosition(serializeKey(key), hint, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getElementAtPosition(String key, int pos, int clientId) {
+    default CompletableFuture<Payload> getElementAtPosition(String key, int pos, int clientId) {
         return getElementAtPosition(serializeKey(key), null, pos, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getElementAtPosition(byte[] key, KeyHint hint, int pos) {
+    default CompletableFuture<Payload> getElementAtPosition(byte[] key, KeyHintData hint, int pos) {
         return getElementAtPosition(key, hint, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Streams or downloads the entire contents of a cached List structure.
-     *
-     * @param key      the list key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping a {@link List} containing all elements.
+     * Atomically fetches and removes an element situated at a specific index/position.
      */
-    CompletableFuture<List<byte[]>> streamList(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<Payload> getAndRemoveElementAtPosition(byte[] key, KeyHintData hint, int pos, int clientId, Duration timeout);
 
-    default CompletableFuture<List<byte[]>> streamList(String key) {
+    default CompletableFuture<Payload> getAndRemoveElementAtPosition(String key, KeyHintData hint, int pos) {
+        return getAndRemoveElementAtPosition(key, hint, pos, getDefaultClientId());
+    }
+
+    default CompletableFuture<Payload> getAndRemoveElementAtPosition(String key, KeyHintData hint, int pos, int clientId) {
+        return getAndRemoveElementAtPosition(serializeKey(key), hint, pos, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Payload> getAndRemoveElementAtPosition(byte[] key, KeyHintData hint, int pos) {
+        return getAndRemoveElementAtPosition(key, hint, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Inserts elements at a target index/position within a container.
+     */
+    CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Payload> data, int pos, int clientId, Duration timeout);
+
+    default CompletableFuture<Integer> addElementToPosition(String key, List<Payload> data, int pos) {
+        return addElementToPosition(serializeKey(key), null, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> addElementToPosition(String key, KeyHintData hint, List<Payload> data, int pos) {
+        return addElementToPosition(serializeKey(key), hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> addElementToPosition(String key, List<Payload> data, int pos, int clientId) {
+        return addElementToPosition(serializeKey(key), null, data, pos, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Payload> data, int pos) {
+        return addElementToPosition(key, hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Inserts elements immediately before a specified pivot element.
+     */
+    CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHintData hint, List<Payload> data, Payload pivot, int clientId, Duration timeout);
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<Payload> data, Payload pivot) {
+        return addElementToPositionBefore(serializeKey(key), null, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key, KeyHintData hint, List<Payload> data, Payload pivot) {
+        return addElementToPositionBefore(serializeKey(key), hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<Payload> data, Payload pivot, int clientId) {
+        return addElementToPositionBefore(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHintData hint, List<Payload> data, Payload pivot) {
+        return addElementToPositionBefore(key, hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Inserts elements immediately after a specified pivot element.
+     */
+    CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHintData hint, List<Payload> data, Payload pivot, int clientId, Duration timeout);
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<Payload> data, Payload pivot) {
+        return addElementToPositionAfter(serializeKey(key), null, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key, KeyHintData hint, List<Payload> data, Payload pivot) {
+        return addElementToPositionAfter(serializeKey(key), hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<Payload> data, Payload pivot, int clientId) {
+        return addElementToPositionAfter(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHintData hint, List<Payload> data, Payload pivot) {
+        return addElementToPositionAfter(key, hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Streams or retrieves all elements contained in a List container.
+     */
+    CompletableFuture<List<Payload>> streamList(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<List<Payload>> streamList(String key) {
         return streamList(key, getDefaultClientId());
     }
 
-    default CompletableFuture<List<byte[]>> streamList(String key, int clientId) {
+    default CompletableFuture<List<Payload>> streamList(String key, int clientId) {
         return streamList(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<List<byte[]>> streamList(String key, KeyHint hint) {
+    default CompletableFuture<List<Payload>> streamList(String key, KeyHintData hint) {
         return streamList(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<byte[]>> streamList(byte[] key, KeyHint hint) {
+    default CompletableFuture<List<Payload>> streamList(byte[] key, KeyHintData hint) {
         return streamList(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Acquires a lock on a specific key/object to orchestrate concurrency control.
-     *
-     * @param key      the object key to lock.
-     * @param hint     the key hint for routing optimization.
-     * @param type     the type of isolation barrier requested (e.g., Read, Write).
-     * @param clientId the identifier of the client holding the lock.
-     * @param duration the validity/lease duration of the lock.
-     * @param timeout  the acquisition timeout boundary.
-     * @return a {@link CompletableFuture} returning the acquisition status via {@link LockStatus}.
+     * Streams or retrieves elements contained in a Vector container.
      */
-    CompletableFuture<LockStatus> lockObject(byte[] key, KeyHint hint, LockType type, int clientId, Duration duration, Duration timeout);
+    CompletableFuture<List<Payload>> streamVector(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<LockStatus> lockObject(byte[] key, KeyHint hint, LockType type, Duration duration) {
+    default CompletableFuture<List<Payload>> streamVector(String key) {
+        return streamVector(key, null);
+    }
+
+    default CompletableFuture<List<Payload>> streamVector(String key, KeyHintData hint) {
+        return streamVector(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Payload>> streamVector(String key, int clientId) {
+        return streamVector(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Payload>> streamVector(byte[] key, KeyHintData hint) {
+        return streamVector(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Dumps or streams all entries from an unordered Map container.
+     */
+    CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Map<Payload, Payload>> streamMap(String key) {
+        return streamMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Fetches a slice (range) of elements from an unordered container based on position indexes.
+     */
+    CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key, KeyHintData hint, ContainerType containerType, int start, int end, int clientId, Duration timeout);
+
+    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key, KeyHintData hint, ContainerType containerType, int start, int end) {
+        return streamElementInRangeUnordered(serializeKey(key), hint, containerType, start, end, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key, ContainerType containerType, int start, int end, int clientId) {
+        return streamElementInRangeUnordered(serializeKey(key), null, containerType, start, end, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key, KeyHintData hint, ContainerType containerType, int start, int end) {
+        return streamElementInRangeUnordered(key, hint, containerType, start, end, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Deletes matching values/keys from the given container type.
+     *
+     * @return count of successfully removed elements.
+     */
+    CompletableFuture<Integer> removeFromContainer(byte[] key, KeyHintData hint, ContainerType type, List<Payload> values, List<Payload> keys, int clientId, Duration timeout);
+
+    default CompletableFuture<Integer> removeFromContainer(String key, ContainerType type, List<Payload> values) {
+        return removeFromContainer(serializeKey(key), null, type, values, Collections.emptyList(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainer(byte[] key, KeyHintData hint, ContainerType type, List<Payload> values) {
+        return removeFromContainer(key, hint, type, values, Collections.emptyList(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    // =========================================================================
+    // ORDERED CONTAINERS (OrderedPayload)
+    // =========================================================================
+
+    /**
+     * Creates an OrderedSet container containing weight/score-ranked {@link OrderedPayload} elements.
+     */
+    CompletableFuture<KeyHintData> createOrderedSet(byte[] key, List<OrderedPayload> initialValue, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<KeyHintData> createOrderedSet(String key, List<OrderedPayload> initialValue) {
+        return createOrderedSet(serializeKey(key), initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createOrderedSet(byte[] key, List<OrderedPayload> initialValue) {
+        return createOrderedSet(key, initialValue == null ? Collections.emptyList() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Creates an OrderedMap container where keys are instance of {@link OrderedPayload}.
+     */
+    CompletableFuture<KeyHintData> createOrderedMap(byte[] key, Map<OrderedPayload, Payload> initialValue, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<KeyHintData> createOrderedMap(String key, Map<OrderedPayload, Payload> initialValue) {
+        return createOrderedMap(serializeKey(key), initialValue == null ? Collections.emptyMap() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createOrderedMap(byte[] key, Map<OrderedPayload, Payload> initialValue) {
+        return createOrderedMap(key, initialValue == null ? Collections.emptyMap() : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Streams or dumps all entries stored in an OrderedMap.
+     */
+    CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(String key) {
+        return streamOrderedMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Fetches a sub-range of elements from an {@link OrderedSet} filtered by score/weight boundaries.
+     *
+     * @param startWeight lower bound weight limit.
+     * @param endWeight   upper bound weight limit.
+     * @param reverse     {@code true} for descending ordering, {@code false} for ascending.
+     */
+    CompletableFuture<List<OrderedPayload>> streamElementInRangeOrderedSet(byte[] key, KeyHintData hint,
+                                                                           long startWeight, long endWeight, boolean reverse, int clientId, Duration timeout);
+
+    default CompletableFuture<List<OrderedPayload>> streamElementInRangeOrdered(String key, ContainerType containerType, long startWeight, long endWeight) {
+        return streamElementInRangeOrderedSet(serializeKey(key), null, startWeight, endWeight, false, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Adds weighted elements to an {@link OrderedSet}.
+     */
+    CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout);
+
+    default CompletableFuture<Integer> addElementWithWeight(String key, List<OrderedPayload> data) {
+        return addElementWithWeight(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    // =========================================================================
+    // ATOMIC & LOCK OPERATIONS
+    // =========================================================================
+
+    /**
+     * Acquires a distributed lock on an object key.
+     *
+     * @param key      target lock key.
+     * @param hint     optional key routing hint.
+     * @param type     type of lock requested (e.g., READ, WRITE).
+     * @param clientId identifier of the acquiring client.
+     * @param duration lease duration of the lock.
+     * @param timeout  execution timeout duration.
+     * @return resulting {@link LockStatus}.
+     */
+    CompletableFuture<LockStatus> lockObject(byte[] key, KeyHintData hint, LockType type, int clientId, Duration duration, Duration timeout);
+
+    default CompletableFuture<LockStatus> lockObject(byte[] key, KeyHintData hint, LockType type, Duration duration) {
         return lockObject(key, hint, type, getDefaultClientId(), duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(String key, KeyHint hint, LockType type, int clientId, Duration duration) {
+    default CompletableFuture<LockStatus> lockObject(String key, KeyHintData hint, LockType type, int clientId, Duration duration) {
         return lockObject(serializeKey(key), hint, type, clientId, duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(byte[] key, KeyHint hint, LockType type, int clientId, Duration duration) {
+    default CompletableFuture<LockStatus> lockObject(byte[] key, KeyHintData hint, LockType type, int clientId, Duration duration) {
         return lockObject(key, hint, type, clientId, duration, getDefaultTimeout());
     }
 
@@ -601,25 +884,19 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Explicitly releases a locked object resource.
-     *
-     * @param key      the object key to unlock.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the client releasing the lock.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the resulting execution {@link LockStatus}.
+     * Releases a held lock on a specified key.
      */
-    CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<LockStatus> unlockObject(String key, KeyHint hint, int clientId) {
+    default CompletableFuture<LockStatus> unlockObject(String key, KeyHintData hint, int clientId) {
         return unlockObject(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHint hint) {
+    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint) {
         return unlockObject(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHint hint, int clientid) {
+    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientid) {
         return unlockObject(key, hint, clientid, getDefaultTimeout());
     }
 
@@ -632,147 +909,9 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Streams elements belonging to a specific sub-range subset out of an array or sequential structure.
-     *
-     * @param key      the unique identifier for the structure.
-     * @param hint     the key hint for routing optimization.
-     * @param isArray  flag stating if the structure should be processed as a standard primitive array.
-     * @param start    the index boundary start position (inclusive).
-     * @param end      the index boundary stopping position (exclusive).
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} containing the matching item list segment payload.
+     * Removes the tail element of a sequence without returning the deleted element.
      */
-    CompletableFuture<List<byte[]>> streamElementInRange(byte[] key, KeyHint hint, boolean isArray, int start, int end, int clientId, Duration timeout);
-
-    default CompletableFuture<List<byte[]>> streamElementInRange(String key, KeyHint hint, boolean isArray, int start, int end) {
-        return streamElementInRange(serializeKey(key), hint, isArray, start, end, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<List<byte[]>> streamElementInRange(String key, boolean isArray, int start, int end, int clientId) {
-        return streamElementInRange(serializeKey(key), null, isArray, start, end, clientId, getDefaultTimeout());
-    }
-
-    default CompletableFuture<List<byte[]>> streamElementInRange(byte[] key, KeyHint hint, boolean isArray, int start, int end) {
-        return streamElementInRange(key, hint, isArray, start, end, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    /**
-     * Streams or downloads all entries contained inside a Vector structure.
-     *
-     * @param key      the vector structure key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping a list containing the vector's entries.
-     */
-    CompletableFuture<List<byte[]>> streamVector(byte[] key, KeyHint hint, int clientId, Duration timeout);
-
-    default CompletableFuture<List<byte[]>> streamVector(String key) {
-        return streamVector(key, null);
-    }
-
-    default CompletableFuture<List<byte[]>> streamVector(String key, KeyHint hint) {
-        return streamVector(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<List<byte[]>> streamVector(String key, int clientId) {
-        return streamVector(serializeKey(key), null, clientId, getDefaultTimeout());
-    }
-
-    default CompletableFuture<List<byte[]>> streamVector(byte[] key, KeyHint hint) {
-        return streamVector(key, hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    /**
-     * Atomically retrieves and purges an item located at an exact position coordinate inside a structural collection.
-     *
-     * @param key      the targeted collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param pos      the zero-based index to extract.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the extracted item payload.
-     */
-    CompletableFuture<byte[]> getAndRemoveElementAtPosition(byte[] key, KeyHint hint, int pos, int clientId, Duration timeout);
-
-    default CompletableFuture<byte[]> getAndRemoveElementAtPosition(String key, KeyHint hint, int pos) {
-        return getAndRemoveElementAtPosition(key, hint, pos, getDefaultClientId());
-    }
-
-    default CompletableFuture<byte[]> getAndRemoveElementAtPosition(String key, KeyHint hint, int pos, int clientId) {
-        return getAndRemoveElementAtPosition(serializeKey(key), hint, pos, clientId, getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> getAndRemoveElementAtPosition(byte[] key, KeyHint hint, int pos) {
-        return getAndRemoveElementAtPosition(key, hint, pos, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    /**
-     * Prepends an array of elements directly to the head (front) of a targeted structure.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param data     the collection of payload data pieces to push forward.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if successful, otherwise {@code false}.
-     */
-    CompletableFuture<Boolean> addElementToHead(byte[] key, KeyHint hint, List<byte[]> data, int clientId, Duration timeout);
-
-    default CompletableFuture<Boolean> addElementToHead(String key, List<byte[]> data) {
-        return addElementToHead(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToHead(String key, KeyHint hint, List<byte[]> data) {
-        return addElementToHead(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToHead(byte[] key, KeyHint keyhint, List<byte[]> data) {
-        return addElementToHead(key, keyhint, data, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    /**
-     * Inserts data records directly into a specific index location, shifting succeeding indices rightward.
-     *
-     * @param key      the structural key entity.
-     * @param hint     the key hint for routing optimization.
-     * @param data     the sequence of item byte lists to embed.
-     * @param pos      the target index coordinate slot.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if the entry was added safely, otherwise {@code false}.
-     */
-    CompletableFuture<Boolean> addElementToPosition(byte[] key, KeyHint hint, List<byte[]> data, int pos, int clientId, Duration timeout);
-
-    default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos) {
-        byte[] key1 = serializeKey(key);
-        return addElementToPosition(key1, null, data, pos, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToPosition(String key, KeyHint hint, List<byte[]> data, int pos) {
-        return addElementToPosition(serializeKey(key), hint, data, pos, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToPosition(String key, List<byte[]> data, int pos, int clientId) {
-        byte[] key1 = serializeKey(key);
-        return addElementToPosition(key1, null, data, pos, clientId, getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToPosition(byte[] key, KeyHint hint, List<byte[]> data, int pos) {
-        return addElementToPosition(key, hint, data, pos, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    /**
-     * Trims or drops the final ending item (tail) from the structured type.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if an item was removed, otherwise {@code false}.
-     */
-    CompletableFuture<Boolean> removeTail(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<Boolean> removeTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
     default CompletableFuture<Boolean> removeTail(String key) {
         return removeTail(key, getDefaultClientId());
@@ -782,24 +921,18 @@ public interface HurriCacheClientInterface {
         return removeTail(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(String key, KeyHint hint) {
+    default CompletableFuture<Boolean> removeTail(String key, KeyHintData hint) {
         return removeTail(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(byte[] key, KeyHint hint) {
+    default CompletableFuture<Boolean> removeTail(byte[] key, KeyHintData hint) {
         return removeTail(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Trims or drops the leading item (head) from the structured type.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if an item was removed, otherwise {@code false}.
+     * Removes the head element of a sequence without returning the deleted element.
      */
-    CompletableFuture<Boolean> removeHead(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    CompletableFuture<Boolean> removeHead(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
     default CompletableFuture<Boolean> removeHead(String key) {
         return removeHead(key, getDefaultClientId());
@@ -809,228 +942,95 @@ public interface HurriCacheClientInterface {
         return removeHead(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(byte[] key, KeyHint hint) {
+    default CompletableFuture<Boolean> removeHead(byte[] key, KeyHintData hint) {
         return removeHead(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(String key, KeyHint hint) {
+    default CompletableFuture<Boolean> removeHead(String key, KeyHintData hint) {
         return removeHead(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Deletes a range of elements residing between index limits.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param pos      the initial starting offset position boundary (inclusive).
-     * @param endPos   the final ending index boundary limit (exclusive).
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if the subset region was emptied, otherwise {@code false}.
+     * Removes a range of elements by position indexes.
      */
-    CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHint hint, int pos, int endPos, int clientId, Duration timeout);
+    CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, int pos, int endPos, int clientId, Duration timeout);
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHint hint, int pos, int endPos) {
+    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, int pos, int endPos) {
         return removeElementAtPosition(key, hint, pos, endPos, getDefaultClientId());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHint hint, int pos) {
+    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, int pos) {
         return removeElementAtPosition(key, hint, pos, pos + 1, getDefaultClientId());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHint hint, int pos) {
+    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, int pos) {
         return removeElementAtPosition(key, hint, pos, pos + 1, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHint hint, int pos, int endPos, int clientId) {
+    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, int pos, int endPos, int clientId) {
         return removeElementAtPosition(serializeKey(key), hint, pos, endPos, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHint hint, int pos, int endPos) {
+    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, int pos, int endPos) {
         return removeElementAtPosition(key, hint, pos, endPos, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Shuts down the client connection pool and releases allocated communication pipeline resources.
+     * Atomically creates a 64-bit primitive scalar value.
      */
-    void shutdown();
+    CompletableFuture<KeyHintData> atomicCreate(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId, Duration timeout);
 
-    /**
-     * Looks at the head element of a structure without removing it.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the head byte array element.
-     */
-    CompletableFuture<byte[]> getHead(byte[] key, KeyHint hint, int clientId, Duration timeout);
-
-    default CompletableFuture<byte[]> getHead(String key) {
-        return getHead(key, getDefaultClientId());
-    }
-
-    default CompletableFuture<byte[]> getHead(String key, int clientId) {
-        return getHead(serializeKey(key), null, clientId, getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> getHead(String key, KeyHint hint) {
-        return getHead(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> getHead(byte[] key, KeyHint hint) {
-        return getHead(key, hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    /**
-     * Looks at the tail element of a structure without removing it.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the tail byte array element.
-     */
-    CompletableFuture<byte[]> getTail(byte[] key, KeyHint hint, int clientId, Duration timeout);
-
-    default CompletableFuture<byte[]> getTail(String key) {
-        return getTail(key, getDefaultClientId());
-    }
-
-    default CompletableFuture<byte[]> getTail(String key, KeyHint hint) {
-        return getTail(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> getTail(byte[] key, KeyHint hint) {
-        return getTail(key, hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> getTail(String key, int clientId) {
-        return getTail(serializeKey(key), null, clientId, getDefaultTimeout());
-    }
-
-    /**
-     * Pops and removes the tail (rear) item from a structure.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the extracted tail byte array element.
-     */
-    CompletableFuture<byte[]> getAndRemoveTail(byte[] key, KeyHint hint, int clientId, Duration timeout);
-
-    default CompletableFuture<byte[]> getAndRemoveTail(String key) {
-        return getTail(key, getDefaultClientId());
-    }
-
-    default CompletableFuture<byte[]> getAndRemoveTail(String key, KeyHint hint) {
-        return getTail(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> getAndRemoveTail(byte[] key, KeyHint hint) {
-        return getTail(key, hint, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<byte[]> getAndRemoveTail(String key, int clientId) {
-        return getTail(serializeKey(key), null, clientId, getDefaultTimeout());
-    }
-
-    /**
-     * Null-safe helper that returns a fallback default KeyHint if the provided hint reference is null.
-     *
-     * @param key  the cache byte array key.
-     * @param hint a nullable user-provided KeyHint.
-     * @return the provided hint if non-null, or a newly generated default KeyHint.
-     */
-    default KeyHint getKeyHint(byte[] key, KeyHint hint) {
-        return hint == null ? getKeyHint(key) : hint;
-    }
-
-    // =========================================================================
-    // ATOMIC OPERATIONS (USING LONG FOR COUNTERS / MASKS)
-    // =========================================================================
-
-    /**
-     * Initialized an atomic counter or 64-bit numerical field under the specified key.
-     *
-     * @param key      the counter entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param value    the primitive long scalar integer initializer.
-     * @param ttl      the expiration lifetime limit.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the confirmed {@link KeyHint}.
-     */
-    CompletableFuture<KeyHint> atomicCreate(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout);
-
-    default CompletableFuture<KeyHint> atomicCreate(byte[] key, KeyHint hint, long value) {
+    default CompletableFuture<KeyHintData> atomicCreate(byte[] key, KeyHintData hint, long value) {
         return atomicCreate(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> atomicCreate(String key, KeyHint hint, long value) {
+    default CompletableFuture<KeyHintData> atomicCreate(String key, KeyHintData hint, long value) {
         return atomicCreate(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> atomicCreate(String key, long value) {
+    default CompletableFuture<KeyHintData> atomicCreate(String key, long value) {
         return atomicCreate(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> atomicCreate(byte[] key, long value) {
+    default CompletableFuture<KeyHintData> atomicCreate(byte[] key, long value) {
         return atomicCreate(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> atomicCreate(String key, long value, int clientId) {
+    default CompletableFuture<KeyHintData> atomicCreate(String key, long value, int clientId) {
         return atomicCreate(serializeKey(key), null, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
-     * Overwrites or stores an atomic numerical value to a given long integer value.
-     *
-     * @param key      the entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param value    the long integer value to assign.
-     * @param ttl      the entry lifetime limit.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the confirmed {@link KeyHint}.
+     * Atomically overwrites a 64-bit scalar counter/value.
      */
-    CompletableFuture<KeyHint> atomicStore(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<KeyHintData> atomicStore(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<KeyHint> atomicStore(byte[] key, KeyHint hint, long value) {
+    default CompletableFuture<KeyHintData> atomicStore(byte[] key, KeyHintData hint, long value) {
         return atomicStore(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> atomicStore(String key, KeyHint hint, long value) {
+    default CompletableFuture<KeyHintData> atomicStore(String key, KeyHintData hint, long value) {
         return atomicStore(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> atomicStore(byte[] key, long value) {
+    default CompletableFuture<KeyHintData> atomicStore(byte[] key, long value) {
         return atomicStore(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHint> atomicStore(String key, KeyHint keyHint, long value, int clientId) {
+    default CompletableFuture<KeyHintData> atomicStore(String key, KeyHintData keyHint, long value, int clientId) {
         return atomicStore(serializeKey(key), keyHint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
-     * Atomically exchanges a numerical field value, replacing it with a new one and returning the prior state value.
-     *
-     * @param key      the unique entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param value    the substitution replacement value.
-     * @param ttl      the lifetime limit of the entry.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the old numerical value before substitution.
+     * Atomically sets a new 64-bit value and returns the old value.
      */
-    CompletableFuture<Long> atomicExchange(byte[] key, KeyHint hint, long value, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> atomicExchange(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<Long> atomicExchange(byte[] key, KeyHint hint, long value) {
+    default CompletableFuture<Long> atomicExchange(byte[] key, KeyHintData hint, long value) {
         return atomicExchange(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicExchange(String key, KeyHint hint, long value) {
+    default CompletableFuture<Long> atomicExchange(String key, KeyHintData hint, long value) {
         return atomicExchange(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -1039,23 +1039,15 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Performs an atomic addition operation on a remote long counter field.
-     *
-     * @param key      the counter entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param delta    the value amount increment offset to apply.
-     * @param ttl      the lifetime limit of the entry.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the freshly updated value post-addition.
+     * Atomically increments a 64-bit scalar value by a given delta.
      */
-    CompletableFuture<Long> atomicAdd(byte[] key, KeyHint hint, long delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> atomicAdd(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<Long> atomicAdd(byte[] key, KeyHint hint, long delta) {
+    default CompletableFuture<Long> atomicAdd(byte[] key, KeyHintData hint, long delta) {
         return atomicAdd(key, hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicAdd(String key, KeyHint hint, long delta) {
+    default CompletableFuture<Long> atomicAdd(String key, KeyHintData hint, long delta) {
         return atomicAdd(serializeKey(key), hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -1064,182 +1056,143 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Performs an atomic subtraction operation on a remote long counter field.
-     *
-     * @param key      the counter entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param delta    the value amount decrement offset to apply.
-     * @param ttl      the lifetime limit of the entry.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the freshly updated value post-subtraction.
+     * Atomically decrements a 64-bit scalar value by a given delta.
      */
-    CompletableFuture<Long> atomicSub(byte[] key, KeyHint hint, long delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> atomicSub(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<Long> atomicSub(byte[] key, KeyHint hint, long delta) {
+    default CompletableFuture<Long> atomicSub(byte[] key, KeyHintData hint, long delta) {
         return atomicSub(key, hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicSub(String key, KeyHint hint, long delta) {
+    default CompletableFuture<Long> atomicSub(String key, KeyHintData hint, long delta) {
         return atomicSub(serializeKey(key), hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Computes an atomic bitwise AND operation across the given 64-bit mask against a specific value entry.
-     *
-     * @param key      the entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param mask     the bitwise mask parameter.
-     * @param ttl      the lifetime limit of the entry.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the newly computed bitwise value.
+     * Applies an atomic bitwise AND mask operation on a scalar value.
      */
-    CompletableFuture<Long> atomicAnd(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> atomicAnd(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<Long> atomicAnd(byte[] key, KeyHint hint, long mask) {
+    default CompletableFuture<Long> atomicAnd(byte[] key, KeyHintData hint, long mask) {
         return atomicAnd(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicAnd(String key, KeyHint hint, long mask) {
+    default CompletableFuture<Long> atomicAnd(String key, KeyHintData hint, long mask) {
         return atomicAnd(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Computes an atomic bitwise OR operation across the given 64-bit mask against a specific value entry.
-     *
-     * @param key      the entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param mask     the bitwise mask parameter.
-     * @param ttl      the lifetime limit of the entry.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the newly computed bitwise value.
+     * Applies an atomic bitwise OR mask operation on a scalar value.
      */
-    CompletableFuture<Long> atomicOr(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> atomicOr(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<Long> atomicOr(byte[] key, KeyHint hint, long mask) {
+    default CompletableFuture<Long> atomicOr(byte[] key, KeyHintData hint, long mask) {
         return atomicOr(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicOr(String key, KeyHint keyHint, long mask) {
+    default CompletableFuture<Long> atomicOr(String key, KeyHintData keyHint, long mask) {
         return atomicOr(serializeKey(key), keyHint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Computes an atomic bitwise XOR (exclusive or) operation across the given 64-bit mask against a specific value entry.
-     *
-     * @param key      the entry key.
-     * @param hint     the key hint for routing optimization.
-     * @param mask     the bitwise mask parameter.
-     * @param ttl      the lifetime limit of the entry.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping the newly computed bitwise value.
+     * Applies an atomic bitwise XOR mask operation on a scalar value.
      */
-    CompletableFuture<Long> atomicXor(byte[] key, KeyHint hint, long mask, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> atomicXor(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<Long> atomicXor(byte[] key, KeyHint hint, long mask) {
+    default CompletableFuture<Long> atomicXor(byte[] key, KeyHintData hint, long mask) {
         return atomicXor(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicXor(String key, KeyHint hint, long mask) {
+    default CompletableFuture<Long> atomicXor(String key, KeyHintData hint, long mask) {
         return atomicXor(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
-     * Executes an atomic Compare-And-Set (CAS) conditional value assignment state adjustment.
+     * Performs an atomic Compare-And-Swap (CAS) operation on a primitive 64-bit scalar.
      *
-     * @param key           the entry key.
-     * @param hint          the key hint for routing optimization.
-     * @param expectedValue the prerequisite value expected to match within cache storage state.
-     * @param newValue      the target assigned value written if the prerequisite match succeeds.
-     * @param ttl           the expiration lifetime limit.
-     * @param clientId      the identifier of the invoking client.
-     * @param timeout       the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping an {@link AtomicCasRes} envelope depicting transaction results.
+     * @param expectedValue expected existing scalar value.
+     * @param newValue      new target value to apply if match succeeds.
+     * @return resulting {@link AtomicCasRes} indicating success/failure and current value.
      */
-    CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHint hint, long expectedValue, long newValue, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData hint, long expectedValue, long newValue, Duration ttl, int clientId, Duration timeout);
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHint keyHint, long expectedValue, long newValue) {
+    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData keyHint, long expectedValue, long newValue) {
         return atomicCompareAndSet(key, keyHint, expectedValue, newValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHint keyHint, long expectedValue, long newValue) {
+    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData keyHint, long expectedValue, long newValue) {
         return atomicCompareAndSet(serializeKey(key), keyHint, expectedValue, newValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHint hint, long expectedValue, long newValue, int clientId) {
+    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData hint, long expectedValue, long newValue, int clientId) {
         return atomicCompareAndSet(serializeKey(key), hint, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-
     /**
-     * Inserts a list of elements into a sequential collection (List or Vector) directly before a specified pivot element.
-     *
-     * <p>The method searches for the first occurrence matching {@code pivotVal}. If found, all items in {@code data}
-     * are inserted in order immediately preceding the pivot, shifting the pivot and all subsequent elements to the right.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param data     the sequence of byte payloads to insert.
-     * @param pos      the target pivot element before which the new elements will be inserted.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if the insertion succeeded, or {@code false} if the key/pivot was not found or type mismatched.
-     */    CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout);
-
-    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<byte[]> data, byte[] pos) {
-        byte[] key1 = serializeKey(key);
-        return addElementToPositionBefore(key1, null, data, pos, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToPositionBefore(String key, KeyHint hint, List<byte[]> data, byte[] pos) {
-        return addElementToPositionBefore(serializeKey(key), hint, data, pos, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<byte[]> data, byte[] pos, int clientId) {
-        byte[] key1 = serializeKey(key);
-        return addElementToPositionBefore(key1, null, data, pos, clientId, getDefaultTimeout());
-    }
-
-    default CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos) {
-        return addElementToPositionBefore(key, hint, data, pos, getDefaultClientId(), getDefaultTimeout());
-    }
-
-
-    /**
-     * Inserts a list of elements into a sequential collection (List or Vector) directly after a specified pivot element.
-     *
-     * <p>The method searches for the first occurrence matching {@code pivotVal}. If found, all items in {@code data}
-     * are inserted in order immediately following the pivot, shifting subsequent elements to the right.
-     *
-     * @param key      the collection key.
-     * @param hint     the key hint for routing optimization.
-     * @param data     the sequence of byte payloads to insert.
-     * @param pos    the target pivot element after which the new elements will be inserted.
-     * @param clientId the identifier of the invoking client.
-     * @param timeout  the operation execution timeout.
-     * @return a {@link CompletableFuture} wrapping {@code true} if the insertion succeeded, or {@code false} if the key/pivot was not found or type mismatched.
+     * Queries current element count / size of a container data structure.
      */
-    CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos, int clientId, Duration timeout);
+    CompletableFuture<Integer> getSize(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<byte[]> data, byte[] pos) {
-        byte[] key1 = serializeKey(key);
-        return addElementToPositionAfter(key1, null, data, pos, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> getSize(String key) {
+        return getSize(key, getDefaultClientId());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(String key, KeyHint hint, List<byte[]> data, byte[] pos) {
-        return addElementToPositionAfter(serializeKey(key), hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> getSize(String key, int clientId) {
+        return getSize(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<byte[]> data, byte[] pos, int clientId) {
-        byte[] key1 = serializeKey(key);
-        return addElementToPositionAfter(key1, null, data, pos, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> getSize(String key, KeyHintData hint) {
+        return getSize(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHint hint, List<byte[]> data, byte[] pos) {
-        return addElementToPositionAfter(key, hint, data, pos, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> getSize(byte[] key, KeyHintData hint) {
+        return getSize(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
+    /**
+     * Loads current value of an atomic scalar.
+     */
+    CompletableFuture<Long> atomicLoad(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Long> atomicLoad(String key) {
+        return atomicLoad(key, getDefaultClientId());
+    }
+
+    default CompletableFuture<Long> atomicLoad(String key, int clientId) {
+        return atomicLoad(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> atomicLoad(String key, KeyHintData hint) {
+        return atomicLoad(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> atomicLoad(byte[] key, KeyHintData hint) {
+        return atomicLoad(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Reads current value of an atomic scalar and immediately removes it.
+     */
+    CompletableFuture<Long> atomicLoadAndDelete(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Long> atomicLoadAndDelete(String key) {
+        return atomicLoadAndDelete(key, getDefaultClientId());
+    }
+
+    default CompletableFuture<Long> atomicLoadAndDelete(String key, int clientId) {
+        return atomicLoadAndDelete(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> atomicLoadAndDelete(String key, KeyHintData hint) {
+        return atomicLoadAndDelete(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> atomicLoadAndDelete(byte[] key, KeyHintData hint) {
+        return atomicLoadAndDelete(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Gracefully shuts down client connections and releases network resources.
+     */
+    void shutdown();
 }

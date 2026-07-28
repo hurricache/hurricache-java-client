@@ -23,11 +23,6 @@ public class FastCacheRawStressTest {
     private final int OPERATIONS_PER_THREAD = 100000;
     private String serverName;
 
-    @BeforeEach
-    void init() throws IOException {
-        serverName = "stress-server-" + UUID.randomUUID();
-        InProcessServerBuilder.forName(serverName).addService(new TestBase.MockFastCacheService()).build().start();
-    }
 
     @Test
     void highConcurrencyLoadTest() throws InterruptedException {

@@ -1,6 +1,7 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -15,7 +16,7 @@ public class ControlOperationsTest extends TestBase {
     @Test
     void testTtlMethods() throws ExecutionException, InterruptedException {
         String key = "ttlKey";
-        KeyHint keyHint = client.createKeyValue(key, "data".getBytes()).get();
+        KeyHintData keyHint = client.createKeyValue(key, "data".getBytes()).get();
 
         // Set TTL to 100 seconds
         Boolean success = client.setTtl(key, keyHint, 100).get();

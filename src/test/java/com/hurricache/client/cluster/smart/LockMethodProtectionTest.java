@@ -1,8 +1,9 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -33,7 +34,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testGlobalLockUnaryProtectionCreateOnMaster() throws Exception {
         // Ensure object exists - Create on master
         String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -59,7 +60,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Ensure object exists - Create on backup
         String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -82,11 +83,10 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Master")
     void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
         String listKey = "global_list" + UUID.randomUUID();
-        ;
 
         // Create on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
-                .createList(listKey, List.of("item1".getBytes()), ownerId)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
+                .createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -99,7 +99,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList("item2".getBytes()),
+                                                                                  Collections.singletonList(Payload.of("item2".getBytes())),
                                                                                   intruderId).get());
     }
 
@@ -107,11 +107,10 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Backup")
     void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
         String listKey = "global_list" + UUID.randomUUID();
-        ;
 
         // Create on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
-                .createList(listKey, List.of("item1".getBytes()), ownerId)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
+                .createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -124,7 +123,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList("item2".getBytes()),
+                                                                                  Collections.singletonList(Payload.of("item2".getBytes())),
                                                                                   intruderId).get());
     }
 
@@ -135,8 +134,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testWriteLockProtectionCreateOnMaster() throws Exception {
         // Create on master
         String testKey1 = testKey + UUID.randomUUID();
-        ;
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -162,7 +160,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testWriteLockProtectionCreateOnBackup() throws Exception {
         // Create on backup
         String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -190,8 +188,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testReadLockProtectionCreateOnMaster() throws Exception {
         // Create on master
         String testKey1 = testKey + UUID.randomUUID();
-        ;
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -215,7 +212,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testReadLockProtectionCreateOnBackup() throws Exception {
         // Create on backup
         String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -242,7 +239,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Create on master
         String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -265,7 +262,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testLockCompatibilityCreateOnBackup() throws Exception {
         // Create on backup
         String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster

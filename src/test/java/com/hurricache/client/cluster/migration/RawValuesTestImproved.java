@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.migration;
 
 import com.hurricache.client.cluster.AdvancedTest;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Assertions;
@@ -17,7 +18,7 @@ public class RawValuesTestImproved extends AdvancedTest {
 
     @Test
     void createKeyValueLoopMigration() throws InterruptedException {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
 
         // Phase 1: High-Throughput Async Writes
         runAsyncBatch("Write Phase Loading", NUM_OF_KEYS, emitter -> {
@@ -44,7 +45,7 @@ public class RawValuesTestImproved extends AdvancedTest {
                 NUM_OF_KEYS,
                 emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
                 (entry, badCounter) -> {
-                    Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
+                    Pair<String, Pair<String, KeyHintData>> p = (Pair<String, Pair<String, KeyHintData>>) entry;
                     client.getValue(p.first, p.second.second).thenAccept(res -> {
                         if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
                             reducedGood.incrementAndGet();
@@ -66,7 +67,7 @@ public class RawValuesTestImproved extends AdvancedTest {
                 NUM_OF_KEYS,
                 emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
                 (entry, badCounter) -> {
-                    Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
+                    Pair<String, Pair<String, KeyHintData>> p = (Pair<String, Pair<String, KeyHintData>>) entry;
                     client.getValue(p.first, p.second.second).thenAccept(res -> {
                         if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
                             growingGood.incrementAndGet();

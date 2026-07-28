@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class StreamBatchObserver extends CompletableFutureObserver<BatchValueResponse, List<byte[]>> {
+public class StreamBatchOrderedObserver extends CompletableFutureObserver<BatchValueResponse, List<Pair<Long, byte[]>>> {
 
-    public StreamBatchObserver(CompletableFuture<List<byte[]>> future) {
-        super(future, res -> res.getValueList().stream().map(CompressionUtils::decompressIfNeeded).toList());
+    public StreamBatchOrderedObserver(CompletableFuture<List<Pair<Long, byte[]>>> future) {
+        super(future, res -> res.getValueOrderedList().stream().map(orderedValue -> Pair.of(orderedValue.getOrder(), CompressionUtils.decompressIfNeeded(orderedValue))).toList());
         value = new ArrayList<>();
     }
 

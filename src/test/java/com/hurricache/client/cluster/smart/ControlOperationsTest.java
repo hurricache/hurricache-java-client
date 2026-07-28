@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
@@ -19,7 +20,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         String key = "ttlKey" + UUID.randomUUID();
 
         // Create should be done on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(key, "data".getBytes())
                 .get();
         // Allow cache to replicate data inside cluster
@@ -40,7 +41,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         String key = "ttlKey" + UUID.randomUUID();
 
         // Create should be done on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(key, "data".getBytes())
                 .get();
         // Allow cache to replicate data inside cluster
@@ -60,7 +61,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         String lockKey = "resourceKey" + UUID.randomUUID();
 
         // Create should be done on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey, "secure_data".getBytes())
                 .get();
         // Allow cache to replicate data inside cluster
@@ -81,7 +82,7 @@ public class ControlOperationsTest extends TestBaseCluster {
         String lockKey = "resourceKey" + UUID.randomUUID();
 
         // Create should be done on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey, "secure_data".getBytes())
                 .get();
         // Allow cache to replicate data inside cluster

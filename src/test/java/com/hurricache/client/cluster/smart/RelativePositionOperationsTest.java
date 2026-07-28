@@ -1,8 +1,9 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.Payload;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -24,12 +25,12 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
     @DisplayName("addElementToPositionBefore: Create on Master, insert before pivot on Backup")
     void testAddElementToPositionBeforeCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String key = "relativeBeforeMaster" + UUID.randomUUID();
-        byte[] pivot = "pivot".getBytes(StandardCharsets.UTF_8);
-        byte[] item1 = "item1".getBytes(StandardCharsets.UTF_8);
-        byte[] item2 = "item2".getBytes(StandardCharsets.UTF_8);
+        Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
+        Payload item1 = Payload.of("item1".getBytes(StandardCharsets.UTF_8));
+        Payload item2 = Payload.of("item2".getBytes(StandardCharsets.UTF_8));
 
         // Create initial collection on Master containing the pivot
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createList(key, List.of(pivot))
                 .get();
 
@@ -48,7 +49,7 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
                 .streamList(key, keyHint)
                 .get()
                 .stream()
-                .map(String::new)
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
                 .toList();
 
         Assertions.assertEquals(3, results.size());
@@ -61,12 +62,12 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
     @DisplayName("addElementToPositionBefore: Create on Backup, insert before pivot on Master")
     void testAddElementToPositionBeforeCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String key = "relativeBeforeBackup" + UUID.randomUUID();
-        byte[] head = "head".getBytes(StandardCharsets.UTF_8);
-        byte[] pivot = "pivot".getBytes(StandardCharsets.UTF_8);
-        byte[] inserted = "inserted".getBytes(StandardCharsets.UTF_8);
+        Payload head = Payload.of("head".getBytes(StandardCharsets.UTF_8));
+        Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
+        Payload inserted = Payload.of("inserted".getBytes(StandardCharsets.UTF_8));
 
         // Create initial collection on Backup: [head, pivot]
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createVector(key, List.of(head, pivot))
                 .get();
 
@@ -85,7 +86,7 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get()
                 .stream()
-                .map(String::new)
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
                 .toList();
 
         Assertions.assertEquals(3, results.size());
@@ -102,13 +103,13 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
     @DisplayName("addElementToPositionAfter: Create on Master, insert after pivot on Backup")
     void testAddElementToPositionAfterCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String key = "relativeAfterMaster" + UUID.randomUUID();
-        byte[] pivot = "pivot".getBytes(StandardCharsets.UTF_8);
-        byte[] tail = "tail".getBytes(StandardCharsets.UTF_8);
-        byte[] item1 = "item1".getBytes(StandardCharsets.UTF_8);
-        byte[] item2 = "item2".getBytes(StandardCharsets.UTF_8);
+        Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
+        Payload tail = Payload.of("tail".getBytes(StandardCharsets.UTF_8));
+        Payload item1 = Payload.of("item1".getBytes(StandardCharsets.UTF_8));
+        Payload item2 = Payload.of("item2".getBytes(StandardCharsets.UTF_8));
 
         // Create initial collection on Master: [pivot, tail]
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createList(key, List.of(pivot, tail))
                 .get();
 
@@ -127,7 +128,7 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
                 .streamList(key, keyHint)
                 .get()
                 .stream()
-                .map(String::new)
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
                 .toList();
 
         Assertions.assertEquals(4, results.size());
@@ -141,11 +142,11 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
     @DisplayName("addElementToPositionAfter: Create on Backup, insert after pivot on Master")
     void testAddElementToPositionAfterCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String key = "relativeAfterBackup" + UUID.randomUUID();
-        byte[] pivot = "pivot".getBytes(StandardCharsets.UTF_8);
-        byte[] inserted = "inserted".getBytes(StandardCharsets.UTF_8);
+        Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
+        Payload inserted = Payload.of("inserted".getBytes(StandardCharsets.UTF_8));
 
         // Create initial collection on Backup containing the pivot
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createVector(key, List.of(pivot))
                 .get();
 
@@ -164,7 +165,7 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get()
                 .stream()
-                .map(String::new)
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
                 .toList();
 
         Assertions.assertEquals(2, results.size());
@@ -180,11 +181,11 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
     @DisplayName("Non-existent pivot should throw StatusRuntimeException NOT_FOUND without altering collection")
     void testMissingPivotReturnsFalse() throws ExecutionException, InterruptedException {
         String key = "missingPivotKey" + UUID.randomUUID();
-        byte[] pivot = "existing_pivot".getBytes(StandardCharsets.UTF_8);
-        byte[] missingPivot = "non_existent_pivot".getBytes(StandardCharsets.UTF_8);
-        byte[] item = "newItem".getBytes(StandardCharsets.UTF_8);
+        Payload pivot = Payload.of("existing_pivot".getBytes(StandardCharsets.UTF_8));
+        Payload missingPivot = Payload.of("non_existent_pivot".getBytes(StandardCharsets.UTF_8));
+        Payload item = Payload.of("newItem".getBytes(StandardCharsets.UTF_8));
 
-        KeyHint keyHint = client.createList(key, List.of(pivot)).get();
+        KeyHintData keyHint = client.createList(key, List.of(pivot)).get();
         Thread.sleep(150);
 
         // Attempt BEFORE with non-existent pivot
@@ -208,8 +209,8 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
         Assertions.assertTrue(causeAfter.getStatus().getDescription().contains("Pivot element not found"));
 
         // Verify collection size remains unchanged
-        List<byte[]> current = client.streamList(key, keyHint).get();
+        List<Payload> current = client.streamList(key, keyHint).get();
         Assertions.assertEquals(1, current.size());
-        Assertions.assertEquals("existing_pivot", new String(current.get(0)));
+        Assertions.assertEquals("existing_pivot", new String(current.get(0).getValue(), StandardCharsets.UTF_8));
     }
 }

@@ -1,12 +1,14 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.Payload;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +37,7 @@ public class VectorIndexPerfTest {
     @BeforeAll
     public static void setup() throws Exception {
         client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, TIMEOUT) {
+            @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }
@@ -86,16 +89,16 @@ public class VectorIndexPerfTest {
 
     private void runBenchmarkForSize(int vectorSize) throws Exception {
         String vectorKeyStr = "perf-vector-" + vectorSize + "-" + System.currentTimeMillis();
-        byte[] vectorKey = vectorKeyStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] vectorKey = vectorKeyStr.getBytes(StandardCharsets.UTF_8);
 
-        // 1. Подготовка данных нужного размера
-        List<byte[]> initialData = new ArrayList<>(vectorSize);
+        // 1. Подготовка данных нужного размера с использованием Payload
+        List<Payload> initialData = new ArrayList<>(vectorSize);
         for (int i = 0; i < vectorSize; i++) {
-            initialData.add(generate100ByteString("val-" + i));
+            initialData.add(generate100BytePayload("val-" + i));
         }
 
         // 2. Создание вектора на сервере
-        KeyHint vectorHint = client.createVector(
+        KeyHintData vectorHint = client.createVector(
                 vectorKey,
                 initialData,
                 Duration.ofMinutes(15),
@@ -127,10 +130,11 @@ public class VectorIndexPerfTest {
                         // Случайный индекс в рамках текущего размера вектора
                         int randomIdx = random.nextInt(vectorSize);
 
-                        client.setMode(Mode.LB_SMART).getElementAtPosition(vectorKey, vectorHint, randomIdx, 0, TIMEOUT)
+                        client.setMode(Mode.LB_SMART)
+                                .getElementAtPosition(vectorKey, vectorHint, randomIdx, 0, TIMEOUT)
                                 .whenComplete((res, ex) -> {
                                     inFlightWindow.release();
-                                    if (ex == null && res != null) {
+                                    if (ex == null && res != null && res.getValue() != null) {
                                         readOps.increment();
                                     } else {
                                         readErrors.increment();
@@ -167,13 +171,13 @@ public class VectorIndexPerfTest {
                           vectorSize, tps, readErrors.sum());
     }
 
-    private byte[] generate100ByteString(String prefix) {
-        byte[] prefixBytes = prefix.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    private Payload generate100BytePayload(String prefix) {
+        byte[] prefixBytes = prefix.getBytes(StandardCharsets.UTF_8);
         byte[] result = new byte[MESSAGE_SIZE];
         System.arraycopy(prefixBytes, 0, result, 0, Math.min(prefixBytes.length, MESSAGE_SIZE));
         for (int i = prefixBytes.length; i < MESSAGE_SIZE; i++) {
             result[i] = 'x';
         }
-        return result;
+        return Payload.of(result);
     }
 }

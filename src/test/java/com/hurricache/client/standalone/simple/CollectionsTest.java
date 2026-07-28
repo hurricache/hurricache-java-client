@@ -1,7 +1,9 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
+import com.hurricache.grpc.ContainerType;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -19,50 +21,72 @@ public class CollectionsTest extends TestBase {
     @Test
     void testListEdgeOperations() throws ExecutionException, InterruptedException {
         String listKey = "testVector";
-        KeyHint keyHint = client.createVector(listKey, List.of("middle".getBytes()))
-                .get();// Assume server allows create as list or use createList
+        KeyHintData keyHint = client.createVector(
+                listKey,
+                List.of(Payload.of("middle".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
-        client.addElementToTail(listKey, keyHint, List.of("tail".getBytes())).get();
+        client.addElementToTail(
+                listKey,
+                keyHint,
+                List.of(Payload.of("tail".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
         // Get Position
-        byte[] posVal = client.getElementAtPosition(listKey, 1).get();
-        Assertions.assertEquals("tail", new String(posVal));
+        Payload posVal = client.getElementAtPosition(listKey, keyHint, 1).get();
+        Assertions.assertEquals("tail", new String(posVal.getValue(), StandardCharsets.UTF_8));
 
         // Remove Head
-        Boolean headRemoved = client.removeHead(listKey).get();
+        Boolean headRemoved = client.removeHead(listKey, keyHint).get();
         Assertions.assertTrue(headRemoved);
     }
 
     @Test
     void testRangeStreaming() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeList";
-        KeyHint keyHint = client.createList(rangeKey, List.of("0".getBytes())).get();
+        KeyHintData keyHint = client.createList(
+                rangeKey,
+                List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
         for (int i = 1; i < 10; i++) {
-            client.addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.addElementToTail(
+                    rangeKey,
+                    keyHint,
+                    List.of(Payload.of(String.valueOf(i).getBytes(StandardCharsets.UTF_8)))
+            ).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.streamElementInRange(rangeKey, keyHint, false, 2, 5).get();
+        List<Payload> rangeData = client.streamElementInRangeUnordered(rangeKey, keyHint, ContainerType.LIST, 2, 5).get();
 
         System.out.println(rangeData);
-        Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertEquals("2", new String(rangeData.get(0)));
+        Assertions.assertEquals(3, rangeData.size());
+        Assertions.assertEquals("2", new String(rangeData.get(0).getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     void testRangeStreamingVector() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeVector";
-        KeyHint keyHint = client.createVector(rangeKey, List.of("0".getBytes())).get();
+        KeyHintData keyHint = client.createVector(
+                rangeKey,
+                List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
         for (int i = 1; i < 10; i++) {
-            client.addElementToTail(rangeKey, keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.addElementToTail(
+                    rangeKey,
+                    keyHint,
+                    List.of(Payload.of(String.valueOf(i).getBytes(StandardCharsets.UTF_8)))
+            ).get();
         }
 
         // Get elements from index 2 to 5
-        List<byte[]> rangeData = client.streamElementInRange(rangeKey, keyHint, true, 2, 5).get();
+        List<Payload> rangeData = client.streamElementInRangeUnordered(rangeKey, keyHint, ContainerType.VECTOR, 2, 5).get();
 
         System.out.println(rangeData);
-        Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertEquals("2", new String(rangeData.get(0)));
+        Assertions.assertEquals(3, rangeData.size());
+        Assertions.assertEquals("2", new String(rangeData.get(0).getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -72,11 +96,22 @@ public class CollectionsTest extends TestBase {
         String val2 = "item2";
 
         // Create List with first element
-        KeyHint keyHint = client.createList(key, List.of(val1.getBytes(StandardCharsets.UTF_8))).get();
-        // Add second element
-        client.addElementToTail(key, keyHint, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
+        KeyHintData keyHint = client.createList(
+                key,
+                List.of(Payload.of(val1.getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
-        List<String> results = client.streamList(key).get().stream().map(String::new).toList();
+        // Add second element
+        client.addElementToTail(
+                key,
+                keyHint,
+                List.of(Payload.of(val2.getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
+        List<String> results = client.streamList(key, keyHint).get()
+                .stream()
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
+                .toList();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertEquals(val1, results.get(0));
@@ -86,10 +121,21 @@ public class CollectionsTest extends TestBase {
     @Test
     void testCreateAndStreamVector() throws ExecutionException, InterruptedException {
         String key = "vectorTestKey";
-        KeyHint keyHint = client.createVector(key, List.of("v1".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key, keyHint, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
+        KeyHintData keyHint = client.createVector(
+                key,
+                List.of(Payload.of("v1".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
-        List<String> results = client.streamVector(key).get().stream().map(String::new).toList();
+        client.addElementToTail(
+                key,
+                keyHint,
+                List.of(Payload.of("v2".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
+        List<String> results = client.streamVector(key, keyHint).get()
+                .stream()
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
+                .toList();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertTrue(results.contains("v1"));
@@ -98,96 +144,130 @@ public class CollectionsTest extends TestBase {
     @Test
     void testFrontBackOperations() throws ExecutionException, InterruptedException {
         String key = "edgeTestKey";
-        KeyHint keyHint = client.createList(key, List.of("head".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key, keyHint, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
+        KeyHintData keyHint = client.createList(
+                key,
+                List.of(Payload.of("head".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
+        client.addElementToTail(
+                key,
+                keyHint,
+                List.of(Payload.of("tail".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
         // Get Head/Front
-        byte[] head = client.getHead(key).get();
-        byte[] front = client.getFront(key).get();
-        Assertions.assertEquals("head", new String(head));
-        Assertions.assertEquals("head", new String(front));
+        Payload head = client.getHead(key, keyHint).get();
+        Payload front = client.getFront(key, keyHint).get();
+        Assertions.assertEquals("head", new String(head.getValue(), StandardCharsets.UTF_8));
+        Assertions.assertEquals("head", new String(front.getValue(), StandardCharsets.UTF_8));
 
         // Get Tail
-        byte[] tail = client.getTail(key).get();
-        Assertions.assertEquals("tail", new String(tail));
+        Payload tail = client.getTail(key, keyHint).get();
+        Assertions.assertEquals("tail", new String(tail.getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     void testAtomicRemoval() throws ExecutionException, InterruptedException {
         String key = "removalTestKey";
-        KeyHint keyHint = client.createList(key, List.of("item1".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key, keyHint, List.of("item2".getBytes(StandardCharsets.UTF_8))).get();
+        KeyHintData keyHint = client.createList(
+                key,
+                List.of(Payload.of("item1".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
+        client.addElementToTail(
+                key,
+                keyHint,
+                List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
         // Remove Front
-        byte[] removed = client.getAndRemoveFront(key).get();
-        Assertions.assertEquals("item1", new String(removed));
+        Payload removed = client.getAndRemoveFront(key, keyHint).get();
+        Assertions.assertEquals("item1", new String(removed.getValue(), StandardCharsets.UTF_8));
 
         // Verify tail is now head
-        byte[] newHead = client.getFront(key).get();
-        Assertions.assertEquals("item2", new String(newHead));
+        Payload newHead = client.getFront(key, keyHint).get();
+        Assertions.assertEquals("item2", new String(newHead.getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     void testPositionalOperationsVector() throws ExecutionException, InterruptedException {
         String key = "posTestKeyVector";
-        KeyHint keyHint = client.createVector(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key, keyHint,
-                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
-                        "pos2".getBytes(StandardCharsets.UTF_8))).get();
+        KeyHintData keyHint = client.createVector(
+                key,
+                List.of(Payload.of("pos0".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
+        client.addElementToTail(
+                key,
+                keyHint,
+                Arrays.asList(
+                        Payload.of("pos1".getBytes(StandardCharsets.UTF_8)),
+                        Payload.of("pos2".getBytes(StandardCharsets.UTF_8))
+                )
+        ).get();
 
         // Get At Position 1
-        byte[] pos1 = client.getElementAtPosition(key, 1).get();
-        Assertions.assertEquals("pos1", new String(pos1));
+        Payload pos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Assertions.assertEquals("pos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
 
         // Remove At Position 1
-        byte[] removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertEquals("pos1", new String(removed));
+        Payload removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
+        Assertions.assertEquals("pos1", new String(removed.getValue(), StandardCharsets.UTF_8));
 
         CountDownLatch latch = new CountDownLatch(1);
-        List<byte[]> results = client.streamVector(key).get();
+        List<Payload> results = client.streamVector(key, keyHint).get();
 
         latch.await(5, TimeUnit.SECONDS);
         System.out.println(results);
 
         // Verify Shift
-        byte[] newPos1 = client.getElementAtPosition(key, 1).get();
-        Assertions.assertEquals("pos2", new String(newPos1));
+        Payload newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Assertions.assertEquals("pos2", new String(newPos1.getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     void testPositionalOperationsList() throws ExecutionException, InterruptedException {
         String key = "posTestKeyList";
-        KeyHint keyHint = client.createList(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
-        client.addElementToTail(key, keyHint,
-                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
-                        "pos2".getBytes(StandardCharsets.UTF_8))).get();
+        KeyHintData keyHint = client.createList(
+                key,
+                List.of(Payload.of("pos0".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
+        client.addElementToTail(
+                key,
+                keyHint,
+                Arrays.asList(
+                        Payload.of("pos1".getBytes(StandardCharsets.UTF_8)),
+                        Payload.of("pos2".getBytes(StandardCharsets.UTF_8))
+                )
+        ).get();
 
         // Get At Position 1
-        byte[] pos1 = client.getElementAtPosition(key, 1).get();
-        Assertions.assertEquals("pos1", new String(pos1));
+        Payload pos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Assertions.assertEquals("pos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
 
         // Remove At Position 1
-        byte[] removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertEquals("pos1", new String(removed));
+        Payload removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
+        Assertions.assertEquals("pos1", new String(removed.getValue(), StandardCharsets.UTF_8));
 
-        List<byte[]> results = client.streamList(key).get();
+        List<Payload> results = client.streamList(key, keyHint).get();
 
         System.out.println(results);
         // Verify Shift
-        byte[] newPos1 = client.getElementAtPosition(key, 1).get();
-        Assertions.assertEquals("pos2", new String(newPos1));
+        Payload newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Assertions.assertEquals("pos2", new String(newPos1.getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     void testCollectionNotFound() {
         String key = "nonExistentCollection";
         try {
-            client.getFront(key).get();
+            client.getFront(key, null).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Server should return NOT_FOUND if key doesn't exist
             Assertions.assertTrue(cause.getStatus().getCode() == Status.Code.NOT_FOUND
-                    || cause.getStatus().getCode() == Status.Code.INTERNAL);
+                                  || cause.getStatus().getCode() == Status.Code.INTERNAL);
         } catch (InterruptedException e) {
             Assertions.fail(e.getMessage());
         }

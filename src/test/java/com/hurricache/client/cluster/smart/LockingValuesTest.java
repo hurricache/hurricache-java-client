@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
@@ -66,7 +67,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         String lockKey1 = lockKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -94,7 +95,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         String lockKey1 = lockKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -120,7 +121,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         String lockKey1 = lockKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -140,7 +141,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         String lockKey1 = lockKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -160,7 +161,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         String lockKey1 = lockKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -180,7 +181,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         String lockKey1 = lockKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -200,7 +201,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         String lockKey1 = lockKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -250,7 +251,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 1. Create and then Lock Globally
         // Create should be done on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(key, "sensitive_info".getBytes())
                 .get();
         // Allow cache to replicate data inside cluster
@@ -282,7 +283,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 1. Create and then Lock Globally
         // Create should be done on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(key, "sensitive_info".getBytes())
                 .get();
         // Allow cache to replicate data inside cluster

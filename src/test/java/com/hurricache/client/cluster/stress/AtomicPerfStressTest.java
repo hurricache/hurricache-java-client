@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -53,7 +54,7 @@ public class AtomicPerfStressTest {
 
         // 1. Инициализация пула ключей и хинтов на сервере
         String[] keys = new String[keyCount];
-        KeyHint[] hints = new KeyHint[keyCount];
+        KeyHintData[] hints = new KeyHintData[keyCount];
 
         // Создаем атомики параллельно, чтобы не тратить время теста на подготовку
         ExecutorService initPool = Executors.newFixedThreadPool(32);
@@ -100,7 +101,7 @@ public class AtomicPerfStressTest {
                         // Каждый поток распределяет свои вызовы по всему массиву ключей
                         int targetIdx = (int) (ThreadLocalRandom.current().nextLong(keyCount));
                         byte[] keyBytes = keys[targetIdx].getBytes(StandardCharsets.UTF_8);
-                        KeyHint hint = hints[targetIdx];
+                        KeyHintData hint = hints[targetIdx];
 
                         // Асинхронный инкремент на +1
                         client.atomicAdd(keyBytes, hint, 1L)

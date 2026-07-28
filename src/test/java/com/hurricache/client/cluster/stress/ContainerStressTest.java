@@ -1,7 +1,8 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.LockType;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +36,7 @@ public class ContainerStressTest extends TestBaseCluster {
      */
     @Test
     void testConcurrentQueuePushPop() throws Exception {
-        KeyHint keyHint = client.createQueue(QUEUE_KEY, null).get();
+        KeyHintData keyHint = client.createQueue(QUEUE_KEY, null).get();
 
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
         CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
@@ -50,7 +51,7 @@ public class ContainerStressTest extends TestBaseCluster {
                     for (int j = 0; j < OPS_PER_THREAD; j++) {
                         // Alternating PUSH and POP
                         if (j % 2 == 0) {
-                            byte[] data = ("val-" + threadId + "-" + j).getBytes();
+                            Payload data = Payload.of(("val-" + threadId + "-" + j).getBytes());
                             client.addElementToTail(QUEUE_KEY, keyHint, List.of(data)).get();
                         } else {
                             client.getAndRemoveFront(QUEUE_KEY, keyHint).get();
@@ -84,10 +85,10 @@ public class ContainerStressTest extends TestBaseCluster {
     void testShardedVectorThroughput() throws Exception {
         int totalKeys = 1000;
         // Pre-create 1000 vectors to distribute across shards
-        ConcurrentHashMap<String, KeyHint> keyHintsMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, KeyHintData> keyHintsMap = new ConcurrentHashMap<>();
         for (int i = 0; i < totalKeys; i++) {
             String key = "vec_" + i;
-            KeyHint keyHint = client.createVector(key, List.of("init".getBytes())).get();
+            KeyHintData keyHint = client.createVector(key, List.of(Payload.of("init".getBytes()))).get();
             keyHintsMap.put(key, keyHint);
         }
 
@@ -99,10 +100,11 @@ public class ContainerStressTest extends TestBaseCluster {
         for (int i = 0; i < THREAD_COUNT * OPS_PER_THREAD; i++) {
             String key = "vec_" + (ThreadLocalRandom.current().nextInt(totalKeys));
             byte[] payload = new byte[128]; // 128 byte entries
+            Payload payload1 = Payload.of(payload);
             ThreadLocalRandom.current().nextBytes(payload);
 
             // Fire and forget (Async) to maximize gRPC pipeline saturation
-            futures.add(client.addElementToTail(key, keyHintsMap.get(key), List.of(payload)));
+            futures.add(client.addElementToTail(key, keyHintsMap.get(key), List.of(payload1)));
         }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(30, TimeUnit.SECONDS);
@@ -118,7 +120,7 @@ public class ContainerStressTest extends TestBaseCluster {
 
     @Test
     void testConcurrentListPushPop() throws Exception {
-        KeyHint keyHint = client.createList(LIST_KEY, null).get();
+        KeyHintData keyHint = client.createList(LIST_KEY, null).get();
 
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
         CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
@@ -133,7 +135,7 @@ public class ContainerStressTest extends TestBaseCluster {
                     for (int j = 0; j < OPS_PER_THREAD; j++) {
                         // Alternating PUSH and POP
                         if (j % 2 == 0) {
-                            byte[] data = ("val-" + threadId + "-" + j).getBytes();
+                            Payload data = Payload.of(("val-" + threadId + "-" + j).getBytes());
                             client.addElementToTail(LIST_KEY, keyHint, List.of(data)).get();
                         } else {
                             client.getAndRemoveFront(LIST_KEY,keyHint).get();
@@ -162,7 +164,7 @@ public class ContainerStressTest extends TestBaseCluster {
     @Test
     void testLockPermissionStress() throws Exception {
         String lockKey = "permission_stress";
-        KeyHint keyHint = client.createKeyValue(lockKey, "data".getBytes()).get();
+        KeyHintData keyHint = client.createKeyValue(lockKey, "data".getBytes()).get();
         Thread.sleep(150);
         // 1. Owner locks the object
         client.lockObject(lockKey, keyHint,LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)).get();

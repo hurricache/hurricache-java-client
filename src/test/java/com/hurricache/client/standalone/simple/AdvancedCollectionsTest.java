@@ -1,7 +1,8 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -18,83 +19,75 @@ public class AdvancedCollectionsTest extends TestBase {
     void testHeadAndPositionalAddition() throws ExecutionException, InterruptedException {
         String listKey = "headPosKey";
         // Start with a list: [Middle]
-        KeyHint keyHintResponse = client.createList(listKey, List.of("Middle".getBytes(StandardCharsets.UTF_8))).get();
+        KeyHintData keyHintResponse = client.createList(
+                listKey,
+                List.of(Payload.of("Middle".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
         // addElementToHead -> [Head, Middle]
-        Boolean boolResponse = client.addElementToHead(listKey, List.of("Head".getBytes(StandardCharsets.UTF_8))).get();
+        Boolean boolResponse = client.addElementToHead(
+                listKey,
+                keyHintResponse,
+                List.of(Payload.of("Head".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
-        Boolean boolResponse1 = client.addElementToPosition(listKey,
-                List.of("NewPos1".getBytes(StandardCharsets.UTF_8)),
-                1).get();
+        Integer boolResponse1 = client.addElementToPosition(
+                listKey,
+                keyHintResponse,
+                List.of(Payload.of("NewPos1".getBytes(StandardCharsets.UTF_8))),
+                1
+        ).get();
 
-        byte[] head = client.getHead(listKey).get();
-        byte[] pos1 = client.getElementAtPosition(listKey, 1).get();
+        Payload head = client.getHead(listKey, keyHintResponse).get();
+        Payload pos1 = client.getElementAtPosition(listKey, keyHintResponse, 1).get();
 
-        Assertions.assertEquals("Head", new String(head));
-        Assertions.assertEquals("NewPos1", new String(pos1));
+        Assertions.assertEquals("Head", new String(head.getValue(), StandardCharsets.UTF_8));
+        Assertions.assertEquals("NewPos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     void testTailAndPositionalRemoval() throws ExecutionException, InterruptedException {
         String vecKey = "removePosKey";
         // Setup Vector: [0, 1, 2]
-        KeyHint keyHint = client.createVector(vecKey, List.of("0".getBytes())).get();
-        client.addElementToTail(vecKey, keyHint, Arrays.asList("1".getBytes(), "2".getBytes())).get();
+        KeyHintData keyHint = client.createVector(
+                vecKey,
+                List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
+        client.addElementToTail(
+                vecKey,
+                keyHint,
+                Arrays.asList(
+                        Payload.of("1".getBytes(StandardCharsets.UTF_8)),
+                        Payload.of("2".getBytes(StandardCharsets.UTF_8))
+                )
+        ).get();
 
         // removeTail -> [0, 1]
-        client.removeTail(vecKey).get();
+        client.removeTail(vecKey, keyHint).get();
 
-        // removeElementAtPositionAsync at 0 -> [1]
+        // removeElementAtPosition at 0 -> [1]
         client.removeElementAtPosition(vecKey, keyHint, 0, 0).get();
 
-        byte[] remaining = client.getElementAtPosition(vecKey, 0).get();
-        Assertions.assertEquals("1", new String(remaining));
+        Payload remaining = client.getElementAtPosition(vecKey, keyHint, 0).get();
+        Assertions.assertEquals("1", new String(remaining.getValue(), StandardCharsets.UTF_8));
     }
-
-    //    @Test
-    //    void testStreamAndRemoveRangeList() throws InterruptedException, ExecutionException {
-    //        String key = "rangeStreamRemoveKey";
-    //        // Setup: [A, B, C, D, E]
-    //        client.createList(key, "A".getBytes()).get();
-    //        client.addElementToTail(key,
-    //                                     Arrays.asList("B".getBytes(),
-    //                                                   "C".getBytes(),
-    //                                                   "D".getBytes(),
-    //                                                   "D".getBytes(),
-    //                                                   "E".getBytes())).get();
-    //
-    //        List<String> removedValues = new ArrayList<>();
-    //        CountDownLatch latch = new CountDownLatch(1);
-    //
-    //        // Stream and remove range 1 to 3 (B, C, D)
-    //        client.streamAndRemoveElementInRange(key,
-    //                                             false,
-    //                                             1,
-    //                                             3,
-    //                                             val -> removedValues.add(new String(val)),
-    //                                             err -> latch.countDown(),
-    //                                             latch::countDown);
-    //
-    //        latch.await(5, TimeUnit.SECONDS);
-    //
-    //        Assertions.assertEquals(3, removedValues.size());
-    //        Assertions.assertEquals("B", removedValues.get(0));
-    //        Assertions.assertEquals("D", removedValues.get(2));
-    //
-    //        // Final check: Should only have [A, E]
-    //        byte[] head = client.getHead(key).get();
-    //        byte[] tail = client.getTailAsync(key).get();
-    //        Assertions.assertEquals("A", new String(head));
-    //        Assertions.assertEquals("E", new String(tail));
-    //    }
 
     @Test
     void testRemoveElementInRangeSuccess() throws ExecutionException, InterruptedException {
         String key = "boolRangeKey";
-        KeyHint keyHint = client.createVector(key, List.of("0".getBytes())).get();
+        KeyHintData keyHint = client.createVector(
+                key,
+                List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8)))
+        ).get();
+
         for (int i = 1; i < 5; i++) {
-            client.addElementToTail(key, keyHint, List.of(String.valueOf(i).getBytes())).get();
+            client.addElementToTail(
+                    key,
+                    keyHint,
+                    List.of(Payload.of(String.valueOf(i).getBytes(StandardCharsets.UTF_8)))
+            ).get();
         }
 
         // Remove indices 0 to 2
@@ -106,12 +99,20 @@ public class AdvancedCollectionsTest extends TestBase {
     @Test
     void testQueueTypeSafety() throws ExecutionException, InterruptedException {
         String qKey = "strictQueue";
-        client.createQueue(qKey, List.of("q1".getBytes())).get();
+        KeyHintData keyHint = client.createQueue(
+                qKey,
+                List.of(Payload.of("q1".getBytes(StandardCharsets.UTF_8)))
+        ).get();
 
         // Queues typically don't support positional addition in many implementations.
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
-            client.addElementToPosition(qKey, List.of("fail".getBytes()), 1).get();
+            client.addElementToPosition(
+                    qKey,
+                    keyHint,
+                    List.of(Payload.of("fail".getBytes(StandardCharsets.UTF_8))),
+                    1
+            ).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Expecting an error code if Queues are strictly FIFO

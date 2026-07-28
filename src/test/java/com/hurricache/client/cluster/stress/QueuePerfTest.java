@@ -1,6 +1,8 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -29,7 +31,7 @@ public class QueuePerfTest {
     private static final int MAX_IN_FLIGHT_PER_THREAD = 100;
 
     private static FastCacheAsyncSmartClient client;
-    private static com.hurricache.grpc.KeyHint queueKeyHint;
+    private static KeyHintData queueKeyHint;
 
     // Раздельные метрики производительности
     private static class PerfMetrics {
@@ -150,7 +152,7 @@ public class QueuePerfTest {
                 inFlightWindow.acquire(); // Ждем свободного слота в окне отправки
 
                 byte[] payload = generate100ByteString(writerId + "-" + i++);
-                client.addElementToTail(QUEUE_NAME, queueKeyHint, List.of(payload)).whenComplete((success, ex) -> {
+                client.addElementToTail(QUEUE_NAME, queueKeyHint, List.of(Payload.of(payload))).whenComplete((success, ex) -> {
                     inFlightWindow.release(); // Освобождаем слот сразу по завершению сетевой операции
                     if (ex == null && success) {
                         metrics.produced.increment();
@@ -176,7 +178,7 @@ public class QueuePerfTest {
                     inFlightWindow.release();
                     if (ex != null) {
                         metrics.failedReads.increment();
-                    } else if (resp != null && resp.length > 0) {
+                    } else if (resp != null && resp.getValue().length > 0) {
                         metrics.consumed.increment();
                     } else {
                         metrics.emptyReads.increment(); // Очередь пуста, писатель не успевает

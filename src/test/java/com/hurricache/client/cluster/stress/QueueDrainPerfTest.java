@@ -1,6 +1,8 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -87,13 +89,13 @@ public class QueueDrainPerfTest {
         byte[] queueKey = queueKeyStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         // 1. Подготовка данных нужного размера
-        List<byte[]> initialData = new ArrayList<>(queueSize);
+        List<Payload> initialData = new ArrayList<>(queueSize);
         for (int i = 0; i < queueSize; i++) {
-            initialData.add(generate100ByteString("val-" + i));
+            initialData.add(Payload.of(generate100ByteString("val-" + i)));
         }
 
         // 2. Создание очереди на сервере с автоматическим рекурсивным чанкованием хвоста
-        KeyHint queueHint = client.createQueue(
+        KeyHintData queueHint = client.createQueue(
                 queueKey,
                 initialData,
                 Duration.ofMinutes(15),
@@ -127,7 +129,7 @@ public class QueueDrainPerfTest {
                                     inFlightWindow.release();
                                     if (ex == null) {
                                         // Если сервер вернул пустоту — значит очередь полностью выгребли
-                                        if (res == null || res.length == 0) {
+                                        if (res == null || res.getValue().length == 0) {
                                             queueIsEmpty.set(true);
                                         } else {
                                             readOps.increment();

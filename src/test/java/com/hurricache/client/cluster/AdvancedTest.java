@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Assertions;
@@ -23,23 +24,23 @@ public class AdvancedTest extends TestBaseCluster {
 
     @FunctionalInterface
     public interface ThrowingValueCreator {
-        KeyHint create(String key, byte[] valueBytes) throws Exception;
+        KeyHintData create(String key, byte[] valueBytes) throws Exception;
     }
 
     /**
      * Generic structural baseline loader.
      * Pass client calls via lambdas to dynamically provision values, queues, or vectors.
      */
-    protected ConcurrentHashMap<String, Pair<String, KeyHint>> loadSynchronousLeakBaseline(ThrowingValueCreator valueCreator) {
+    protected ConcurrentHashMap<String, Pair<String, KeyHintData>> loadSynchronousLeakBaseline(ThrowingValueCreator valueCreator) {
 
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
 
             try {
                 // Evaluates your custom target lambda dynamically
-                KeyHint keyHint = valueCreator.create(key, value.getBytes(StandardCharsets.UTF_8));
+                KeyHintData keyHint = valueCreator.create(key, value.getBytes(StandardCharsets.UTF_8));
                 keyValueMap.put(key, Pair.of(value, keyHint));
             } catch (Exception e) {
                 Assertions.fail("Baseline cluster injection initialization failed!", e);

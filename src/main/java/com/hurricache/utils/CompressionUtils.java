@@ -4,6 +4,7 @@ import com.hurricache.grpc.BinaryPayload;
 import com.hurricache.grpc.CompressedInfo;
 import com.hurricache.grpc.Key;
 import com.hurricache.grpc.KeyBinaryPayload;
+import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
@@ -70,7 +71,7 @@ public class CompressionUtils {
     }
 
     public static byte[] decompressIfNeeded(ValueResponse responseValue) {
-        return decompressIfNeeded(responseValue.getValue());
+        return decompressIfNeeded(responseValue.getValueUnordered());
     }
 
     public static byte[] decompressIfNeeded(UpdateValueResponse responseValue) {
@@ -94,5 +95,19 @@ public class CompressionUtils {
         }
         return data;
     }
+    public static byte[] decompressIfNeeded(OrderedValue responseValue) {
+        BinaryPayload payload = responseValue.getValue();
+        byte[] data = payload.getPayload().toByteArray();
+
+        if (responseValue.hasCompressionInfo() && responseValue.getCompressionInfo().getEnabled()) {
+            int rawSize = responseValue.getCompressionInfo().getRawSize();
+            LZ4SafeDecompressor decompressor = factory.safeDecompressor();
+            byte[] restored = new byte[rawSize];
+            decompressor.decompress(data, 0, data.length, restored, 0);
+            return restored;
+        }
+        return data;
+    }
+
 
 }

@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.leaks;
 
 import com.hurricache.client.cluster.AdvancedTest;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ public class RawValuesTestImproved extends AdvancedTest {
     @Test
     void createKeyValueLoopLeakTest() {
         // Easily test standard values by passing the creator lambda
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
                 = loadSynchronousLeakBaseline((k, vBytes) -> client.createKeyValue(k, vBytes).get());
 
         AtomicInteger good = new AtomicInteger();
@@ -35,7 +36,7 @@ public class RawValuesTestImproved extends AdvancedTest {
 
     @Test
     void createDeleteKeyValueLoopLeakTest() {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
                 = loadSynchronousLeakBaseline((k, vBytes) -> client.createKeyValue(k, vBytes).get());
 
         AtomicInteger good = new AtomicInteger();
@@ -53,7 +54,7 @@ public class RawValuesTestImproved extends AdvancedTest {
 
     @Test
     void createUpdateKeyValueLoopLeakTest() {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
                 = loadSynchronousLeakBaseline((k, vBytes) -> client.createKeyValue(k, vBytes).get());
 
         AtomicInteger updateGood = new AtomicInteger();
@@ -84,8 +85,8 @@ public class RawValuesTestImproved extends AdvancedTest {
     @Test
     void createTTLKeyValueLoopLeakTest() throws InterruptedException {
         // Can utilize different engine collection calls here if expanding to queues/vectors
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = loadSynchronousLeakBaseline((k, vBytes) -> {
-            KeyHint keyHint = client.createKeyValue(k, vBytes).get();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = loadSynchronousLeakBaseline((k, vBytes) -> {
+            KeyHintData keyHint = client.createKeyValue(k, vBytes).get();
             client.setTtl(client.serializeKey(k), keyHint, TTL).get();
             return keyHint;
         });

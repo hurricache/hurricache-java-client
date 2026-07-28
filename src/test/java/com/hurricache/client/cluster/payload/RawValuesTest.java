@@ -1,8 +1,8 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -20,7 +20,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateValueMaster() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint hint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
+        KeyHintData hint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, hint).get();
         Thread.sleep(100);
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, hint).get();
@@ -34,7 +34,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateValueBackup() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint hint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue).get();
+        KeyHintData hint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue).get();
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, hint).get();
         Thread.sleep(100);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, hint).get();
@@ -48,13 +48,13 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistValueMaster() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
-        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Thread.sleep(100);
-        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
-        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
-        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
-        Assertions.assertNotNull(KeyHint);
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, keyHint).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, keyHint).get();
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
         Assertions.assertArrayEquals(testValue, bytesM);
         Assertions.assertArrayEquals(testValue, bytesB);
         Assertions.assertTrue(isExistM);
@@ -65,13 +65,13 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistValueBackup() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue).get();
+        KeyHintData keyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue).get();
         Thread.sleep(100);
-        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
-        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
-        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
-        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
-        Assertions.assertNotNull(KeyHint);
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, keyHint).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, keyHint).get();
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
         Assertions.assertArrayEquals(testValue, bytesM);
         Assertions.assertArrayEquals(testValue, bytesB);
         Assertions.assertTrue(isExistM);
@@ -82,13 +82,13 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistHintValueMaster() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
-        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
-        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, keyHint).get();
         Thread.sleep(100);
-        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
-        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
-        Assertions.assertNotNull(KeyHint);
+        byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, keyHint).get();
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
         Assertions.assertArrayEquals(testValue, bytesM);
         Assertions.assertTrue(isExistM);
         Assertions.assertArrayEquals(testValue, bytesB);
@@ -99,13 +99,13 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistHintValueBackup() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue).get();
+        KeyHintData keyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue).get();
         Thread.sleep(100);
-        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
-        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
+        byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
+        Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, keyHint).get();
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey).get();
-        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, KeyHint).get();
-        Assertions.assertNotNull(KeyHint);
+        Boolean isExistB = client.setMode(Mode.BACKUP).existKey(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
         Assertions.assertArrayEquals(testValue, bytesM);
         Assertions.assertTrue(isExistM);
         Assertions.assertArrayEquals(testValue, bytesB);
@@ -116,19 +116,19 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateGetAndDeleteValueMaster() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
         Thread.sleep(100);
-        byte[] bytesB = client.setMode(Mode.BACKUP).getAndDeleteValue(testKey, KeyHint).get();
-        Assertions.assertNotNull(KeyHint);
+        byte[] bytesB = client.setMode(Mode.BACKUP).getAndDeleteValue(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
         Assertions.assertArrayEquals(testValue, bytesB);
         try {
-            client.setMode(Mode.MASTER).getAndDeleteValue(testKey, KeyHint).get();
+            client.setMode(Mode.MASTER).getAndDeleteValue(testKey, keyHint).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
         try {
-            client.setMode(Mode.BACKUP).getAndDeleteValue(testKey, KeyHint).get();
+            client.setMode(Mode.BACKUP).getAndDeleteValue(testKey, keyHint).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -139,9 +139,9 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateGetAndDeleteValueBackup() throws ExecutionException, InterruptedException {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue).get();
-        byte[] bytes = client.getAndDeleteValue(testKey, KeyHint).get();
-        Assertions.assertNotNull(KeyHint);
+        KeyHintData keyHint = client.createKeyValue(testKey, testValue).get();
+        byte[] bytes = client.getAndDeleteValue(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
         Assertions.assertArrayEquals(testValue, bytes);
         try {
             client.getValue(testKey).get();
@@ -200,16 +200,16 @@ public class RawValuesTest extends TestBaseCluster {
         byte[] testKey = createLargePayload(KEY_SIZE);
         byte[] testValue = createLargePayload(VALUE_SIZE);
         byte[] testValueUpdate = createLargePayload(VALUE_SIZE);
-        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
-        byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
-        Assertions.assertNotNull(KeyHint);
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue).get();
+        byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
+        Assertions.assertNotNull(keyHint);
         Assertions.assertArrayEquals(testValue, bytes);
-        byte[] oldVal = client.setMode(Mode.MASTER).updateKeyValue(testKey, KeyHint, testValueUpdate).get();
-        byte[] newValM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
+        byte[] oldVal = client.setMode(Mode.MASTER).updateKeyValue(testKey, keyHint, testValueUpdate).get();
+        byte[] newValM = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Assertions.assertArrayEquals(testValue, oldVal);
         Assertions.assertArrayEquals(testValueUpdate, newValM);
         Thread.sleep(100);
-        byte[] newValB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
+        byte[] newValB = client.setMode(Mode.BACKUP).getValue(testKey, keyHint).get();
         Assertions.assertArrayEquals(testValue, oldVal);
         Assertions.assertArrayEquals(testValueUpdate, newValB);
     }

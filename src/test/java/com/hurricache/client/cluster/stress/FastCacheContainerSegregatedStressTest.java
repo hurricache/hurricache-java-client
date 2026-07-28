@@ -1,7 +1,9 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -27,7 +29,7 @@ public class FastCacheContainerSegregatedStressTest {
 
     private static final byte[] ELEMENT_PAYLOAD
             = "container_payload_buffer_item_data_bytes".getBytes(StandardCharsets.UTF_8);
-    private static final List<byte[]> INITIAL_ELEMENT_LIST = Collections.singletonList(ELEMENT_PAYLOAD);
+    private static final List<Payload> INITIAL_ELEMENT_LIST = Collections.singletonList(Payload.of(ELEMENT_PAYLOAD));
 
     private String sessionGuidPrefix;
     private FastCacheAsyncSmartClient client;
@@ -90,7 +92,7 @@ public class FastCacheContainerSegregatedStressTest {
     // =========================================================================
     @Test
     void highConcurrencyListLoadTest() throws InterruptedException {
-        KeyHint[][] threadLocalStorage = new KeyHint[THREAD_COUNT][OPERATIONS_PER_THREAD];
+        KeyHintData[][] threadLocalStorage = new KeyHintData[THREAD_COUNT][OPERATIONS_PER_THREAD];
         String[][] keyStorage = new String[THREAD_COUNT][OPERATIONS_PER_THREAD];
 
         // 1. Creation Sprint
@@ -103,7 +105,7 @@ public class FastCacheContainerSegregatedStressTest {
         for (int i = 0; i < THREAD_COUNT; i++) {
             final int threadId = i;
             executor.submit(() -> {
-                List<CompletableFuture<KeyHint>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
+                List<CompletableFuture<KeyHintData>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 List<Integer> indexMapping = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
@@ -137,11 +139,11 @@ public class FastCacheContainerSegregatedStressTest {
         for (int i = 0; i < THREAD_COUNT; i++) {
             final int threadId = i;
             executor.submit(() -> {
-                List<CompletableFuture<List<byte[]>>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
+                List<CompletableFuture<List<Payload>>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         String key = keyStorage[threadId][j];
-                        KeyHint hint = threadLocalStorage[threadId][j];
+                        KeyHintData hint = threadLocalStorage[threadId][j];
                         pipeline.add(client.streamList(key, hint));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -166,7 +168,7 @@ public class FastCacheContainerSegregatedStressTest {
     // =========================================================================
     @Test
     void highConcurrencyQueueFifoLoadTest() throws InterruptedException {
-        KeyHint[][] threadLocalStorage = new KeyHint[THREAD_COUNT][OPERATIONS_PER_THREAD];
+        KeyHintData[][] threadLocalStorage = new KeyHintData[THREAD_COUNT][OPERATIONS_PER_THREAD];
         String[][] keyStorage = new String[THREAD_COUNT][OPERATIONS_PER_THREAD];
 
         // 1. Creation Sprint (Initialize Empty Queues)
@@ -179,7 +181,7 @@ public class FastCacheContainerSegregatedStressTest {
         for (int i = 0; i < THREAD_COUNT; i++) {
             final int threadId = i;
             executor.submit(() -> {
-                List<CompletableFuture<KeyHint>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
+                List<CompletableFuture<KeyHintData>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 List<Integer> indexMapping = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
@@ -217,7 +219,7 @@ public class FastCacheContainerSegregatedStressTest {
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         String key = keyStorage[threadId][j];
-                        KeyHint hint = threadLocalStorage[threadId][j];
+                        KeyHintData hint = threadLocalStorage[threadId][j];
                         pipeline.add(client.addElementToTail(key, hint, INITIAL_ELEMENT_LIST));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -243,11 +245,11 @@ public class FastCacheContainerSegregatedStressTest {
         for (int i = 0; i < THREAD_COUNT; i++) {
             final int threadId = i;
             executor.submit(() -> {
-                List<CompletableFuture<byte[]>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
+                List<CompletableFuture<Payload>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         String key = keyStorage[threadId][j];
-                        KeyHint hint = threadLocalStorage[threadId][j];
+                        KeyHintData hint = threadLocalStorage[threadId][j];
                         pipeline.add(client.getAndRemoveFront(key, hint));
 
                         if (pipeline.size() == PIPELINE_BATCH_SIZE || j == OPERATIONS_PER_THREAD - 1) {
@@ -272,9 +274,9 @@ public class FastCacheContainerSegregatedStressTest {
     // HELPER PIPELINE PROCESSORS (ALL-OF PATTERN)
     // =========================================================================
 
-    private void processKeyHintBatch(List<CompletableFuture<KeyHint>> pipeline,
+    private void processKeyHintBatch(List<CompletableFuture<KeyHintData>> pipeline,
                                      List<Integer> indexMapping,
-                                     KeyHint[] threadStorage,
+                                     KeyHintData[] threadStorage,
                                      AtomicInteger successCounter,
                                      AtomicInteger errorCounter) {
         try {
@@ -282,7 +284,7 @@ public class FastCacheContainerSegregatedStressTest {
             allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             for (int k = 0; k < pipeline.size(); k++) {
-                KeyHint hint = pipeline.get(k).getNow(null);
+                KeyHintData hint = pipeline.get(k).getNow(null);
                 if (hint != null) {
                     if (threadStorage != null) {
                         threadStorage[indexMapping.get(k)] = hint;
@@ -297,15 +299,15 @@ public class FastCacheContainerSegregatedStressTest {
         }
     }
 
-    private void processReadBatch(List<CompletableFuture<List<byte[]>>> pipeline,
+    private void processReadBatch(List<CompletableFuture<List<Payload>>> pipeline,
                                   AtomicInteger successCounter,
                                   AtomicInteger errorCounter) {
         try {
             CompletableFuture<Void> allOf = CompletableFuture.allOf(pipeline.toArray(new CompletableFuture[0]));
             allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-            for (CompletableFuture<List<byte[]>> future : pipeline) {
-                List<byte[]> res = future.getNow(null);
+            for (CompletableFuture<List<Payload>> future : pipeline) {
+                List<Payload> res = future.getNow(null);
                 if (res != null && !res.isEmpty()) {
                     successCounter.incrementAndGet();
                 } else {
@@ -336,16 +338,16 @@ public class FastCacheContainerSegregatedStressTest {
         }
     }
 
-    private void processByteArrayBatch(List<CompletableFuture<byte[]>> pipeline,
+    private void processByteArrayBatch(List<CompletableFuture<Payload>> pipeline,
                                        AtomicInteger successCounter,
                                        AtomicInteger errorCounter) {
         try {
             CompletableFuture<Void> allOf = CompletableFuture.allOf(pipeline.toArray(new CompletableFuture[0]));
             allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-            for (CompletableFuture<byte[]> future : pipeline) {
-                byte[] data = future.getNow(null);
-                if (data != null && data.length == ELEMENT_PAYLOAD.length) {
+            for (CompletableFuture<Payload> future : pipeline) {
+                Payload data = future.getNow(null);
+                if (data != null && data.getValue().length == ELEMENT_PAYLOAD.length) {
                     successCounter.incrementAndGet();
                 } else {
                     errorCounter.incrementAndGet();

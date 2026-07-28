@@ -1,9 +1,8 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,7 +60,7 @@ public class FastCacheRawStressTest {
 
     @Test
     void highConcurrencyCreateLoadTest() throws InterruptedException {
-        KeyHint[][] threadLocalStorage = new KeyHint[THREAD_COUNT][OPERATIONS_PER_THREAD];
+        KeyHintData[][] threadLocalStorage = new KeyHintData[THREAD_COUNT][OPERATIONS_PER_THREAD];
 
         // ==========================================
         // 1. PIPELINED WRITE SPRINT
@@ -76,7 +75,7 @@ public class FastCacheRawStressTest {
         for (int i = 0; i < THREAD_COUNT; i++) {
             final int threadId = i;
             executor.submit(() -> {
-                List<CompletableFuture<KeyHint>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
+                List<CompletableFuture<KeyHintData>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 List<Integer> indexMapping = new ArrayList<>(PIPELINE_BATCH_SIZE);
 
                 try {
@@ -118,7 +117,7 @@ public class FastCacheRawStressTest {
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         String key = getTestKey(threadId, j);
-                        KeyHint hint = threadLocalStorage[threadId][j];
+                        KeyHintData hint = threadLocalStorage[threadId][j];
 
                         pipeline.add(client.getValue(key, hint));
 
@@ -153,7 +152,7 @@ public class FastCacheRawStressTest {
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         String key = getTestKey(threadId, j);
-                        KeyHint hint = threadLocalStorage[threadId][j];
+                        KeyHintData hint = threadLocalStorage[threadId][j];
 
                         pipeline.add(client.updateKeyValue(key, hint, PREALLOCATED_UPDATE));
 
@@ -188,7 +187,7 @@ public class FastCacheRawStressTest {
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         String key = getTestKey(threadId, j);
-                        KeyHint hint = threadLocalStorage[threadId][j];
+                        KeyHintData hint = threadLocalStorage[threadId][j];
 
                         pipeline.add(client.remove(key, hint));
 
@@ -221,9 +220,9 @@ public class FastCacheRawStressTest {
     // HELPER BATCH PROCESSORS
     // =========================================================================
 
-    private void processWriteBatch(List<CompletableFuture<KeyHint>> pipeline,
+    private void processWriteBatch(List<CompletableFuture<KeyHintData>> pipeline,
                                    List<Integer> indexMapping,
-                                   KeyHint[] threadStorage,
+                                   KeyHintData[] threadStorage,
                                    AtomicInteger successCounter,
                                    AtomicInteger errorCounter) {
         try {
@@ -231,7 +230,7 @@ public class FastCacheRawStressTest {
             allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             for (int k = 0; k < pipeline.size(); k++) {
-                KeyHint hint = pipeline.get(k).getNow(null);
+                KeyHintData hint = pipeline.get(k).getNow(null);
                 if (hint != null) {
                     threadStorage[indexMapping.get(k)] = hint;
                     successCounter.incrementAndGet();

@@ -1,8 +1,8 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -24,7 +24,7 @@ public class LockingValuesTest extends TestBaseCluster {
         // Ensure the object exists in the cache before testing locks
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
         // Create should be done on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -46,7 +46,7 @@ public class LockingValuesTest extends TestBaseCluster {
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
 
         // Create should be done on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -69,7 +69,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -97,7 +97,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -123,7 +123,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -143,7 +143,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -163,7 +163,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -183,7 +183,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -203,7 +203,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on master
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -228,7 +228,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // Create should be done on backup
         byte[] lockKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -255,7 +255,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 1. Create and then Lock Globally
         // Create should be done on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -287,7 +287,7 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 1. Create and then Lock Globally
         // Create should be done on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster

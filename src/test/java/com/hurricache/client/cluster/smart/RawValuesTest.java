@@ -1,8 +1,8 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -18,7 +18,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
-        KeyHint hint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, hint).get();
         Thread.sleep(100);
@@ -33,7 +33,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateValueBackup() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
-        KeyHint hint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, hint).get();
         Thread.sleep(100);
@@ -49,7 +49,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue" + UUID.randomUUID();
         String testValue = "singleCreateExistValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
         Thread.sleep(100);
@@ -67,7 +67,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistValueBackup() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue" + UUID.randomUUID();
         String testValue = "singleCreateExistValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(100);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey, KeyHint).get();
         byte[] bytesB = client.setMode(Mode.BACKUP).getValue(testKey, KeyHint).get();
@@ -84,7 +84,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistHintValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistHintValue" + UUID.randomUUID();
         String testValue = "singleCreateExistHintValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey,KeyHint).get();
         Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
@@ -102,7 +102,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateExistHintValueBackup() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistHintValue" + UUID.randomUUID();
         String testValue = "singleCreateExistHintValue123" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.setMode(Mode.BACKUP).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(100);
         byte[] bytesM = client.setMode(Mode.MASTER).getValue(testKey).get();
         Boolean isExistM = client.setMode(Mode.MASTER).existKey(testKey, KeyHint).get();
@@ -119,7 +119,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateGetAndDeleteValueMaster() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         String testValue = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
-        KeyHint KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(100);
         byte[] bytesB = client.setMode(Mode.BACKUP).getAndDeleteValue(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
@@ -142,7 +142,7 @@ public class RawValuesTest extends TestBaseCluster {
     void singleCreateGetAndDeleteValueBackup() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         String testValue = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytes = client.getAndDeleteValue(testKey,KeyHint).get();
         Assertions.assertNotNull(KeyHint);
@@ -204,7 +204,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
         String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Assertions.assertNotNull(keyHint);
@@ -225,7 +225,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
         String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Assertions.assertNotNull(keyHint);
@@ -239,7 +239,7 @@ public class RawValuesTest extends TestBaseCluster {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
         String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(150);
         byte[] bytes = client.setMode(Mode.MASTER).getValue(testKey, keyHint).get();
         Assertions.assertNotNull(keyHint);

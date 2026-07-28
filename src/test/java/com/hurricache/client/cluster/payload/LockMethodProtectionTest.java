@@ -1,8 +1,9 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -34,7 +35,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testGlobalLockUnaryProtectionCreateOnMaster() throws Exception {
         // Ensure object exists - Create on master
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -60,7 +61,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Ensure object exists - Create on backup
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -85,8 +86,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         byte[] listKey = createLargePayload(KEY_SIZE);
 
         // Create on master
-        KeyHint keyHint = client.setMode(Mode.MASTER)
-                .createList(listKey, List.of(createLargePayload(VALUE_SIZE)), Duration.ofMinutes(5), ownerId, Duration.of(1, ChronoUnit.SECONDS))
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
+                .createList(listKey, List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5), ownerId, Duration.of(1, ChronoUnit.SECONDS))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -99,7 +100,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList(createLargePayload(VALUE_SIZE)),
+                                                                                  Collections.singletonList(Payload.of(createLargePayload(VALUE_SIZE))),
                                                                                   intruderId, Duration.ofSeconds(30)).get());
     }
 
@@ -109,8 +110,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         byte[] listKey = createLargePayload(KEY_SIZE);
 
         // Create on backup
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
-                .createList(listKey, List.of(createLargePayload(VALUE_SIZE)), Duration.ofMinutes(5), ownerId, Duration.of(1, ChronoUnit.SECONDS))
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
+                .createList(listKey, List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5), ownerId, Duration.of(1, ChronoUnit.SECONDS))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -123,7 +124,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList(createLargePayload(VALUE_SIZE)),
+                                                                                  Collections.singletonList(Payload.of(createLargePayload(VALUE_SIZE))),
                                                                                   intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
     }
 
@@ -134,7 +135,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testWriteLockProtectionCreateOnMaster() throws Exception {
         // Create on master
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -160,7 +161,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testWriteLockProtectionCreateOnBackup() throws Exception {
         // Create on backup
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
@@ -188,7 +189,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testReadLockProtectionCreateOnMaster() throws Exception {
         // Create on master
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -212,7 +213,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testReadLockProtectionCreateOnBackup() throws Exception {
         // Create on backup
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -239,7 +240,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Create on master
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.MASTER)
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
@@ -262,7 +263,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testLockCompatibilityCreateOnBackup() throws Exception {
         // Create on backup
         byte[] testKey1 = createLargePayload(KEY_SIZE);
-        KeyHint keyHint = client.setMode(Mode.BACKUP)
+        KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster

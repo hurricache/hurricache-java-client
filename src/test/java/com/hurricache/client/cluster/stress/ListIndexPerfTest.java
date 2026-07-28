@@ -1,6 +1,8 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -93,13 +95,13 @@ public class ListIndexPerfTest {
         byte[] vectorKey = vectorKeyStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         // 1. Подготовка данных нужного размера
-        List<byte[]> initialData = new ArrayList<>(vectorSize);
+        List<Payload> initialData = new ArrayList<>(vectorSize);
         for (int i = 0; i < vectorSize; i++) {
             initialData.add(generate100ByteString("val-" + i));
         }
 
         // 2. Создание вектора на сервере
-        KeyHint vectorHint = client.createList(
+        KeyHintData vectorHint = client.createList(
                 vectorKey,
                 initialData,
                 Duration.ofMinutes(15),
@@ -171,13 +173,13 @@ public class ListIndexPerfTest {
                           vectorSize, tps, readErrors.sum());
     }
 
-    private byte[] generate100ByteString(String prefix) {
+    private Payload generate100ByteString(String prefix) {
         byte[] prefixBytes = prefix.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         byte[] result = new byte[MESSAGE_SIZE];
         System.arraycopy(prefixBytes, 0, result, 0, Math.min(prefixBytes.length, MESSAGE_SIZE));
         for (int i = prefixBytes.length; i < MESSAGE_SIZE; i++) {
             result[i] = 'x';
         }
-        return result;
+        return Payload.of(result);
     }
 }

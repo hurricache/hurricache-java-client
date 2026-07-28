@@ -1,6 +1,8 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -57,7 +59,7 @@ public class LockMethodProtectionTest extends TestBase {
     void testGlobalLockCollectionProtection() throws Exception {
         String listKey = "global_list" + UUID.randomUUID();
 
-        KeyHint keyHint = client.createList(listKey, List.of("item1".getBytes()), ownerId).get();
+        KeyHintData keyHint = client.createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId).get();
         client.lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getFront
@@ -65,7 +67,7 @@ public class LockMethodProtectionTest extends TestBase {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.addElementToTail(listKey, keyHint,
-                Collections.singletonList("item2".getBytes()),
+                Collections.singletonList(Payload.of("item2".getBytes())),
                 intruderId).get());
     }
 

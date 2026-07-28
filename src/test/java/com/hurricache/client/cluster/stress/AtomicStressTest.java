@@ -1,8 +1,8 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +25,7 @@ public class AtomicStressTest extends TestBaseCluster {
         String testKey = "stressAtomicKey_" + UUID.randomUUID();
 
         // 1. Инициализируем атомик со значением 0
-        KeyHint hint = client.setMode(Mode.MASTER)
+        KeyHintData hint = client.setMode(Mode.MASTER)
                 .atomicCreate(bytes(testKey), null, 0L).get();
         Assertions.assertNotNull(hint);
 

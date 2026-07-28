@@ -1,7 +1,8 @@
 package com.hurricache.client.cluster.leaks;
 
 import com.hurricache.client.cluster.AdvancedTest;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -12,18 +13,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ListTestImproved extends AdvancedTest {
 
-
     @Test
     void createListValueLoopLeakTest1() {
         // Easily test standard values by passing the creator lambda
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(vBytes)).get());
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(Payload.of(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                byte[] data = client.getHead(k, v.second).get();
-                if (v.first.equals(new String(data, StandardCharsets.UTF_8))) {
+                Payload data = client.getHead(k, v.second).get();
+                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -36,118 +36,116 @@ public class ListTestImproved extends AdvancedTest {
         keyValueMap.forEach((k, v) -> {
             try {
                 Boolean b = client.remove(k, v.second).get();
-                if (b.booleanValue()) {
+                if (Boolean.TRUE.equals(b)) {
                     goodDelete.getAndIncrement();
                 }
             } catch (Exception ignored) {
             }
         });
 
-        assertLeakResults("createListValueLoopLeakTest2", good.get());
+        assertLeakResults("createListValueLoopLeakTest2", goodDelete.get());
     }
 
     @Test
     void createListValueLoopLeakTest2() {
         // Easily test standard values by passing the creator lambda
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(vBytes)).get());
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(Payload.of(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                byte[] data = client.getAndRemoveFront(k, v.second).get();
-                if (v.first.equals(new String(data, StandardCharsets.UTF_8))) {
+                Payload data = client.getAndRemoveFront(k, v.second).get();
+                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
             }
         });
 
-        assertLeakResults("createListValueLoopLeakTest", good.get());
+        assertLeakResults("createListValueLoopLeakTest2_read", good.get());
 
         AtomicInteger goodDelete = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
                 Boolean b = client.remove(k, v.second).get();
-                if (b.booleanValue()) {
+                if (Boolean.TRUE.equals(b)) {
                     goodDelete.getAndIncrement();
                 }
             } catch (Exception ignored) {
             }
         });
 
-        assertLeakResults("createListValueLoopLeakTest", good.get());
+        assertLeakResults("createListValueLoopLeakTest2_delete", goodDelete.get());
     }
-
 
     @Test
     void createListValueLoopLeakTest3() {
         // Easily test standard values by passing the creator lambda
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(vBytes)).get());
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(Payload.of(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                byte[] data = client.getAndRemoveElementAtPosition(client.serializeKey(k), v.second, 0).get();
-                if (v.first.equals(new String(data, StandardCharsets.UTF_8))) {
+                Payload data = client.getAndRemoveElementAtPosition(k, v.second, 0).get();
+                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
             }
         });
 
-        assertLeakResults("createListValueLoopLeakTest3", good.get());
+        assertLeakResults("createListValueLoopLeakTest3_read", good.get());
 
         AtomicInteger goodDelete = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
                 Boolean b = client.remove(k, v.second).get();
-                if (b.booleanValue()) {
+                if (Boolean.TRUE.equals(b)) {
                     goodDelete.getAndIncrement();
                 }
             } catch (Exception ignored) {
             }
         });
 
-        assertLeakResults("createListValueLoopLeakTest", good.get());
+        assertLeakResults("createListValueLoopLeakTest3_delete", goodDelete.get());
     }
 
     @Test
     void createListValueLoopLeakTest4() {
         // Easily test standard values by passing the creator lambda
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(vBytes)).get());
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createList(k, List.of(Payload.of(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                byte[] data = client.getAndRemoveTail(client.serializeKey(k), v.second).get();
-                if (v.first.equals(new String(data, StandardCharsets.UTF_8))) {
+                Payload data = client.getAndRemoveTail(k, v.second).get();
+                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
             }
         });
 
-        assertLeakResults("createListValueLoopLeakTest3", good.get());
+        assertLeakResults("createListValueLoopLeakTest4_read", good.get());
 
         AtomicInteger goodDelete = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
                 Boolean b = client.remove(k, v.second).get();
-                if (b.booleanValue()) {
+                if (Boolean.TRUE.equals(b)) {
                     goodDelete.getAndIncrement();
                 }
             } catch (Exception ignored) {
             }
         });
 
-        assertLeakResults("createListValueLoopLeakTest", good.get());
+        assertLeakResults("createListValueLoopLeakTest4_delete", goodDelete.get());
     }
+
     /* ========================================================================
        Generic Code-Reuse Engines & Assertions
        ======================================================================== */
-
-
 }

@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.KeyHint;
@@ -25,13 +26,13 @@ public class AtomicOperationsTest extends TestBaseCluster {
         String testKey = "atomicCreateStoreKey" + UUID.randomUUID();
 
         // 1. Создаем атомик со значением 42
-        KeyHint hint = client.setMode(Mode.MASTER)
+        KeyHintData hint = client.setMode(Mode.MASTER)
                 .atomicCreate(testKey,  42L).get();
         Assertions.assertNotNull(hint);
         Thread.sleep(150);
 
         // 2. Перезаписываем новое значение 100 через atomicStore
-        KeyHint storeHint = client.setMode(Mode.MASTER)
+        KeyHintData storeHint = client.setMode(Mode.MASTER)
                 .atomicStore(testKey, hint, 100L).get();
         Assertions.assertNotNull(storeHint);
 
@@ -52,7 +53,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void atomicExchangeTest() throws ExecutionException, InterruptedException {
         String testKey = "atomicExchangeKey" + UUID.randomUUID();
 
-        KeyHint hint = client.setMode(Mode.MASTER)
+        KeyHintData hint = client.setMode(Mode.MASTER)
                 .atomicCreate(testKey,  10L).get();
         Thread.sleep(150);
 
@@ -71,7 +72,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void atomicAddAndSubTest() throws ExecutionException, InterruptedException {
         String testKey = "atomicAddSubKey" + UUID.randomUUID();
 
-        KeyHint hint = client.setMode(Mode.MASTER)
+        KeyHintData hint = client.setMode(Mode.MASTER)
                 .atomicCreate(testKey, 50L).get();
         Thread.sleep(150);
 
@@ -96,7 +97,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
         String testKey = "atomicBitwiseKey" + UUID.randomUUID();
 
         // Начальное значение: 12 (0b1100)
-        KeyHint hint = client.setMode(Mode.MASTER)
+        KeyHintData hint = client.setMode(Mode.MASTER)
                 .atomicCreate(testKey,  12L).get();
         Thread.sleep(150);
 
@@ -125,7 +126,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void atomicCompareAndSetSuccessTest() throws ExecutionException, InterruptedException {
         String testKey = "atomicCasSuccessKey" + UUID.randomUUID();
 
-        KeyHint hint = client.setMode(Mode.MASTER)
+        KeyHintData hint = client.setMode(Mode.MASTER)
                 .atomicCreate(testKey,  500L).get();
         Thread.sleep(150);
 
@@ -146,7 +147,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void atomicCompareAndSetFailureTest() throws ExecutionException, InterruptedException {
         String testKey = "atomicCasFailKey" + UUID.randomUUID();
 
-        KeyHint hint = client.setMode(Mode.MASTER)
+        KeyHintData hint = client.setMode(Mode.MASTER)
                 .atomicCreate(testKey,  500L).get();
         Thread.sleep(150);
 

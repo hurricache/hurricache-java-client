@@ -1,6 +1,8 @@
 package hurricache.clients.jedis;
 
 import com.hurricache.client.intf.HurriCacheClientInterface;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -13,6 +15,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+
+import static com.hurricache.client.KeyValueUtils.weakHash;
 
 /**
  * Full Jedis API drop-in replacement routing requests to HurriCache backend.
@@ -50,7 +54,7 @@ public class Jedis implements AutoCloseable {
     public String setex(String key, long seconds, String value) {
         byte[] keyBytes = cacheClient.serializeKey(key);
         byte[] valBytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
-        KeyHint hint = cacheClient.getKeyHint(keyBytes);
+        KeyHintData hint = KeyHintData.of(null, weakHash(keyBytes, keyBytes.length, 0));
         cacheClient.createKeyValue(keyBytes, hint, valBytes, Duration.ofSeconds(seconds),
                                    cacheClient.getDefaultClientId(), cacheClient.getDefaultTimeout()).join();
         return "OK";
@@ -92,7 +96,7 @@ public class Jedis implements AutoCloseable {
 
     public Long expire(String key, long seconds) {
         byte[] keyBytes = cacheClient.serializeKey(key);
-        KeyHint hint = cacheClient.getKeyHint(keyBytes);
+        KeyHintData hint = KeyHintData.of(null, weakHash(keyBytes, keyBytes.length, 0));
         Boolean ok = cacheClient.setTtl(keyBytes, hint, seconds, cacheClient.getDefaultClientId(), cacheClient.getDefaultTimeout()).join();
         return Boolean.TRUE.equals(ok) ? 1L : 0L;
     }
@@ -105,127 +109,128 @@ public class Jedis implements AutoCloseable {
     // List / Queue Operations
     // =========================================================================
 
-    public Long rpush(String key, String... strings) {
-        List<byte[]> dataList = convertToByteList(strings);
-        byte[] keyBytes = cacheClient.serializeKey(key);
-        KeyHint hint = cacheClient.getKeyHint(keyBytes);
-
-        if (!cacheClient.existKey(keyBytes, hint).join()) {
-            cacheClient.createList(keyBytes, dataList, cacheClient.getDefaultTtl()).join();
-        } else {
-            cacheClient.addElementToTail(keyBytes, hint, dataList).join();
-        }
-        return (long) cacheClient.streamList(keyBytes, hint).join().size();
-    }
-
-    public Long lpush(String key, String... strings) {
-        List<byte[]> dataList = convertToByteList(strings);
-        byte[] keyBytes = cacheClient.serializeKey(key);
-        KeyHint hint = cacheClient.getKeyHint(keyBytes);
-
-        if (!cacheClient.existKey(keyBytes, hint).join()) {
-            cacheClient.createList(keyBytes, dataList, cacheClient.getDefaultTtl()).join();
-        } else {
-            cacheClient.addElementToHead(keyBytes, hint, dataList).join();
-        }
-        return (long) cacheClient.streamList(keyBytes, hint).join().size();
-    }
-
-    public String lpop(String key) {
-        byte[] res = cacheClient.getAndRemoveFront(key).join();
-        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
-    }
-
-    public String rpop(String key) {
-        byte[] res = cacheClient.getAndRemoveTail(key).join();
-        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
-    }
-
-    public String lindex(String key, long index) {
-        byte[] res = cacheClient.getElementAtPosition(key, (int) index).join();
-        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
-    }
-
-    public List<String> lrange(String key, long start, long stop) {
-        byte[] keyBytes = cacheClient.serializeKey(key);
-        KeyHint hint = cacheClient.getKeyHint(keyBytes);
-        List<byte[]> res = cacheClient.streamElementInRange(keyBytes, hint, false, (int) start, (int) stop).join();
-        return convertToStringList(res);
-    }
-
-    public Long linsert(String key, ListPosition where, String pivot, String value) {
-        byte[] keyBytes = cacheClient.serializeKey(key);
-        byte[] pivotBytes = pivot == null ? new byte[0] : pivot.getBytes(StandardCharsets.UTF_8);
-        byte[] valBytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
-
-        return linsert(keyBytes, where, pivotBytes, valBytes);
-    }
-
-    public Long linsert(byte[] key, ListPosition where, byte[] pivot, byte[] value) {
-        KeyHint hint = cacheClient.getKeyHint(key);
-        List<byte[]> valuesToInsert = Collections.singletonList(value);
-
-        try {
-            Boolean ok;
-            if (where == ListPosition.BEFORE) {
-                ok = cacheClient.addElementToPositionBefore(key, hint, valuesToInsert, pivot).join();
-            } else if (where == ListPosition.AFTER) {
-                ok = cacheClient.addElementToPositionAfter(key, hint, valuesToInsert, pivot).join();
-            } else {
-                throw new IllegalArgumentException("Unknown ListPosition: " + where);
-            }
-
-            if (Boolean.TRUE.equals(ok)) {
-                // Redis LINSERT возвращает размер списка после успешеного встраивания
-                return (long) cacheClient.streamList(key, hint).join().size();
-            }
-            return -1L;
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof StatusRuntimeException statusEx) {
-                if (statusEx.getStatus().getCode() == Status.Code.NOT_FOUND) {
-                    // Пивот или список не найдены -> возвращаем -1 по спецификации Redis
-                    return -1L;
-                }
-            }
-            throw e;
-        }
-    }
-
-    // =========================================================================
-    // Numeric & Atomic Operations
-    // =========================================================================
-
-    public Long incr(String key) {
-        return incrBy(key, 1L);
-    }
-
-    public Long incrBy(String key, long increment) {
-        byte[] keyBytes = cacheClient.serializeKey(key);
-        KeyHint hint = cacheClient.getKeyHint(keyBytes);
-
-        // Если ключа нет, создаем атомик
-        if (!cacheClient.existKey(keyBytes, hint).join()) {
-            cacheClient.atomicCreate(keyBytes, hint, increment).join();
-            return increment;
-        }
-        return cacheClient.atomicAdd(keyBytes, hint, increment).join();
-    }
-
-    public Long decr(String key) {
-        return decrBy(key, 1L);
-    }
-
-    public Long decrBy(String key, long decrement) {
-        byte[] keyBytes = cacheClient.serializeKey(key);
-        KeyHint hint = cacheClient.getKeyHint(keyBytes);
-
-        if (!cacheClient.existKey(keyBytes, hint).join()) {
-            cacheClient.atomicCreate(keyBytes, hint, -decrement).join();
-            return -decrement;
-        }
-        return cacheClient.atomicSub(keyBytes, hint, decrement).join();
-    }
+//    public Long rpush(String key, String... strings) {
+//        List<byte[]> dataList = convertToByteList(strings);
+//        byte[] keyBytes = cacheClient.serializeKey(key);
+//        KeyHintData hint = KeyHintData.of(null, weakHash(keyBytes, keyBytes.length, 0));
+//
+//        if (!cacheClient.existKey(keyBytes, hint).join()) {
+//            cacheClient.createList(keyBytes, dataList, cacheClient.getDefaultTtl()).join();
+//        } else {
+//            cacheClient.addElementToTail(keyBytes, hint, dataList).join();
+//        }
+//        return (long) cacheClient.streamList(keyBytes, hint).join().size();
+//    }
+//
+//    public Long lpush(String key, String... strings) {
+//        List<byte[]> dataList = convertToByteList(strings);
+//        byte[] keyBytes = cacheClient.serializeKey(key);
+//        KeyHintData hint = KeyHintData.of(null, weakHash(keyBytes, keyBytes.length, 0));
+//
+//        if (!cacheClient.existKey(keyBytes, hint).join()) {
+//            cacheClient.createList(keyBytes, dataList, cacheClient.getDefaultTtl()).join();
+//        } else {
+//            cacheClient.addElementToHead(keyBytes, hint, dataList).join();
+//        }
+//        return (long) cacheClient.streamList(keyBytes, hint).join().size();
+//    }
+//
+//    public String lpop(String key) {
+//        byte[] res = cacheClient.getAndRemoveFront(key).join();
+//        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
+//    }
+//
+//    public String rpop(String key) {
+//        byte[] res = cacheClient.getAndRemoveTail(key).join();
+//        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
+//    }
+//
+//    public String lindex(String key, long index) {
+//        byte[] res = cacheClient.getElementAtPosition(key, (int) index).join();
+//        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
+//    }
+//
+//    public List<String> lrange(String key, long start, long stop) {
+//        byte[] keyBytes = cacheClient.serializeKey(key);
+//        KeyHint hint = cacheClient.getKeyHint(keyBytes);
+//        List<byte[]> res = cacheClient.streamElementInRangeUnordered(keyBytes, hint,
+//                                                                     ContainerType.VECTOR,  (int) start, (int) stop).join();
+//        return convertToStringList(res);
+//    }
+//
+//    public Long linsert(String key, ListPosition where, String pivot, String value) {
+//        byte[] keyBytes = cacheClient.serializeKey(key);
+//        byte[] pivotBytes = pivot == null ? new byte[0] : pivot.getBytes(StandardCharsets.UTF_8);
+//        byte[] valBytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+//
+//        return linsert(keyBytes, where, pivotBytes, valBytes);
+//    }
+//
+//    public Long linsert(byte[] key, ListPosition where, byte[] pivot, byte[] value) {
+//        KeyHint hint = cacheClient.getKeyHint(key);
+//        List<byte[]> valuesToInsert = Collections.singletonList(value);
+//
+//        try {
+//            Boolean ok;
+//            if (where == ListPosition.BEFORE) {
+//                ok = cacheClient.addElementToPositionBefore(key, hint, valuesToInsert, pivot).join();
+//            } else if (where == ListPosition.AFTER) {
+//                ok = cacheClient.addElementToPositionAfter(key, hint, valuesToInsert, pivot).join();
+//            } else {
+//                throw new IllegalArgumentException("Unknown ListPosition: " + where);
+//            }
+//
+//            if (Boolean.TRUE.equals(ok)) {
+//                // Redis LINSERT возвращает размер списка после успешеного встраивания
+//                return (long) cacheClient.streamList(key, hint).join().size();
+//            }
+//            return -1L;
+//        } catch (CompletionException e) {
+//            Throwable cause = e.getCause();
+//            if (cause instanceof StatusRuntimeException statusEx) {
+//                if (statusEx.getStatus().getCode() == Status.Code.NOT_FOUND) {
+//                    // Пивот или список не найдены -> возвращаем -1 по спецификации Redis
+//                    return -1L;
+//                }
+//            }
+//            throw e;
+//        }
+//    }
+//
+//    // =========================================================================
+//    // Numeric & Atomic Operations
+//    // =========================================================================
+//
+//    public Long incr(String key) {
+//        return incrBy(key, 1L);
+//    }
+//
+//    public Long incrBy(String key, long increment) {
+//        byte[] keyBytes = cacheClient.serializeKey(key);
+//        KeyHint hint = cacheClient.getKeyHint(keyBytes);
+//
+//        // Если ключа нет, создаем атомик
+//        if (!cacheClient.existKey(keyBytes, hint).join()) {
+//            cacheClient.atomicCreate(keyBytes, hint, increment).join();
+//            return increment;
+//        }
+//        return cacheClient.atomicAdd(keyBytes, hint, increment).join();
+//    }
+//
+//    public Long decr(String key) {
+//        return decrBy(key, 1L);
+//    }
+//
+//    public Long decrBy(String key, long decrement) {
+//        byte[] keyBytes = cacheClient.serializeKey(key);
+//        KeyHint hint = cacheClient.getKeyHint(keyBytes);
+//
+//        if (!cacheClient.existKey(keyBytes, hint).join()) {
+//            cacheClient.atomicCreate(keyBytes, hint, -decrement).join();
+//            return -decrement;
+//        }
+//        return cacheClient.atomicSub(keyBytes, hint, decrement).join();
+//    }
 
     // =========================================================================
     // Connection Lifecycle
