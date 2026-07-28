@@ -1,5 +1,6 @@
 package com.hurricache.utils;
 
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.BatchValueResponse;
 import com.hurricache.grpc.BoolResponse;
 
@@ -7,10 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class StreamBatchUnorderedObserver extends CompletableFutureObserver<BatchValueResponse, List<byte[]>> {
+public class StreamBatchUnorderedObserver extends CompletableFutureObserver<BatchValueResponse, List<Payload>> {
 
-    public StreamBatchUnorderedObserver(CompletableFuture<List<byte[]>> future) {
-        super(future, res -> res.getValueUnorderedList().stream().map(CompressionUtils::decompressIfNeeded).toList());
+    public StreamBatchUnorderedObserver(CompletableFuture<List<Payload>> future) {
+        super(future, res -> res.getValueUnorderedList().stream()
+                .map(val -> Payload.of(CompressionUtils.decompressIfNeeded(val)))
+                .toList());
         value = new ArrayList<>();
     }
 

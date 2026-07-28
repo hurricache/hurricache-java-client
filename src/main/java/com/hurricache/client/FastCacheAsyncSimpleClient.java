@@ -10,6 +10,7 @@ import com.hurricache.utils.CompletableFutureObserver;
 import com.hurricache.utils.CompressionUtils;
 import com.hurricache.utils.DecompressingObserver;
 import com.hurricache.utils.StreamBatchMapObserver;
+import com.hurricache.utils.StreamBatchOrderedMapObserver;
 import com.hurricache.utils.StreamBatchOrderedObserver;
 import com.hurricache.utils.StreamBatchUnorderedObserver;
 import io.grpc.ManagedChannel;
@@ -422,38 +423,30 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<List<Payload>> streamList(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        CompletableFuture<List<byte[]>> rawFuture = new CompletableFuture<>();
+        CompletableFuture<List<Payload>> rawFuture = new CompletableFuture<>();
         getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchUnorderedObserver(rawFuture));
-        return rawFuture.thenApply(list -> list.stream().map(Payload::of).toList());
+        return rawFuture;
     }
 
     @Override
     public CompletableFuture<List<Payload>> streamVector(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        CompletableFuture<List<byte[]>> rawFuture = new CompletableFuture<>();
+        CompletableFuture<List<Payload>> rawFuture = new CompletableFuture<>();
         getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchUnorderedObserver(rawFuture));
-        return rawFuture.thenApply(list -> list.stream().map(Payload::of).toList());
+        return rawFuture;
     }
 
     @Override
     public CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        CompletableFuture<Map<byte[], byte[]>> rawFuture = new CompletableFuture<>();
+        CompletableFuture<Map<Payload, Payload>> rawFuture = new CompletableFuture<>();
         getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchMapObserver(rawFuture));
-        return rawFuture.thenApply(map -> {
-            Map<Payload, Payload> result = new java.util.HashMap<>();
-            map.forEach((k, v) -> result.put(Payload.of(k), Payload.of(v)));
-            return result;
-        });
+        return rawFuture;
     }
 
     @Override
     public CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        CompletableFuture<Map<byte[], byte[]>> rawFuture = new CompletableFuture<>();
-        getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchMapObserver(rawFuture));
-        return rawFuture.thenApply(map -> {
-            Map<OrderedPayload, Payload> result = new java.util.HashMap<>();
-            map.forEach((k, v) -> result.put(OrderedPayload.of(null, k), Payload.of(v)));
-            return result;
-        });
+        CompletableFuture<Map<OrderedPayload, Payload>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchOrderedMapObserver(rawFuture));
+        return rawFuture;
     }
 
     @Override
@@ -462,14 +455,14 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId))
                 .setPos(start)
                 .setEnd(end);
-        CompletableFuture<List<byte[]>> rawFuture = new CompletableFuture<>();
+        CompletableFuture<List<Payload>> rawFuture = new CompletableFuture<>();
 
         switch (containerType) {
             case LIST, VECTOR, SET -> getStub(timeout).getElementInRange(request.setType(containerType).build(), new StreamBatchUnorderedObserver(rawFuture));
             default -> throw new IllegalArgumentException("Unsupported container type for stream operation: " + containerType);
         }
 
-        return rawFuture.thenApply(list -> list.stream().map(Payload::of).toList());
+        return rawFuture;
     }
 
     @Override
@@ -481,9 +474,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .setEnd(endWeight)
                 .build();
 
-        CompletableFuture<List<com.hurricache.utils.Pair<Long, byte[]>>> rawFuture = new CompletableFuture<>();
+        CompletableFuture<List<OrderedPayload>> rawFuture = new CompletableFuture<>();
         getStub(timeout).getElementInRange(request, new StreamBatchOrderedObserver(rawFuture));
-        return rawFuture.thenApply(list -> list.stream().map(pair -> OrderedPayload.of(pair.first, pair.second)).toList());
+        return rawFuture;
     }
 
     // =========================================================================
@@ -496,7 +489,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             return CompletableFuture.completedFuture(true);
         }
         Key protoKey = buildKey(key, hint, clientId);
-        return sendAddRequestInChunks(protoKey, data, -1, AddType.TAIL, timeout);
+        return sendAddRequestInChunks(protoKey, data, -1, AddType.POSITION, timeout);
     }
 
     @Override

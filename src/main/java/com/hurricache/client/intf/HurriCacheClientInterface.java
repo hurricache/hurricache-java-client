@@ -747,9 +747,12 @@ public interface HurriCacheClientInterface {
      * Dumps or streams all entries from an unordered Map container.
      */
     CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key, KeyHintData hint, int clientId, Duration timeout);
-
     default CompletableFuture<Map<Payload, Payload>> streamMap(String key) {
         return streamMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<Payload, Payload>> streamMap(String key,KeyHintData hint) {
+        return streamMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -823,6 +826,10 @@ public interface HurriCacheClientInterface {
         return streamOrderedMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(String key,KeyHintData hint) {
+        return streamOrderedMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
     /**
      * Fetches a sub-range of elements from an {@link OrderedSet} filtered by score/weight boundaries.
      *
@@ -844,6 +851,9 @@ public interface HurriCacheClientInterface {
 
     default CompletableFuture<Integer> addElementWithWeight(String key, List<OrderedPayload> data) {
         return addElementWithWeight(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint,List<OrderedPayload> data) {
+        return addElementWithWeight(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
     // =========================================================================

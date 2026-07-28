@@ -89,7 +89,7 @@ public class CollectionsTest extends TestBaseCluster {
                 .get();
 
         Assertions.assertNotNull(rangeData);
-        Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
+        Assertions.assertEquals(4, rangeData.size()); // 2, 3, 4, 5
         Assertions.assertEquals("2", new String(rangeData.get(0).getValue(), StandardCharsets.UTF_8));
     }
 
@@ -114,7 +114,7 @@ public class CollectionsTest extends TestBaseCluster {
                 .get();
 
         Assertions.assertNotNull(rangeData);
-        Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
+        Assertions.assertEquals(4, rangeData.size()); // 2, 3, 4, 5
         Assertions.assertEquals("2", new String(rangeData.get(0).getValue(), StandardCharsets.UTF_8));
     }
 
@@ -139,7 +139,7 @@ public class CollectionsTest extends TestBaseCluster {
                 .get();
 
         Assertions.assertNotNull(rangeData);
-        Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
+        Assertions.assertEquals(4, rangeData.size()); // 2, 3, 4, 5
         Assertions.assertEquals("2", new String(rangeData.get(0).getValue(), StandardCharsets.UTF_8));
     }
 
@@ -164,7 +164,7 @@ public class CollectionsTest extends TestBaseCluster {
                 .get();
 
         Assertions.assertNotNull(rangeData);
-        Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
+        Assertions.assertEquals(4, rangeData.size()); // 2, 3, 4, 5
         Assertions.assertEquals("2", new String(rangeData.get(0).getValue(), StandardCharsets.UTF_8));
     }
 

@@ -1,28 +1,29 @@
 package com.hurricache.utils;
 
+import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.BatchValueResponse;
 import com.hurricache.grpc.BoolResponse;
+import com.hurricache.grpc.OrderedKey;
+import com.hurricache.grpc.Value;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class StreamBatchMapObserver extends CompletableFutureObserver<BatchValueResponse, Map<Payload, Payload>> {
+public class StreamBatchOrderedMapObserver extends CompletableFutureObserver<BatchValueResponse, Map<OrderedPayload, Payload>> {
 
-    public StreamBatchMapObserver(CompletableFuture<Map<Payload, Payload>> future) {
+    public StreamBatchOrderedMapObserver(CompletableFuture<Map<OrderedPayload, Payload>> future) {
         super(future, res -> {
             int valueUnorderedCount = res.getValueUnorderedCount();
-            int keyUnorderedCount = res.getKeyUnorderedCount();
-            int size = Math.min(valueUnorderedCount, keyUnorderedCount);
-
-            Map<Payload, Payload> resp = new HashMap<>(size);
-            for (int i = 0; i < size; i++) {
-                byte[] keyBytes = res.getKeyUnordered(i).getPayload().getPayload().toByteArray();
-                byte[] valBytes = res.getValueUnordered(i).getValue().getPayload().toByteArray();
-
-                resp.put(Payload.of(keyBytes), Payload.of(valBytes));
+            int keyOrderedCount = res.getKeyOrderedCount();
+            int size = Math.min(valueUnorderedCount, keyOrderedCount);
+            Map resp = new HashMap(size);
+            for (int i = 0; i < size; i++){
+                OrderedKey keyOrdered = res.getKeyOrdered(i);
+                Value valueUnordered = res.getValueUnordered(i);
+                resp.put(OrderedPayload.of(keyOrdered.getOrder(),keyOrdered.getPayload().toByteArray()),Payload.of(valueUnordered.getValue().getPayload().toByteArray()));
             }
             return resp;
         });
@@ -44,5 +45,6 @@ public class StreamBatchMapObserver extends CompletableFutureObserver<BatchValue
         public void onNext(BoolResponse value) {
             this.value.addAll(function.apply(value));
         }
+
     }
 }
