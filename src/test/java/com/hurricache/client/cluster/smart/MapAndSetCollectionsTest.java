@@ -148,6 +148,7 @@ public class MapAndSetCollectionsTest extends TestBaseCluster {
                 .removeFromContainer(client.serializeKey(setKey), keyHint, ContainerType.SET, List.of(p("item1")))
                 .get();
         Assertions.assertEquals(1, removedCount);
+        Thread.sleep(500);
 
         // 5. Verify Size after removal
         Integer finalSize = client.setMode(Mode.MASTER).getSize(setKey, keyHint).get();

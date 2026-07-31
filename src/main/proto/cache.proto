@@ -161,7 +161,7 @@ message BatchValueResponse {
 // Ответ при обновлении значения.
 message UpdateValueResponse {
   bool result = 1;                            // Флаг успеха
-  optional Value value = 2;                  // Новое или прежнее значение
+  optional Value value = 2;                  // прежнее значение
 }
 
 // Ответ, возвращающий сгенерированный/рассчитанный KeyHint.
@@ -366,7 +366,9 @@ enum ReplicationCommandType {
   ADD_TO_POSITION_BY_VAL = 24;
   REMOVE_FROM_CONTAINER = 25;
   ADD_TO_CONTAINER = 26;
-  UNKNOWN = 27;
+  REMOVE_FROM_CONTAINER_BY_KEY = 27;
+  UPDATE_IN_CONTAINER_BY_KEY = 28;
+  UNKNOWN = 29;
 }
 
 // Оболочка одной команды в батче репликации.
@@ -385,6 +387,8 @@ message BatchCommand {
   optional AtomicCas atomic_cas = 13;
   optional AddToValRequest add_to_pos_by_val = 14;
   optional RemoveFromContainerRequest remove_from_container = 15;
+  optional ContainerGetRequest remove_from_container_by_key = 16;
+  optional UpdateContainerRequest update_in_container_by_key = 17;
 }
 
 // Атомарная команда репликации с явным типом.
@@ -409,16 +413,18 @@ service DataReplicationService {
   rpc remove(GetRequest) returns (BoolResponse) {}
 
   rpc createContainer(CreateContainerRequest) returns (BoolResponse) {}
+  rpc updateValueInContainer(UpdateContainerRequest) returns (BoolResponse) {}
 
   rpc removeTail(GetRequest) returns (BoolResponse) {}
   rpc removeHead(GetRequest) returns (BoolResponse) {}
   rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse) {}
   rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse) {}
-  rpc removeFromContainer(RemoveFromContainerRequest) returns (BoolResponse) {}
+  rpc removeFromContainerByKeyValue(RemoveFromContainerRequest) returns (BoolResponse) {}
+  rpc removeInContainer(ContainerGetRequest) returns (BoolResponse) {}
 
   rpc addElementToTail(AddToRequest) returns (BoolResponse) {}
   rpc addElementToHead(AddToRequest) returns (BoolResponse) {}
-  rpc addElementToPosition(AddToRequest) returns (BoolResponse) {}
+  rpc addElement(AddToRequest) returns (BoolResponse) {}
   rpc addElementToPositionByValue(AddToValRequest) returns (BoolResponse) {}
 
   rpc atomicCreate(AtomicCreate) returns (BoolResponse) {}
@@ -430,6 +436,8 @@ service DataReplicationService {
   rpc atomicAnd(AtomicCreate) returns (BoolResponse) {}
   rpc atomicXor(AtomicCreate) returns (BoolResponse) {}
   rpc atomicCompareAndSet(AtomicCas) returns (BoolResponse) {}
+
+
 }
 
 
@@ -566,16 +574,14 @@ service HurriCacheGrpcService {
   rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse) {}
 
   // [CONTAINERS] Специализированное удаление элементов по значению
-  rpc removeFromContainer(RemoveFromContainerRequest) returns (IntResponse) {}
-
+  rpc removeFromContainerByKeyValue(RemoveFromContainerRequest) returns (IntResponse) {}
+  // Map,Ordered Map,Set,Ordered Set containers by key
+  rpc removeInContainer(ContainerGetRequest) returns (IntResponse) {}
 
   // --------------------------------------------------------------------------
   // Insertion Operations (Добавление и вставка)
   // Применимость: LIST, VECTOR, QUEUE, SET, ORDERED_SET
   // --------------------------------------------------------------------------
-
-  // [LIST, VECTOR, QUEUE] Добавление элемента в конец по умолчанию (Enqueue).
-  rpc addElement(AddToRequest) returns (BoolResponse) {}
 
   // [LIST, VECTOR, QUEUE] Добавляет элемент в конец (Push Back / Enqueue).
   rpc addElementToTail(AddToRequest) returns (BoolResponse) {}
@@ -584,7 +590,7 @@ service HurriCacheGrpcService {
   rpc addElementToHead(AddToRequest) returns (BoolResponse) {}
 
   // [LIST, VECTOR, SET, ORDERED_SET] Добавляет элементы в множества (для ORDERED_SET учитывает вес).
-  rpc addElementToPosition(AddToRequest) returns (IntResponse) {}
+  rpc addElement(AddToRequest) returns (IntResponse) {}
 
   // [LIST, VECTOR] Вставляет элемент относительно другого значения (Insert Before/After).
   rpc addElementToPositionByValue(AddToValRequest) returns (BoolResponse) {}
@@ -628,14 +634,14 @@ service HurriCacheGrpcService {
 
   // [ATOMIC] Compare-And-Swap (CAS).
   rpc atomicCompareAndSet(AtomicCas) returns (AtomicCasRes) {}
-
+  //Map and OrderedMap
   rpc getValueInContainer(ContainerGetRequest) returns (ValueResponse) {}
-
-  rpc getAndDeleteValueInContainer(ContainerGetRequest) returns (ValueResponse) {}
-
+  //All containers
   rpc existKeyInContainer(ContainerGetRequest) returns (BoolResponse) {}
 
+  //Map and OrderedMap
+  rpc getAndDeleteValueInContainer(ContainerGetRequest) returns (ValueResponse) {}
+  //All containers
   rpc updateValueInContainer(UpdateContainerRequest) returns (UpdateValueResponse) {}
 
-  rpc removeInContainer(ContainerGetRequest) returns (BoolResponse) {}
 }

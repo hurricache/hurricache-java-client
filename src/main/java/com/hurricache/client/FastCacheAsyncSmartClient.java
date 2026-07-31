@@ -295,7 +295,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<Boolean> setTtl(byte[] key, KeyHintData hint, long ttl, int clientId, Duration timeout) {
-        return execute(hint, c -> c.setTtl(key, hint, ttl, clientId, timeout));
+        return executeWrite(hint, c -> c.setTtl(key, hint, ttl, clientId, timeout));
     }
 
     @Override
@@ -415,12 +415,12 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                     int clientId,
                                                     Duration duration,
                                                     Duration timeout) {
-        return execute(hint, c -> c.lockObject(key, hint, type, clientId, duration, timeout));
+        return executeWrite(hint, c -> c.lockObject(key, hint, type, clientId, duration, timeout));
     }
 
     @Override
     public CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        return execute(hint, c -> c.unlockObject(key, hint, clientId, timeout));
+        return executeWrite(hint, c -> c.unlockObject(key, hint, clientId, timeout));
     }
 
     @Override
@@ -700,5 +700,51 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                                             int clientId,
                                                                             Duration timeout) {
         return execute(hint, c -> c.streamOrderedMap(key, hint, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getContainerValue(byte[] key,
+                                                       KeyHintData hint,
+                                                       byte[] elementKey,
+                                                       int clientId,
+                                                       Duration timeout) {
+        return execute(hint, c -> c.getContainerValue(key, hint,elementKey, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getAndRemoveContainerValue(byte[] key,
+                                                                KeyHintData hint,
+                                                                byte[] elementKey,
+                                                                int clientId,
+                                                                Duration timeout) {
+        return execute(hint, c -> c.getAndRemoveContainerValue(key, hint,elementKey, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> containsContainerKey(byte[] key,
+                                                           KeyHintData hint,
+                                                           byte[] elementKey,
+                                                           int clientId,
+                                                           Duration timeout) {
+        return execute(hint, c -> c.containsContainerKey(key, hint,elementKey, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<byte[]> updateContainerValue(byte[] key,
+                                                          KeyHintData hint,
+                                                          byte[] elementKey,
+                                                          byte[] value,
+                                                          int clientId,
+                                                          Duration timeout) {
+        return execute(hint, c -> c.updateContainerValue(key, hint,elementKey,value, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Integer> removeFromContainer(byte[] key,
+                                                          KeyHintData hint,
+                                                          byte[] elementKey,
+                                                          int clientId,
+                                                          Duration timeout) {
+        return execute(hint, c -> c.removeFromContainer(key, hint,elementKey, clientId, timeout));
     }
 }

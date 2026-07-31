@@ -31,7 +31,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     private final String target;
     private static final long MAX_RPC_SIZE = 4 * 1024 * 1024 - 1024 * 1024 / 2;
 
-    private enum AddType { TAIL, HEAD, POSITION }
+    private enum AddType { TAIL, HEAD, POSITION,NON_POSITION }
 
     public FastCacheAsyncSimpleClient(String host, int port, int defaultClientId, Duration timeout) {
         this.channel = ManagedChannelBuilder.forAddress(host, port).directExecutor().usePlaintext().build();
@@ -135,6 +135,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         if (ttl != null && !ttl.isZero()) {
             valueBuilder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
+        valueBuilder.setLockInfo(LockInfo.newBuilder().setLockedBy(clientId).setType(LockType.NO_LOCK).build());
         CreateRequest req = CreateRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId))
                 .setValue(valueBuilder)
@@ -538,7 +539,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
-        getStub(timeout).addElementToPosition(builder.build(), new CompletableFutureObserver<>(future, IntResponse::getSize));
+        getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(future, IntResponse::getSize));
         return future;
     }
 
@@ -638,7 +639,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             }
         }
 
-        getStub(timeout).removeFromContainer(builder.build(), new CompletableFutureObserver<>(future, IntResponse::getSize));
+        getStub(timeout).removeFromContainerByKeyValue(builder.build(), new CompletableFutureObserver<>(future, IntResponse::getSize));
         return future;
     }
 
@@ -932,7 +933,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         switch (type) {
             case TAIL -> getStub(timeout).addElementToTail(builder.build(), new CompletableFutureObserver<>(chunkFuture, BoolResponse::getValue));
             case HEAD -> getStub(timeout).addElementToHead(builder.build(), new CompletableFutureObserver<>(chunkFuture, BoolResponse::getValue));
-            case POSITION -> getStub(timeout).addElementToPosition(builder.build(), new CompletableFutureObserver<>(chunkFuture, res -> res.getSize() > 0));
+            case POSITION -> getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(chunkFuture, res -> res.getSize() > 0));
         }
 
         List<Payload> nextTail = data.subList(splitIndex, data.size());
@@ -970,7 +971,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
         CompletableFuture<Integer> chunkFuture = new CompletableFuture<>();
 
-        getStub(timeout).addElementToPosition(builder.build(), new CompletableFutureObserver<>(chunkFuture, IntResponse::getSize));
+        getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(chunkFuture, IntResponse::getSize));
         List<Payload> nextTail = data.subList(splitIndex, data.size());
 
         int finalSplitIndex = splitIndex;
@@ -982,6 +983,81 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             int nextPos = currentPos + finalSplitIndex;
             return sendAddRequestInChunks(protoKey, nextTail, nextPos, timeout);
         });
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getContainerValue(byte[] key,
+                                                       KeyHintData hint,
+                                                       byte[] elementKey,
+                                                       int clientId,
+                                                       Duration timeout) {
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
+        ContainerGetRequest request = ContainerGetRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId)).setElementKey(KeyValueUtils.createUnorderedKey(elementKey, null, clientId))
+                .build();
+        getStub(timeout).getValueInContainer(request, new DecompressingObserver(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getAndRemoveContainerValue(byte[] key,
+                                                                KeyHintData hint,
+                                                                byte[] elementKey,
+                                                                int clientId,
+                                                                Duration timeout) {
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
+        ContainerGetRequest request = ContainerGetRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId)).setElementKey(KeyValueUtils.createUnorderedKey(elementKey, null, clientId))
+                .build();
+        getStub(timeout).getAndDeleteValueInContainer(request, new DecompressingObserver(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> containsContainerKey(byte[] key,
+                                                           KeyHintData hint,
+                                                           byte[] elementKey,
+                                                           int clientId,
+                                                           Duration timeout) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        ContainerGetRequest request = ContainerGetRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId)).setElementKey(KeyValueUtils.createUnorderedKey(elementKey, null, clientId))
+                .build();
+        getStub(timeout).existKeyInContainer(request, new CompletableFutureObserver<>(future, BoolResponse::getValue));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<byte[]> updateContainerValue(byte[] key,
+                                                          KeyHintData hint,
+                                                          byte[] elementKey,
+                                                          byte[] value,
+                                                          int clientId,
+                                                          Duration timeout) {
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
+        Value.Builder builderForValue = CompressionUtils.compressIfNeeded(value);
+//        if (ttl != null && !ttl.isZero()) {
+//            builderForValue.setTtl(System.currentTimeMillis() + ttl.toMillis());
+//        }
+        UpdateContainerRequest request = UpdateContainerRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId)).setElementKey(KeyValueUtils.createUnorderedKey(elementKey, null, clientId)).setValue(builderForValue)
+                .build();
+        getStub(timeout).updateValueInContainer(request, new DecompressingObserver.Update(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> removeFromContainer(byte[] key,
+                                                          KeyHintData hint,
+                                                          byte[] elementKey,
+                                                          int clientId,
+                                                          Duration timeout) {
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+        ContainerGetRequest request = ContainerGetRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId)).setElementKey(KeyValueUtils.createUnorderedKey(elementKey, null, clientId))
+                .build();
+        getStub(timeout).removeInContainer(request, new CompletableFutureObserver<>(future, IntResponse::getSize));
+        return future;
     }
 
     // =========================================================================

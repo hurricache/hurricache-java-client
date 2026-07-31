@@ -24,13 +24,11 @@ public class KeyValueUtils {
      */
     public static Key.Builder createUnorderedKey(byte[] key, KeyHintData hint, int clientId) {
         Key.Builder builder = CompressionUtils.compressKeyIfNeeded(key, clientId);
-        if (hint != null) {
             if (hint != null) {
                 KeyHint.Builder khBuilder = KeyHint.newBuilder();
                 if (hint.hasWeekHash()) khBuilder.setWeekHash(hint.getWeek_hash());
                 if (hint.hasStrongHash()) khBuilder.setStrongHash(hint.getStrong_hash());
                 builder.setKeyHint(khBuilder);
-            }
         }
         return builder;
     }
