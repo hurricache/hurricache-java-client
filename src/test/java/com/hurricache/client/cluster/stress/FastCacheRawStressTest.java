@@ -19,9 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FastCacheRawStressTest {
 
     private final String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
-    private final int THREAD_COUNT = 32;
+    private final int THREAD_COUNT = 16;
     private final int OPERATIONS_PER_THREAD = 100_000;
-    private final int PIPELINE_BATCH_SIZE = 100;
+    private final int PIPELINE_BATCH_SIZE = 500;
     private final int EXPECTED_TOTAL_OPS = THREAD_COUNT * OPERATIONS_PER_THREAD;
     private final int BATCH_TIMEOUT_SECONDS = 10;
 

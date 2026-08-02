@@ -87,7 +87,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Create on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createList(listKey, List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5), ownerId, Duration.of(1, ChronoUnit.SECONDS))
+                .createList(listKey,
+                            List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5) )
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -111,7 +112,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Create on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createList(listKey, List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5), ownerId, Duration.of(1, ChronoUnit.SECONDS))
+                .createList(listKey,
+                            List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5) )
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);

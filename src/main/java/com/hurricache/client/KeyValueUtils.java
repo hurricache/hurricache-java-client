@@ -71,7 +71,9 @@ public class KeyValueUtils {
     private static final long PRIME_0 = 0x9E3779B97F4A7C15L;
     private static final long PRIME_1 = 0xBF58476D1CE4E5B9L;
 
-    public static int weakHash(byte[] data, int len, long seed) {
+    public static int weakHash(byte[] data) {
+        int seed = 0;
+        int len = data.length;
         long a = seed ^ PRIME_0;
         long b = len ^ PRIME_1;
         int offset = 0;

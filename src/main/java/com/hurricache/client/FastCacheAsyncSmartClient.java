@@ -344,30 +344,27 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createQueue(byte[] key,
-                                                      List<Payload> initialValue,
+    public CompletableFuture<KeyHintData> createQueue(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
                                                       Duration ttl,
                                                       int clientId,
                                                       Duration timeout) {
-        return execute(null, c -> c.createQueue(key, initialValue, ttl, clientId, timeout));
+        return execute(keyHint, c -> c.createQueue(key,keyHint , initialValue, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createList(byte[] key,
-                                                     List<Payload> initialValue,
+    public CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
                                                      Duration ttl,
                                                      int clientId,
                                                      Duration timeout) {
-        return execute(null, c -> c.createList(key, initialValue, ttl, clientId, timeout));
+        return execute(keyHint, c -> c.createList(key,keyHint , initialValue, ttl, clientId, timeout ));
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createVector(byte[] key,
-                                                       List<Payload> initialValue,
+    public CompletableFuture<KeyHintData> createVector(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
                                                        Duration ttl,
                                                        int clientId,
                                                        Duration timeout) {
-        return execute(null, c -> c.createVector(key, initialValue, ttl, clientId, timeout));
+        return execute(keyHint, c -> c.createVector(key, keyHint, initialValue, ttl, clientId, timeout));
     }
 
     @Override
@@ -636,8 +633,10 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createSet(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return execute(null, c -> c.createSet(key, initialValue, ttl, clientId, timeout));
+    public CompletableFuture<KeyHintData> createSet(byte[] key,
+                                                    KeyHintData keyHint,
+                                                    List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
+        return execute(keyHint, c -> c.createSet(key,keyHint , initialValue, ttl, clientId, timeout));
     }
 
     @Override

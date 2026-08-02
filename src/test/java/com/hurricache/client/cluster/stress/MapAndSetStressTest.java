@@ -33,10 +33,14 @@ public class MapAndSetStressTest extends TestBaseCluster {
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createSet(setKey, List.of(p("base_item")))
                 .get();
-
+        Thread.sleep(1000);
         int threadsCount = 20;
         int itemsPerThread = 50;
+        int totalOperations = threadsCount * itemsPerThread;
         List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+
+        // --- Замер времени начала ---
+        long startTimeNs = System.nanoTime();
 
         // Штурмуем сет параллельно из разных потоков вперемешку через Master и Backup
         for (int i = 0; i < threadsCount; i++) {
@@ -60,11 +64,20 @@ public class MapAndSetStressTest extends TestBaseCluster {
 
         // Ждем завершения всех потоков
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+
+        // --- Замер времени окончания ---
+        long durationNs = System.nanoTime() - startTimeNs;
+        double durationMs = durationNs / 1_000_000.0;
+        double opsPerSec = (totalOperations / (durationNs / 1_000_000_000.0));
+
+        System.out.printf("[Set Addition Stress] Total Items: %d | Time: %.2f ms | Throughput: %.2f ops/sec%n",
+                          totalOperations, durationMs, opsPerSec);
+
         Thread.sleep(1500); // Даем время на репликацию и финализацию
 
         // Проверяем итоговый размер: 1 базовый + (20 потоков * 50 элементов) = 1001
         Integer size = client.setMode(Mode.MASTER).getSize(setKey, keyHint).get();
-        Assertions.assertEquals(1 + (threadsCount * itemsPerThread), size);
+        Assertions.assertEquals(1 + totalOperations, size);
     }
 
     @Test
@@ -74,10 +87,14 @@ public class MapAndSetStressTest extends TestBaseCluster {
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createOrderedSet(zsetKey, List.of(OrderedPayload.of(0L, bytes("root"))))
                 .get();
-
+        Thread.sleep(1000);
         int threadsCount = 15;
         int itemsPerThread = 40;
+        int totalOperations = threadsCount * itemsPerThread;
         List<CompletableFuture<Integer>> futures = new ArrayList<>();
+
+        // --- Замер времени начала ---
+        long startTimeNs = System.nanoTime();
 
         for (int i = 0; i < threadsCount; i++) {
             final int threadId = i;
@@ -100,9 +117,18 @@ public class MapAndSetStressTest extends TestBaseCluster {
         }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+
+        // --- Замер времени окончания ---
+        long durationNs = System.nanoTime() - startTimeNs;
+        double durationMs = durationNs / 1_000_000.0;
+        double opsPerSec = (totalOperations / (durationNs / 1_000_000_000.0));
+
+        System.out.printf("[OrderedSet Weights Stress] Total Items: %d | Time: %.2f ms | Throughput: %.2f ops/sec%n",
+                          totalOperations, durationMs, opsPerSec);
+
         Thread.sleep(1500);
 
         Integer size = client.setMode(Mode.BACKUP).getSize(zsetKey, keyHint).get();
-        Assertions.assertEquals(1 + (threadsCount * itemsPerThread), size);
+        Assertions.assertEquals(1 + totalOperations, size);
     }
 }

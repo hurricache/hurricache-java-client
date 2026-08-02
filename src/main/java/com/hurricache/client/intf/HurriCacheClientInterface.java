@@ -20,47 +20,9 @@ import java.util.concurrent.CompletableFuture;
  * distributed locks, as well as ordered ({@link OrderedPayload}) and unordered ({@link Payload})
  * data structures (Queue, List, Vector, Set, Map).
  */
-public interface HurriCacheClientInterface {
+public interface HurriCacheClientInterface extends HurriCacheClientInterfaceCommon  {
 
-    /**
-     * Gets the default client identifier used for routing and locking metadata.
-     *
-     * @return default client ID.
-     */
-    int getDefaultClientId();
 
-    /**
-     * Gets the default timeout duration applied to RPC invocations.
-     *
-     * @return default timeout as a {@link Duration}.
-     */
-    Duration getDefaultTimeout();
-
-    /**
-     * Gets the default Time-To-Live (TTL) duration applied to created entries.
-     *
-     * @return default TTL {@link Duration}, or {@code null} if entries do not expire by default.
-     */
-    default Duration getDefaultTtl() {
-        return null;
-    }
-
-    /**
-     * Gets the target server connection endpoint string.
-     *
-     * @return connection target (e.g., "host:port").
-     */
-    String getTarget();
-
-    /**
-     * Serializes a string key into a UTF-8 byte array representation.
-     *
-     * @param key target key string.
-     * @return byte array representation of the key.
-     */
-    default byte[] serializeKey(String key) {
-        return key.getBytes(StandardCharsets.UTF_8);
-    }
 
     // =========================================================================
     // TTL & BASIC KEY-VALUE OPERATIONS
@@ -355,24 +317,24 @@ public interface HurriCacheClientInterface {
      * Creates a Queue container.
      *
      * @param key          target container key.
+     * @param keyHint
      * @param initialValue initial sequence of {@link Payload} elements.
      * @param ttl          container expiration duration.
      * @param clientId     identifier of the issuing client.
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} with created {@link KeyHint}.
      */
-    CompletableFuture<KeyHintData> createQueue(byte[] key,
-                                               List<Payload> initialValue,
+    CompletableFuture<KeyHintData> createQueue(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
                                                Duration ttl,
                                                int clientId,
                                                Duration timeout);
 
     default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue, Duration ttl) {
-        return createQueue(key, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
+        return createQueue(key,null , initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createQueue(String key) {
-        return createQueue(serializeKey(key),
+        return createQueue(serializeKey(key),null ,
                            Collections.emptyList(),
                            getDefaultTtl(),
                            getDefaultClientId(),
@@ -380,36 +342,27 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<KeyHintData> createQueue(String key, List<Payload> initialValue) {
-        return createQueue(serializeKey(key),
-                           initialValue == null
-                           ? Collections.emptyList()
-                           : initialValue,
-                           getDefaultTtl(),
-                           getDefaultClientId(),
-                           getDefaultTimeout());
+        return createQueue(serializeKey(key), null, initialValue == null
+        ? Collections.emptyList()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue) {
-        return createQueue(key,
-                           initialValue == null
-                           ? Collections.emptyList()
-                           : initialValue,
-                           getDefaultTtl(),
-                           getDefaultClientId(),
-                           getDefaultTimeout());
+        return createQueue(key, null, initialValue == null
+        ? Collections.emptyList()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
      * Creates a List container (linked sequence).
      */
-    CompletableFuture<KeyHintData> createList(byte[] key,
-                                              List<Payload> initialValue,
+    CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
                                               Duration ttl,
                                               int clientId,
                                               Duration timeout);
 
     default CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue, Duration ttl) {
-        return createList(key, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
+        return createList(key,null , initialValue, ttl, getDefaultClientId(), getDefaultTimeout() );
     }
 
     default CompletableFuture<KeyHintData> createList(String key) {
@@ -421,30 +374,31 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue) {
-        return createList(key, initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+        return createList(key,null , initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout() );
+    }
+    default CompletableFuture<KeyHintData> createList(byte[] key,KeyHintData keyHint, List<Payload> initialValue) {
+        return createList(key,keyHint , initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout() );
     }
 
     default CompletableFuture<KeyHintData> createList(String key, List<Payload> initialValue, int clientId) {
-        return createList(serializeKey(key),
-                          initialValue == null
+        return createList(serializeKey(key), null, initialValue == null
                           ? Collections.emptyList()
                           : initialValue,
                           getDefaultTtl(),
                           clientId,
-                          getDefaultTimeout());
+                          getDefaultTimeout() );
     }
 
     /**
      * Creates a Vector container (dynamic indexed array).
      */
-    CompletableFuture<KeyHintData> createVector(byte[] key,
-                                                List<Payload> initialValue,
+    CompletableFuture<KeyHintData> createVector(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
                                                 Duration ttl,
                                                 int clientId,
                                                 Duration timeout);
 
     default CompletableFuture<KeyHintData> createVector(byte[] key, List<Payload> initialValue, Duration ttl) {
-        return createVector(key, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
+        return createVector(key,null, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createVector(String key) {
@@ -456,46 +410,33 @@ public interface HurriCacheClientInterface {
     }
 
     default CompletableFuture<KeyHintData> createVector(byte[] key, List<Payload> initialValue) {
-        return createVector(key, initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+        return createVector(key,null , initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createVector(String key, List<Payload> initialValue, int clientId) {
-        return createVector(serializeKey(key),
-                            initialValue == null
-                            ? Collections.emptyList()
-                            : initialValue,
-                            getDefaultTtl(),
-                            clientId,
-                            getDefaultTimeout());
+        return createVector(serializeKey(key),null , initialValue == null
+        ? Collections.emptyList()
+        : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
      * Creates a Set container (unordered unique collection).
      */
-    CompletableFuture<KeyHintData> createSet(byte[] key,
-                                             List<Payload> initialValue,
+    CompletableFuture<KeyHintData> createSet(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
                                              Duration ttl,
                                              int clientId,
                                              Duration timeout);
 
     default CompletableFuture<KeyHintData> createSet(String key, List<Payload> initialValue) {
-        return createSet(serializeKey(key),
-                         initialValue == null
-                         ? Collections.emptyList()
-                         : initialValue,
-                         getDefaultTtl(),
-                         getDefaultClientId(),
-                         getDefaultTimeout());
+        return createSet(serializeKey(key),null , initialValue == null
+        ? Collections.emptyList()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createSet(byte[] key, List<Payload> initialValue) {
-        return createSet(key,
-                         initialValue == null
-                         ? Collections.emptyList()
-                         : initialValue,
-                         getDefaultTtl(),
-                         getDefaultClientId(),
-                         getDefaultTimeout());
+        return createSet(key,null , initialValue == null
+        ? Collections.emptyList()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -946,6 +887,10 @@ public interface HurriCacheClientInterface {
         return streamMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key, KeyHintData hint) {
+        return streamMap(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
     /**
      * Fetches a slice (range) of elements from an unordered container based on position indexes.
      */
@@ -1157,6 +1102,10 @@ public interface HurriCacheClientInterface {
     default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint, List<OrderedPayload> data) {
         return addElementWithWeight(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data) {
+        return addElementWithWeight(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
 
     // =========================================================================
     // ATOMIC & LOCK OPERATIONS
@@ -1427,6 +1376,11 @@ public interface HurriCacheClientInterface {
     default CompletableFuture<Long> atomicSub(byte[] key, KeyHintData hint, long delta) {
         return atomicSub(key, hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<Long> atomicSub(byte[] key, long delta) {
+        return atomicSub(key, null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+
 
     default CompletableFuture<Long> atomicSub(String key, KeyHintData hint, long delta) {
         return atomicSub(serializeKey(key), hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());

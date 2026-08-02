@@ -188,34 +188,50 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // =========================================================================
 
     @Override
-    public CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return createUnorderedContainer(key, initialValue, ContainerType.QUEUE, ttl, clientId, timeout);
+    public CompletableFuture<KeyHintData> createQueue(byte[] key,
+                                                      KeyHintData keyHint,
+                                                      List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
+        return createUnorderedContainer(key, keyHint, initialValue, ContainerType.QUEUE, ttl, clientId, timeout);
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return createUnorderedContainer(key, initialValue, ContainerType.LIST, ttl, clientId, timeout);
+    public CompletableFuture<KeyHintData> createList(byte[] key,
+                                                     KeyHintData keyHint,
+                                                     List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
+        return createUnorderedContainer(key, keyHint, initialValue, ContainerType.LIST, ttl, clientId, timeout);
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createVector(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return createUnorderedContainer(key, initialValue, ContainerType.VECTOR, ttl, clientId, timeout);
+    public CompletableFuture<KeyHintData> createVector(byte[] key,
+                                                       KeyHintData keyHint,
+                                                       List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
+        return createUnorderedContainer(key,keyHint , initialValue, ContainerType.VECTOR, ttl, clientId, timeout);
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createSet(byte[] key, List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return createUnorderedContainer(key, initialValue, ContainerType.SET, ttl, clientId, timeout);
+    public CompletableFuture<KeyHintData> createSet(byte[] key,
+                                                    KeyHintData keyHint,
+                                                    List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
+        return createUnorderedContainer(key, keyHint, initialValue, ContainerType.SET, ttl, clientId, timeout);
     }
 
-    private CompletableFuture<KeyHintData> createUnorderedContainer(byte[] key, List<Payload> initialValue, ContainerType type, Duration ttl, int clientId, Duration timeout) {
+    private CompletableFuture<KeyHintData> createUnorderedContainer(byte[] key,
+                                                                    KeyHintData keyHint,
+                                                                    List<Payload> initialValue, ContainerType type, Duration ttl, int clientId, Duration timeout) {
         CreateContainerRequest.Builder builder = CreateContainerRequest.newBuilder();
         if (ttl != null && !ttl.isZero()) {
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
-        Key protoKey = KeyValueUtils.createUnorderedKey(key, clientId).build();
+        Key.Builder protoKey = KeyValueUtils.createUnorderedKey(key, clientId);
         builder.setKey(protoKey).setType(type);
-
-        long currentChunkSize = protoKey.getSerializedSize();
+        if (keyHint != null) {
+            KeyHint.Builder khb = KeyHint.newBuilder();
+            if (keyHint.hasWeekHash()) khb.setWeekHash(keyHint.getWeek_hash());
+            if (keyHint.hasStrongHash()) khb.setStrongHash(keyHint.getStrong_hash());
+            protoKey.setKeyHint(khb);
+        }
+        Key keyProto = protoKey.build();
+        long currentChunkSize = keyProto.getSerializedSize();
         int splitIndex = 0;
 
         if (initialValue != null) {
@@ -235,18 +251,18 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
         CompletableFuture<KeyHintData> createFuture = new CompletableFuture<>();
         getStub(timeout).createContainer(builder.build(), new CompletableFutureObserver<>(createFuture, keyHintResponse -> {
-            KeyHint keyHint = keyHintResponse.getKeyHint();
-            return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash());
+            KeyHint keyHint1 = keyHintResponse.getKeyHint();
+            return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash());
         }));
 
         List<Payload> remainingTail = (initialValue != null) ? initialValue.subList(splitIndex, initialValue.size()) : List.of();
 
-        return createFuture.thenCompose(keyHint -> {
+        return createFuture.thenCompose(keyHint1 -> {
             if (remainingTail.isEmpty()) {
-                return CompletableFuture.completedFuture(keyHint);
+                return CompletableFuture.completedFuture(keyHint1);
             } else {
                 repDelay();
-                return sendTailInChunks(protoKey, keyHint, remainingTail, timeout);
+                return sendTailInChunks(keyProto, keyHint1, remainingTail, timeout);
             }
         });
     }

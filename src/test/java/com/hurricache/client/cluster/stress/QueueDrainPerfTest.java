@@ -3,7 +3,6 @@ package com.hurricache.client.cluster.stress;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
-import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -98,9 +97,7 @@ public class QueueDrainPerfTest {
         KeyHintData queueHint = client.createQueue(
                 queueKey,
                 initialData,
-                Duration.ofMinutes(15),
-                0,
-                TIMEOUT
+                Duration.ofMinutes(15)
         ).get();
 
         assertNotNull(queueHint, "Queue must be created successfully for size: " + queueSize);

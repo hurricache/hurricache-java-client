@@ -99,12 +99,7 @@ public class VectorIndexPerfTest {
 
         // 2. Создание вектора на сервере
         KeyHintData vectorHint = client.createVector(
-                vectorKey,
-                initialData,
-                Duration.ofMinutes(15),
-                0,
-                TIMEOUT
-        ).get();
+                vectorKey , initialData, Duration.ofMinutes(15)).get();
 
         assertNotNull(vectorHint, "Vector must be created successfully for size: " + vectorSize);
 

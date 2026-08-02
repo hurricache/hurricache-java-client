@@ -3,7 +3,8 @@ package com.hurricache.client.cluster.stress;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
-import com.hurricache.grpc.KeyHint;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -104,10 +105,7 @@ public class ListIndexPerfTest {
         KeyHintData vectorHint = client.createList(
                 vectorKey,
                 initialData,
-                Duration.ofMinutes(15),
-                0,
-                TIMEOUT
-        ).get();
+                Duration.ofMinutes(15)).get();
 
         assertNotNull(vectorHint, "Vector must be created successfully for size: " + vectorSize);
 
@@ -115,6 +113,7 @@ public class ListIndexPerfTest {
         ExecutorService pool = Executors.newFixedThreadPool(READER_THREADS);
         LongAdder readOps = new LongAdder();
         LongAdder readErrors = new LongAdder();
+        LongAdder timeoutErrors = new LongAdder();
 
         AtomicBoolean running = new AtomicBoolean(true);
         CountDownLatch startLatch = new CountDownLatch(1);
@@ -136,6 +135,9 @@ public class ListIndexPerfTest {
                         client.getElementAtPosition(vectorKey, vectorHint, randomIdx, 0, TIMEOUT)
                                 .whenComplete((res, ex) -> {
                                     inFlightWindow.release();
+                                    if ((ex instanceof StatusRuntimeException exception) && (exception.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED)) {
+                                        timeoutErrors.increment();
+                                    }
                                     if (ex == null && res != null) {
                                         readOps.increment();
                                     } else {
@@ -155,6 +157,7 @@ public class ListIndexPerfTest {
 
         readOps.reset();
         readErrors.reset();
+        timeoutErrors.reset();
         long startTime = System.nanoTime();
 
         // Замер
@@ -169,8 +172,8 @@ public class ListIndexPerfTest {
         long totalReads = readOps.sum();
         double tps = totalReads / elapsedTimeSec;
 
-        System.out.printf("Vector Size: %-7d | Elements | Read TPS: %-10.2f | Errors: %d%n",
-                          vectorSize, tps, readErrors.sum());
+        System.out.printf("Vector Size: %-7d | Elements | Read TPS: %-10.2f | Errors: %d%n | Timeouts: %d%n",
+                          vectorSize, tps, readErrors.sum(),timeoutErrors.sum());
     }
 
     private Payload generate100ByteString(String prefix) {

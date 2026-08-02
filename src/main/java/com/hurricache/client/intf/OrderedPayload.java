@@ -15,11 +15,17 @@ public class OrderedPayload extends Payload {
     public static  OrderedPayload of(Long order, byte[] value) {
         return new OrderedPayload(value,order);
     }
+    public static  OrderedPayload of(long order, byte[] value) {
+        return new OrderedPayload(value,order);
+    }
 
     public static  OrderedPayload of(byte[] value,Long order ) {
         return new OrderedPayload(value,order);
     }
 
+    public static  OrderedPayload of(byte[] value,long order ) {
+        return new OrderedPayload(value,order);
+    }
 
     public Long getOrder() {
         return order;
