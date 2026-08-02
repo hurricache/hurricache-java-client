@@ -686,7 +686,27 @@ public interface HurriCacheClientInterface {
     }
 
     /**
-     * Adds elements to an unordered container (e.g., Set).
+     * Adds elements to an unordered container (e.g., HashMap).
+     */
+    CompletableFuture<Integer> addElementHashMap(byte[] key,
+                                          KeyHintData hint,
+                                          List<Payload> container_keys,
+                                          List<Payload> container_values,
+                                          int clientId,
+                                          Duration timeout);
+
+    /**
+     * Adds elements to an unordered container (e.g., OederedMap).
+     */
+    CompletableFuture<Integer> addElementOrderedMap(byte[] key,
+                                          KeyHintData hint,
+                                          List<OrderedPayload> container_keys,
+                                          List<Payload> container_values,
+                                          int clientId,
+                                          Duration timeout);
+
+    /**
+     * Adds elements to an unordered container (e.g., Set,HashSet).
      */
     CompletableFuture<Boolean> addElement(byte[] key,
                                           KeyHintData hint,

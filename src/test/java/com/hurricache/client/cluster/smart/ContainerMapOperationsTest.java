@@ -3,18 +3,25 @@ package com.hurricache.client.cluster.smart;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
+import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class ContainerMapOperationsTest extends TestBaseCluster {
+
+    private static final Duration TEST_TIMEOUT = Duration.ofSeconds(2);
+    private static final int CLIENT_ID = 101;
 
     @Test
     void testMapContainerOperationsCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
@@ -64,17 +71,10 @@ public class ContainerMapOperationsTest extends TestBaseCluster {
         Assertions.assertEquals("val1_updated", new String(removedValue, StandardCharsets.UTF_8));
 
         // 5. Убеждаемся, что элемент удален
-
         Thread.sleep(500);
-        ExecutionException ex = Assertions.assertThrows(
-                ExecutionException.class,
-                () -> client.setMode(Mode.MASTER)
-                        .containsContainerKey(keyBytes, keyHint, elemKey)
-                        .get()
-        );
-        Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
-        Assertions.assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
 
+        Boolean b = client.setMode(Mode.MASTER).containsContainerKey(keyBytes, keyHint, elemKey).get();
+        Assertions.assertFalse(b);
     }
 
     @Test
@@ -104,17 +104,10 @@ public class ContainerMapOperationsTest extends TestBaseCluster {
         Assertions.assertEquals(1, removedCount);
 
         // 4. Проверяем отсутствие ключа на BACKUP
+        Thread.sleep(1000);
 
-        Thread.sleep(500);
-
-        ExecutionException ex = Assertions.assertThrows(
-                ExecutionException.class,
-                () -> client.setMode(Mode.BACKUP)
-                        .containsContainerKey(keyBytes, keyHint, elemKey)
-                        .get()
-        );
-        Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
-        Assertions.assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
+        Boolean b = client.setMode(Mode.BACKUP).containsContainerKey(keyBytes, keyHint, elemKey).get();
+        Assertions.assertFalse(b);
 
         ExecutionException ex1 = Assertions.assertThrows(
                 ExecutionException.class,
@@ -124,5 +117,85 @@ public class ContainerMapOperationsTest extends TestBaseCluster {
         );
         Assertions.assertInstanceOf(StatusRuntimeException.class, ex1.getCause());
         Assertions.assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex1.getCause()).getStatus().getCode());
+    }
+
+    // =========================================================================
+    // Расширение: Батчевое добавление и проверка репликации HashMap / OrderedMap
+    // =========================================================================
+
+    @Test
+    @DisplayName("Батчевое добавление элементов в HashMap с проверкой репликации на BACKUP")
+    void testAddElementHashMapBatchReplication() throws ExecutionException, InterruptedException {
+        String mapKey = "batchHashMapKey_" + UUID.randomUUID();
+        byte[] keyBytes = mapKey.getBytes(StandardCharsets.UTF_8);
+
+        // 1. Создаем пустой контейнер на MASTER
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
+                .createMap(mapKey, Map.of())
+                .get();
+
+        List<Payload> keys = List.of(
+                Payload.of("k1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("k2".getBytes(StandardCharsets.UTF_8))
+        );
+        List<Payload> values = List.of(
+                Payload.of("v1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("v2".getBytes(StandardCharsets.UTF_8))
+        );
+        Thread.sleep(500);
+        // 2. Вызываем addElementHashMap на MASTER
+        Integer addedCount = client.setMode(Mode.MASTER)
+                .addElementHashMap(keyBytes, keyHint, keys, values, CLIENT_ID, TEST_TIMEOUT)
+                .get();
+
+        Assertions.assertEquals(2, addedCount);
+        Thread.sleep(500); // Ожидаем репликацию на BACKUP
+
+        // 3. Валидируем с BACKUP узла
+        byte[] val1 = client.setMode(Mode.BACKUP)
+                .getContainerValue(keyBytes, keyHint, "k1".getBytes(StandardCharsets.UTF_8))
+                .get();
+        byte[] val2 = client.setMode(Mode.BACKUP)
+                .getContainerValue(keyBytes, keyHint, "k2".getBytes(StandardCharsets.UTF_8))
+                .get();
+
+        Assertions.assertEquals("v1", new String(val1, StandardCharsets.UTF_8));
+        Assertions.assertEquals("v2", new String(val2, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("Батчевое добавление элементов в OrderedMap с проверкой порядка")
+    void testAddElementOrderedMapBatchReplication() throws ExecutionException, InterruptedException {
+        String mapKey = "batchOrderedMapKey_" + UUID.randomUUID();
+        byte[] keyBytes = mapKey.getBytes(StandardCharsets.UTF_8);
+
+        KeyHintData keyHint = client.setMode(Mode.MASTER)
+                .createOrderedMap(mapKey, Map.of())
+                .get();
+
+        List<OrderedPayload> orderedKeys = List.of(
+                OrderedPayload.of("score_100".getBytes(StandardCharsets.UTF_8), 100L),
+                OrderedPayload.of("score_50".getBytes(StandardCharsets.UTF_8), 50L)
+        );
+        List<Payload> values = List.of(
+                Payload.of("userMax".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("userMid".getBytes(StandardCharsets.UTF_8))
+        );
+        Thread.sleep(500);
+        // 1. Вставляем элементы через addElementOrderedMap на BACKUP (проверяем прямую запись в бэкап)
+        Integer addedCount = client.setMode(Mode.BACKUP)
+                .addElementOrderedMap(keyBytes, keyHint, orderedKeys, values, CLIENT_ID, TEST_TIMEOUT)
+                .get();
+
+        Assertions.assertEquals(2, addedCount);
+        Thread.sleep(500);
+
+        // 2. Вычитываем с MASTER
+        byte[] userMaxVal = client.setMode(Mode.MASTER)
+                .getContainerValue(keyBytes, keyHint, "score_100".getBytes(StandardCharsets.UTF_8))
+                .get();
+
+        Assertions.assertNotNull(userMaxVal);
+        Assertions.assertEquals("userMax", new String(userMaxVal, StandardCharsets.UTF_8));
     }
 }

@@ -1060,6 +1060,78 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         return future;
     }
 
+    @Override
+    public CompletableFuture<Integer> addElementHashMap(byte[] key,
+                                                        KeyHintData hint,
+                                                        List<Payload> container_keys,
+                                                        List<Payload> container_values,
+                                                        int clientId,
+                                                        Duration timeout) {
+        if (container_keys == null || container_keys.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        if (container_values == null || container_values.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        int size = Math.min(container_keys.size(), container_values.size());
+
+        Key protoKey = buildKey(key, hint, clientId);
+        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
+
+        for (int i = 0; i < size; i++) {
+            Payload payload = container_keys.get(i);
+            Payload upayload = container_values.get(i);
+            Key.Builder uk = Key.newBuilder()
+                    .setPayload(KeyBinaryPayload.newBuilder().setSize(payload.getValue().length).setPayload(ByteString.copyFrom(payload.getValue())).build());
+
+            Value.Builder unorderedValueBuilder = Value.newBuilder()
+                    .setValue(BinaryPayload.newBuilder().setSize(payload.getValue().length).setPayload(ByteString.copyFrom(upayload.getValue())).build());
+
+            builder.addKeyUnordered(uk).addValueUnordered(unorderedValueBuilder);
+        }
+        builder.setType(ContainerType.MAP);
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+        getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(future, IntResponse::getSize));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementOrderedMap(byte[] key,
+                                                           KeyHintData hint,
+                                                           List<OrderedPayload> container_keys,
+                                                           List<Payload> container_values,
+                                                           int clientId,
+                                                           Duration timeout) {
+        if (container_keys == null || container_keys.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        if (container_values == null || container_values.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        int size = Math.min(container_keys.size(), container_values.size());
+
+        Key protoKey = buildKey(key, hint, clientId);
+        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
+
+        for (int i = 0; i < size; i++) {
+            OrderedPayload payload = container_keys.get(i);
+            Payload upayload = container_values.get(i);
+            long order = payload.getOrder() != null ? payload.getOrder() : 0L;
+            OrderedKey.Builder orderedValue = OrderedKey.newBuilder()
+                    .setOrder(order)
+                    .setPayload(KeyBinaryPayload.newBuilder().setSize(payload.getValue().length).setPayload(ByteString.copyFrom(payload.getValue())).build());
+
+            Value.Builder unorderedValueBuilder = Value.newBuilder()
+                    .setValue(BinaryPayload.newBuilder().setSize(payload.getValue().length).setPayload(ByteString.copyFrom(upayload.getValue())).build());
+
+            builder.addKeyOrdered(orderedValue).addValueUnordered(unorderedValueBuilder);
+        }
+        builder.setType(ContainerType.ORDERED_MAP);
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+        getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(future, IntResponse::getSize));
+        return future;
+    }
+
     // =========================================================================
     // LIFECYCLE & OVERRIDES
     // =========================================================================
