@@ -500,6 +500,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // INSERTION OPERATIONS
     // =========================================================================
 
+
     @Override
     public CompletableFuture<Boolean> addElement(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
@@ -507,6 +508,15 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         }
         Key protoKey = buildKey(key, hint, clientId);
         return sendAddRequestInChunks(protoKey, data, -1, AddType.POSITION, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> addElementOrdered(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
+        }
+        Key protoKey = buildKey(key, hint, clientId);
+        return sendAddRequestInChunksOrdered(protoKey, data, 0,  timeout);
     }
 
     @Override
@@ -965,6 +975,46 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
             int nextPos = (type == AddType.POSITION) ? currentPos + finalSplitIndex : currentPos;
             return sendAddRequestInChunks(protoKey, nextTail, nextPos, type, timeout);
+        });
+    }
+
+    private CompletableFuture<Boolean> sendAddRequestInChunksOrdered(Key protoKey, List<OrderedPayload> data, int currentPos, Duration timeout) {
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
+        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
+
+        builder.setPos(currentPos);
+
+
+        int splitIndex = 0;
+        for (OrderedPayload datum : data) {
+            OrderedValue.Builder compressedValue = KeyValueUtils.createOrderedValue(datum.getValue(),datum.getOrder(), Duration.ZERO);
+
+            int elemSize = compressedValue.build().getSerializedSize();
+            if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
+                break;
+            }
+            builder.addValueOrdered(compressedValue);
+            currentChunkSize += elemSize;
+            splitIndex++;
+        }
+
+        CompletableFuture<Boolean> chunkFuture = new CompletableFuture<>();
+
+        getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(chunkFuture, res -> res.getSize() > 0));
+
+        List<OrderedPayload> nextTail = data.subList(splitIndex, data.size());
+        int finalSplitIndex = splitIndex;
+
+        return chunkFuture.thenCompose(success -> {
+            if (!success) {
+                return CompletableFuture.completedFuture(false);
+            }
+            if (nextTail.isEmpty()) {
+                return CompletableFuture.completedFuture(true);
+            }
+
+            int nextPos = currentPos + finalSplitIndex;
+            return sendAddRequestInChunksOrdered(protoKey, nextTail, nextPos, timeout);
         });
     }
 

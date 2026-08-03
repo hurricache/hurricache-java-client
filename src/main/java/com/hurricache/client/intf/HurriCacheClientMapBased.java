@@ -1,6 +1,9 @@
 package com.hurricache.client.intf;
 
+import com.hurricache.grpc.ContainerType;
+
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -79,4 +82,39 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
                                                     Duration timeout);
 
 
+    /**
+     * Deletes matching values/keys from the given container type.
+     *
+     * @return count of successfully removed elements.
+     */
+    CompletableFuture<Integer> removeFromContainer(byte[] key,
+                                                   KeyHintData hint,
+                                                   ContainerType type,
+                                                   List<Payload> values,
+                                                   List<Payload> keys,
+                                                   int clientId,
+                                                   Duration timeout);
+
+    default CompletableFuture<Integer> removeFromContainer(String key, ContainerType type, List<Payload> values) {
+        return removeFromContainer(serializeKey(key),
+                                   null,
+                                   type,
+                                   values,
+                                   Collections.emptyList(),
+                                   getDefaultClientId(),
+                                   getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainer(byte[] key,
+                                                           KeyHintData hint,
+                                                           ContainerType type,
+                                                           List<Payload> values) {
+        return removeFromContainer(key,
+                                   hint,
+                                   type,
+                                   values,
+                                   Collections.emptyList(),
+                                   getDefaultClientId(),
+                                   getDefaultTimeout());
+    }
 }

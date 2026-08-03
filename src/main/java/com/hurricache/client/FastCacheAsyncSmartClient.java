@@ -765,4 +765,13 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                            int clientId,
                                                            Duration timeout) {
         return execute(hint, c -> c.addElementOrderedMap(key, hint,container_keys,container_values, clientId, timeout));    }
+
+    @Override
+    public CompletableFuture<Boolean> addElementOrdered(byte[] key,
+                                                        KeyHintData hint,
+                                                        List<OrderedPayload> data,
+                                                        int clientId,
+                                                        Duration timeout) {
+        return execute(hint, c -> c.addElementOrdered(key, hint,data, clientId, timeout));
+    }
 }

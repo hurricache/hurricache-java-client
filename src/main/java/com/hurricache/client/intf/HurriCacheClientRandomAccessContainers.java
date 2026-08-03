@@ -112,4 +112,94 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
     default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, int pos, int endPos) {
         return removeElementAtPosition(key, hint, pos, endPos, getDefaultClientId(), getDefaultTimeout());
     }
+
+    /**
+     * Inserts elements immediately before a specified pivot element.
+     */
+    CompletableFuture<Boolean> addElementToPositionBefore(byte[] key,
+                                                          KeyHintData hint,
+                                                          List<Payload> data,
+                                                          Payload pivot,
+                                                          int clientId,
+                                                          Duration timeout);
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<Payload> data, Payload pivot) {
+        return addElementToPositionBefore(serializeKey(key),
+                                          null,
+                                          data,
+                                          pivot,
+                                          getDefaultClientId(),
+                                          getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key,
+                                                                  KeyHintData hint,
+                                                                  List<Payload> data,
+                                                                  Payload pivot) {
+        return addElementToPositionBefore(serializeKey(key),
+                                          hint,
+                                          data,
+                                          pivot,
+                                          getDefaultClientId(),
+                                          getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(String key,
+                                                                  List<Payload> data,
+                                                                  Payload pivot,
+                                                                  int clientId) {
+        return addElementToPositionBefore(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionBefore(byte[] key,
+                                                                  KeyHintData hint,
+                                                                  List<Payload> data,
+                                                                  Payload pivot) {
+        return addElementToPositionBefore(key, hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Inserts elements immediately after a specified pivot element.
+     */
+    CompletableFuture<Boolean> addElementToPositionAfter(byte[] key,
+                                                         KeyHintData hint,
+                                                         List<Payload> data,
+                                                         Payload pivot,
+                                                         int clientId,
+                                                         Duration timeout);
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<Payload> data, Payload pivot) {
+        return addElementToPositionAfter(serializeKey(key),
+                                         null,
+                                         data,
+                                         pivot,
+                                         getDefaultClientId(),
+                                         getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key,
+                                                                 KeyHintData hint,
+                                                                 List<Payload> data,
+                                                                 Payload pivot) {
+        return addElementToPositionAfter(serializeKey(key),
+                                         hint,
+                                         data,
+                                         pivot,
+                                         getDefaultClientId(),
+                                         getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(String key,
+                                                                 List<Payload> data,
+                                                                 Payload pivot,
+                                                                 int clientId) {
+        return addElementToPositionAfter(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementToPositionAfter(byte[] key,
+                                                                 KeyHintData hint,
+                                                                 List<Payload> data,
+                                                                 Payload pivot) {
+        return addElementToPositionAfter(key, hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
 }

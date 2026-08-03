@@ -2,6 +2,7 @@ package com.hurricache.client.intf;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -50,6 +51,26 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
 
     default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(String key, KeyHintData hint) {
         return streamOrderedMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+    /**
+     * Adds elements to an unordered container (e.g., Set,HashSet).
+     */
+    CompletableFuture<Boolean> addElementOrdered(byte[] key,
+                                          KeyHintData hint,
+                                          List<OrderedPayload> data,
+                                          int clientId,
+                                          Duration timeout);
+
+    default CompletableFuture<Boolean> addElementOrderedSet(String key, List<OrderedPayload> data) {
+        return addElementOrdered(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementOrderedSet(String key, KeyHintData hint, List<OrderedPayload> data) {
+        return addElementOrdered(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> addElementOrderedSet(byte[] key, KeyHintData hint, List<OrderedPayload> data) {
+        return addElementOrdered(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
 }
