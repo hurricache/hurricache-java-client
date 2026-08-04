@@ -11,8 +11,15 @@ import org.jspecify.annotations.NonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static com.hurricache.client.KeyValueUtils.weakHash;
@@ -39,7 +46,9 @@ public class Jedis implements AutoCloseable {
     // =========================================================================
 
     public String set(String key, String value) {
-        byte[] valBytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+        byte[] valBytes = value == null
+                          ? new byte[0]
+                          : value.getBytes(StandardCharsets.UTF_8);
         cacheClient.createKeyValue(key, valBytes).join(); //
         return "OK";
     }
@@ -51,16 +60,24 @@ public class Jedis implements AutoCloseable {
 
     public String setex(String key, long seconds, String value) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
-        byte[] valBytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+        byte[] valBytes = value == null
+                          ? new byte[0]
+                          : value.getBytes(StandardCharsets.UTF_8);
         KeyHintData hint = getKeyHintData(keyBytes);
-        cacheClient.createKeyValue(keyBytes, hint, valBytes, Duration.ofSeconds(seconds),
-                                   cacheClient.getDefaultClientId(), cacheClient.getDefaultTimeout()).join(); //[cite: 4]
+        cacheClient.createKeyValue(keyBytes,
+                                   hint,
+                                   valBytes,
+                                   Duration.ofSeconds(seconds),
+                                   cacheClient.getDefaultClientId(),
+                                   cacheClient.getDefaultTimeout()).join(); //[cite: 4]
         return "OK";
     }
 
     public String get(String key) {
         byte[] res = cacheClient.getValue(key).join(); //[cite: 4]
-        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
+        return res != null
+               ? new String(res, StandardCharsets.UTF_8)
+               : null;
     }
 
     public byte[] get(byte[] key) {
@@ -68,14 +85,20 @@ public class Jedis implements AutoCloseable {
     }
 
     public String getSet(String key, String value) {
-        byte[] valBytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+        byte[] valBytes = value == null
+                          ? new byte[0]
+                          : value.getBytes(StandardCharsets.UTF_8);
         byte[] oldVal = cacheClient.updateKeyValue(key, valBytes).join(); //[cite: 4]
-        return oldVal != null ? new String(oldVal, StandardCharsets.UTF_8) : null;
+        return oldVal != null
+               ? new String(oldVal, StandardCharsets.UTF_8)
+               : null;
     }
 
     public String getDel(String key) {
         byte[] res = cacheClient.getAndDeleteValue(key).join(); //[cite: 4]
-        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
+        return res != null
+               ? new String(res, StandardCharsets.UTF_8)
+               : null;
     }
 
     public Boolean exists(String key) {
@@ -95,8 +118,14 @@ public class Jedis implements AutoCloseable {
     public Long expire(String key, long seconds) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
         KeyHintData hint = getKeyHintData(keyBytes);
-        Boolean ok = cacheClient.setTtl(keyBytes, hint, seconds, cacheClient.getDefaultClientId(), cacheClient.getDefaultTimeout()).join(); //[cite: 4]
-        return Boolean.TRUE.equals(ok) ? 1L : 0L;
+        Boolean ok = cacheClient.setTtl(keyBytes,
+                                        hint,
+                                        seconds,
+                                        cacheClient.getDefaultClientId(),
+                                        cacheClient.getDefaultTimeout()).join(); //[cite: 4]
+        return Boolean.TRUE.equals(ok)
+               ? 1L
+               : 0L;
     }
 
     public Long ttl(String key) {
@@ -135,34 +164,47 @@ public class Jedis implements AutoCloseable {
 
     public String lpop(String key) {
         Payload payload = cacheClient.getAndRemoveFront(key).join(); //[cite: 4]
-        if (payload == null || payload.getValue() == null) return null;
+        if (payload == null || payload.getValue() == null) {
+            return null;
+        }
         return new String(payload.getValue(), StandardCharsets.UTF_8);
     }
 
     public String rpop(String key) {
         Payload payload = cacheClient.getAndRemoveTail(key).join(); //[cite: 4]
-        if (payload == null || payload.getValue() == null) return null;
+        if (payload == null || payload.getValue() == null) {
+            return null;
+        }
         return new String(payload.getValue(), StandardCharsets.UTF_8);
     }
 
     public String lindex(String key, long index) {
         Payload payload = cacheClient.getElementAtPosition(key, (int) index).join(); //[cite: 4]
-        if (payload == null || payload.getValue() == null) return null;
+        if (payload == null || payload.getValue() == null) {
+            return null;
+        }
         return new String(payload.getValue(), StandardCharsets.UTF_8);
     }
 
     public List<String> lrange(String key, long start, long stop) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
         KeyHintData hint = getKeyHintData(keyBytes);
-        List<Payload> res = cacheClient.streamElementInRangeUnordered(keyBytes, hint,
-                                                                      ContainerType.VECTOR, (int) start, (int) stop).join(); //[cite: 4]
+        List<Payload> res = cacheClient.streamElementInRangeUnordered(keyBytes,
+                                                                      hint,
+                                                                      ContainerType.VECTOR,
+                                                                      (int) start,
+                                                                      (int) stop).join(); //[cite: 4]
         return convertToStringList(res);
     }
 
     public Long linsert(String key, ListPosition where, String pivot, String value) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
-        byte[] pivotBytes = pivot == null ? new byte[0] : pivot.getBytes(StandardCharsets.UTF_8);
-        byte[] valBytes = value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+        byte[] pivotBytes = pivot == null
+                            ? new byte[0]
+                            : pivot.getBytes(StandardCharsets.UTF_8);
+        byte[] valBytes = value == null
+                          ? new byte[0]
+                          : value.getBytes(StandardCharsets.UTF_8);
 
         return linsert(keyBytes, where, pivotBytes, valBytes);
     }
@@ -174,9 +216,11 @@ public class Jedis implements AutoCloseable {
         try {
             Boolean ok;
             if (where == ListPosition.BEFORE) {
-                ok = cacheClient.addElementToPositionBefore(key, hint, valuesToInsert, Payload.of(pivot)).join(); //[cite: 4]
+                ok = cacheClient.addElementToPositionBefore(key, hint, valuesToInsert, Payload.of(pivot))
+                        .join(); //[cite: 4]
             } else if (where == ListPosition.AFTER) {
-                ok = cacheClient.addElementToPositionAfter(key, hint, valuesToInsert, Payload.of(pivot)).join(); //[cite: 4]
+                ok = cacheClient.addElementToPositionAfter(key, hint, valuesToInsert, Payload.of(pivot))
+                        .join(); //[cite: 4]
             } else {
                 throw new IllegalArgumentException("Unknown ListPosition: " + where);
             }
@@ -213,7 +257,9 @@ public class Jedis implements AutoCloseable {
 
         for (var entry : hash.entrySet()) {
             keys.add(Payload.of(cacheClient.serializeKey(entry.getKey()))); //[cite: 4]
-            values.add(Payload.of(entry.getValue() == null ? new byte[0] : entry.getValue().getBytes(StandardCharsets.UTF_8)));
+            values.add(Payload.of(entry.getValue() == null
+                                  ? new byte[0]
+                                  : entry.getValue().getBytes(StandardCharsets.UTF_8)));
         }
 
         if (!cacheClient.existKey(keyBytes, hint).join()) { //[cite: 4]
@@ -225,10 +271,15 @@ public class Jedis implements AutoCloseable {
             return (long) keys.size();
         }
 
-        Integer added = cacheClient.addElementHashMap(keyBytes, hint, keys, values,
+        Integer added = cacheClient.addElementHashMap(keyBytes,
+                                                      hint,
+                                                      keys,
+                                                      values,
                                                       cacheClient.getDefaultClientId(),
                                                       cacheClient.getDefaultTimeout()).join(); //[cite: 4]
-        return added != null ? added.longValue() : 0L;
+        return added != null
+               ? added.longValue()
+               : 0L;
     }
 
     public String hget(String key, String field) {
@@ -237,7 +288,9 @@ public class Jedis implements AutoCloseable {
         byte[] fieldBytes = cacheClient.serializeKey(field); //[cite: 4]
 
         byte[] res = cacheClient.getContainerValue(keyBytes, hint, fieldBytes).join(); //[cite: 4]
-        return res != null ? new String(res, StandardCharsets.UTF_8) : null;
+        return res != null
+               ? new String(res, StandardCharsets.UTF_8)
+               : null;
     }
 
     public Long hdel(String key, String... fields) {
@@ -267,7 +320,9 @@ public class Jedis implements AutoCloseable {
         KeyHintData hint = getKeyHintData(keyBytes);
         Map<Payload, Payload> res = cacheClient.streamMap(keyBytes, hint).join(); //[cite: 4]
 
-        if (res == null || res.isEmpty()) return Collections.emptyMap();
+        if (res == null || res.isEmpty()) {
+            return Collections.emptyMap();
+        }
         Map<String, String> resultMap = new HashMap<>();
         for (var entry : res.entrySet()) {
             resultMap.put(new String(entry.getKey().getValue(), StandardCharsets.UTF_8),
@@ -292,16 +347,21 @@ public class Jedis implements AutoCloseable {
         }
 
         Boolean added = cacheClient.addElement(keyBytes, hint, memberList).join(); //[cite: 4]
-        return Boolean.TRUE.equals(added) ? (long) memberList.size() : 0L;
+        return Boolean.TRUE.equals(added)
+               ? (long) memberList.size()
+               : 0L;
     }
 
     public Long srem(String key, String... members) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
         KeyHintData hint = getKeyHintData(keyBytes);
 
-        List<Payload> valuesToRemove = convertToPayloadList(members);
-        Integer removed = cacheClient.removeFromContainer(keyBytes, hint, ContainerType.SET, valuesToRemove).join(); //[cite: 4]
-        return removed != null ? removed.longValue() : 0L;
+        List<byte[]> valuesToRemove = convertToBytesList(members);
+        AtomicLong removed = new AtomicLong();
+        valuesToRemove.forEach(element -> {
+            removed.addAndGet(cacheClient.removeFromContainer(keyBytes, hint, element).join());
+        });
+        return removed.longValue();
     }
 
     public Boolean sismember(String key, String member) {
@@ -314,12 +374,13 @@ public class Jedis implements AutoCloseable {
     public Set<String> smembers(String key) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
         KeyHintData hint = getKeyHintData(keyBytes);
-        List<Payload> members = cacheClient.streamElementInRangeUnordered(keyBytes, hint, ContainerType.SET, 0, -1).join(); //[cite: 4]
+        List<Payload> members = cacheClient.streamElementInRangeUnordered(keyBytes, hint, ContainerType.SET, 0, -1)
+                .join(); //[cite: 4]
 
-        if (members == null) return Collections.emptySet();
-        return members.stream()
-                .map(m -> new String(m.getValue(), StandardCharsets.UTF_8))
-                .collect(Collectors.toSet());
+        if (members == null) {
+            return Collections.emptySet();
+        }
+        return members.stream().map(m -> new String(m.getValue(), StandardCharsets.UTF_8)).collect(Collectors.toSet());
     }
 
     // =========================================================================
@@ -347,24 +408,32 @@ public class Jedis implements AutoCloseable {
         }
 
         Integer addedCount = cacheClient.addElementWithWeight(keyBytes, hint, items).join(); //[cite: 4]
-        return addedCount != null ? addedCount.longValue() : 0L;
+        return addedCount != null
+               ? addedCount.longValue()
+               : 0L;
     }
 
     public Long zrem(String key, String... members) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
         KeyHintData hint = getKeyHintData(keyBytes);
 
-        List<Payload> valuesToRemove = convertToPayloadList(members);
-        Integer count = cacheClient.removeFromContainer(keyBytes, hint, ContainerType.ORDERED_SET, valuesToRemove).join(); //[cite: 4]
-        return count != null ? count.longValue() : 0L;
+        List<byte[]> valuesToRemove = convertToBytesList(members);
+        AtomicLong removed = new AtomicLong();
+        valuesToRemove.forEach(element -> {
+            removed.addAndGet(cacheClient.removeFromContainer(keyBytes, hint, element).join());
+        });
+        return removed.longValue();
     }
 
     public List<String> zrange(String key, long start, long stop) {
         byte[] keyBytes = cacheClient.serializeKey(key); //[cite: 4]
         KeyHintData hint = getKeyHintData(keyBytes);
 
-        List<Payload> res = cacheClient.streamElementInRangeUnordered(keyBytes, hint,
-                                                                      ContainerType.ORDERED_SET, (int) start, (int) stop).join(); //[cite: 4]
+        List<Payload> res = cacheClient.streamElementInRangeUnordered(keyBytes,
+                                                                      hint,
+                                                                      ContainerType.ORDERED_SET,
+                                                                      (int) start,
+                                                                      (int) stop).join(); //[cite: 4]
         return convertToStringList(res);
     }
 
@@ -424,18 +493,37 @@ public class Jedis implements AutoCloseable {
     }
 
     private List<Payload> convertToPayloadList(String... values) {
-        if (values == null || values.length == 0) return Collections.emptyList();
+        if (values == null || values.length == 0) {
+            return Collections.emptyList();
+        }
         List<Payload> list = new ArrayList<>(values.length);
         for (String v : values) {
-            list.add(Payload.of(v == null ? new byte[0] : cacheClient.serializeKey(v))); //[cite: 4]
+            list.add(Payload.of(v == null
+                                ? new byte[0]
+                                : cacheClient.serializeKey(v))); //[cite: 4]
+        }
+        return list;
+    }
+
+    private List<byte[]> convertToBytesList(String... values) {
+        if (values == null || values.length == 0) {
+            return Collections.emptyList();
+        }
+        List<byte[]> list = new ArrayList<>(values.length);
+        for (String v : values) {
+            list.add(cacheClient.serializeKey(v)); //[cite: 4]
         }
         return list;
     }
 
     private List<String> convertToStringList(List<Payload> payloadList) {
-        if (payloadList == null) return Collections.emptyList();
+        if (payloadList == null) {
+            return Collections.emptyList();
+        }
         return payloadList.stream()
-                .map(p -> p == null || p.getValue() == null ? null : new String(p.getValue(), StandardCharsets.UTF_8))
+                .map(p -> p == null || p.getValue() == null
+                          ? null
+                          : new String(p.getValue(), StandardCharsets.UTF_8))
                 .collect(Collectors.toList());
     }
 }

@@ -138,14 +138,14 @@ public class MapAndSetCollectionsTest extends TestBaseCluster {
                 .addElement(setKey, keyHint, List.of(p("item3")))
                 .get();
         Assertions.assertTrue(added);
-
+        Thread.sleep(500);
         // 3. Verify Size on Master
         Integer size = client.setMode(Mode.MASTER).getSize(setKey, keyHint).get();
         Assertions.assertEquals(3, size);
-
+        Thread.sleep(500);
         // 4. Remove element (srem) on Backup
         Integer removedCount = client.setMode(Mode.BACKUP)
-                .removeFromContainer(client.serializeKey(setKey), keyHint, ContainerType.SET, List.of(p("item1")))
+                .removeFromContainer(client.serializeKey(setKey), keyHint, p("item1").getValue())
                 .get();
         Assertions.assertEquals(1, removedCount);
         Thread.sleep(500);

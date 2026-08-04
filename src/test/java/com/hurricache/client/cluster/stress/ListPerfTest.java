@@ -179,7 +179,7 @@ public class ListPerfTest {
             try {
                 inFlightWindow.acquire();
 
-                client.getAndRemoveFront(LIST_NAME, queueKeyHint).whenComplete((resp, ex) -> {
+                client.setMode(Mode.LB_SMART).getAndRemoveFront(LIST_NAME, queueKeyHint).whenComplete((resp, ex) -> {
                     inFlightWindow.release();
                     if (ex != null) {
                         metrics.failedReads.increment();

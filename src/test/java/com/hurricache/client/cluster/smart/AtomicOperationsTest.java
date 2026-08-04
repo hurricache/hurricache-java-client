@@ -159,7 +159,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
         // Должно вернуть актуальное текущее значение на сервере (500)
         Assertions.assertEquals(500L, res.getExpected().getVal());
 
-        Thread.sleep(150);
+        Thread.sleep(500);
         long backupValue = client.setMode(Mode.BACKUP)
                 .atomicOr(testKey, hint, 0L).get();
         Assertions.assertEquals(500L, backupValue); // Значение не изменилось

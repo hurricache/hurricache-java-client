@@ -95,12 +95,21 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
                                                    int clientId,
                                                    Duration timeout);
 
-    default CompletableFuture<Integer> removeFromContainer(String key, ContainerType type, List<Payload> values) {
+    default CompletableFuture<Integer> removeFromContainer(String key,KeyHintData hint, ContainerType type,List<Payload> keys, List<Payload> values) {
+        return removeFromContainer(serializeKey(key),
+                                   hint,
+                                   type,
+                                   keys,
+                                   values,
+                                   getDefaultClientId(),
+                                   getDefaultTimeout());
+    }
+    default CompletableFuture<Integer> removeFromContainer(String key, ContainerType type,List<Payload> keys, List<Payload> values) {
         return removeFromContainer(serializeKey(key),
                                    null,
                                    type,
+                                   keys,
                                    values,
-                                   Collections.emptyList(),
                                    getDefaultClientId(),
                                    getDefaultTimeout());
     }
@@ -108,12 +117,25 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
     default CompletableFuture<Integer> removeFromContainer(byte[] key,
                                                            KeyHintData hint,
                                                            ContainerType type,
+                                                           List<Payload> keys,
                                                            List<Payload> values) {
         return removeFromContainer(key,
                                    hint,
                                    type,
                                    values,
-                                   Collections.emptyList(),
+                                   keys,
+                                   getDefaultClientId(),
+                                   getDefaultTimeout());
+    }
+    default CompletableFuture<Integer> removeFromContainer(byte[] key,
+                                                           ContainerType type,
+                                                           List<Payload> keys,
+                                                           List<Payload> values) {
+        return removeFromContainer(key,
+                                   null,
+                                   type,
+                                   values,
+                                   keys,
                                    getDefaultClientId(),
                                    getDefaultTimeout());
     }
