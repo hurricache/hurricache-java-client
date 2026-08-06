@@ -826,7 +826,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     private static void repDelay() {
         try {
-            Thread.sleep(150);
+            Thread.sleep(500);
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
         }

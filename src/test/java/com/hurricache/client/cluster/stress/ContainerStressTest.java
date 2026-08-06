@@ -121,7 +121,7 @@ public class ContainerStressTest extends TestBaseCluster {
     @Test
     void testConcurrentListPushPop() throws Exception {
         KeyHintData keyHint = client.createList(LIST_KEY, null).get();
-
+        Thread.sleep(500);
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
         CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
         AtomicInteger successCount = new AtomicInteger(0);

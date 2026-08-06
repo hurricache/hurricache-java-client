@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -50,7 +51,7 @@ public abstract class TestBaseCluster {
 
     @BeforeEach
     void setUp() throws IOException {
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(3600)) {
+        client = new FastCacheAsyncSmartClient(List.of("127.0.0.1:51000","127.0.0.1:61000"), 0, Duration.ofSeconds(3600)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(3);

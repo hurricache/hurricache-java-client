@@ -210,6 +210,7 @@ public class ExtendedHurriCacheStressTest extends TestBaseCluster {
         String mapKey = "stress_hash_map_" + UUID.randomUUID();
         KeyHintData hint = client.createMap(mapKey, null).get();
         assertNotNull(hint);
+        Thread.sleep(500);
 
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
         CountDownLatch startLatch = new CountDownLatch(1);

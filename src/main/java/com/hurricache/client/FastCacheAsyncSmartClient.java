@@ -39,7 +39,12 @@ import static com.hurricache.grpc.coordinator.NodeRole.BACKUP;
 import static com.hurricache.grpc.coordinator.NodeRole.MASTER;
 
 public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
-    private final ManagedChannel channel;
+
+    // Поддержка множественных координаторов
+    private final List<String> coordinatorAddresses;
+    private final AtomicInteger activeCoordinatorIndex = new AtomicInteger(0);
+    private final AtomicReference<ManagedChannel> activeCoordinatorChannel = new AtomicReference<>();
+    private final AtomicReference<CoordinatorServiceGrpc.CoordinatorServiceStub> activeCoordinatorStub = new AtomicReference<>();
 
     private final Mode mode = Mode.MASTER_THAN_BACKUP;
     private Mode configuredMode = Mode.MASTER_THAN_BACKUP;
@@ -50,7 +55,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                        ConcurrentHashMap<String, HurriCacheClientInterface> routingTableTarget) {
     }
 
-    private final CoordinatorServiceGrpc.CoordinatorServiceStub asyncStub;
     private final int defaultClientId;
     private final Duration defaultTimeout;
     private final Duration readyTimeout = Duration.ofSeconds(60);
@@ -66,28 +70,68 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     private final AtomicInteger randomShard = new AtomicInteger(0);
     private static final Logger log = LogManager.getLogger(FastCacheAsyncSmartClient.class);
 
+    // Конструктор для списка координаторов (строки вида "host:port")
+
+    public FastCacheAsyncSmartClient(String coordinatorAddresses,
+                                     int defaultClientId,
+                                     Duration timeout) {
+        this(List.of(coordinatorAddresses), defaultClientId, timeout);
+    }
+    public FastCacheAsyncSmartClient(List<String> coordinatorAddresses,
+                                     int defaultClientId,
+                                     Duration timeout) {
+        if (coordinatorAddresses == null || coordinatorAddresses.isEmpty()) {
+            throw new IllegalArgumentException("Coordinator addresses list cannot be empty");
+        }
+        this.coordinatorAddresses = List.copyOf(coordinatorAddresses);
+        this.defaultClientId = defaultClientId;
+        this.defaultTimeout = timeout;
+        this.configuredMode = Mode.MASTER_THAN_BACKUP;
+
+        initCoordinatorChannel(0);
+        this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
+    }
+
+    // Обратная совместимость для одного координатора
     public FastCacheAsyncSmartClient(String coordinatorHost,
                                      int coordinatorPort,
                                      int defaultClientId,
                                      Duration timeout) {
-        this.channel = ManagedChannelBuilder.forAddress(coordinatorHost, coordinatorPort)
+        this(List.of(coordinatorHost + ":" + coordinatorPort), defaultClientId, timeout);
+    }
+
+    private synchronized void initCoordinatorChannel(int index) {
+        int targetIdx = Math.abs(index % coordinatorAddresses.size());
+        String address = coordinatorAddresses.get(targetIdx);
+
+        ManagedChannel oldChannel = activeCoordinatorChannel.get();
+        if (oldChannel != null && !oldChannel.isShutdown()) {
+            try {
+                oldChannel.shutdown();
+            } catch (Exception e) {
+                log.atDebug().log("Error closing old coordinator channel", e);
+            }
+        }
+
+        ManagedChannel newChannel = ManagedChannelBuilder.forTarget(address)
                 .directExecutor()
                 .usePlaintext()
                 .build();
-        this.asyncStub = CoordinatorServiceGrpc.newStub(channel);
-        this.defaultClientId = defaultClientId;
-        this.defaultTimeout = timeout;
-        this.configuredMode = Mode.MASTER_THAN_BACKUP;
-        this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
+
+        activeCoordinatorChannel.set(newChannel);
+        activeCoordinatorStub.set(CoordinatorServiceGrpc.newStub(newChannel));
+        activeCoordinatorIndex.set(targetIdx);
+        log.atInfo().log("[COORDINATOR] Connected to coordinator node: {}", address);
     }
 
-    public FastCacheAsyncSmartClient(ManagedChannel ch, int defaultClientId, Duration timeout) {
-        this.channel = ch;
-        this.asyncStub = CoordinatorServiceGrpc.newStub(channel);
-        this.defaultClientId = defaultClientId;
-        this.defaultTimeout = timeout;
-        this.configuredMode = Mode.MASTER_THAN_BACKUP;
-        this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
+    private CoordinatorServiceGrpc.CoordinatorServiceStub getOrSwitchCoordinatorStub(boolean forceSwitch) {
+        if (forceSwitch) {
+            synchronized (this) {
+                int nextIndex = activeCoordinatorIndex.get() + 1;
+                initCoordinatorChannel(nextIndex);
+            }
+        }
+        return activeCoordinatorStub.get();
     }
 
     private void init() {
@@ -95,10 +139,24 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             return;
         }
 
+        requestRoutingInfoFromCoordinator(0);
+    }
+
+    private void requestRoutingInfoFromCoordinator(int attemptCount) {
+        if (attemptCount >= coordinatorAddresses.size()) {
+            log.atError().log("[COORDINATOR FAILOVER] All coordinator nodes are unavailable!");
+            isUpdating.set(false);
+            return;
+        }
+
+        boolean forceSwitch = (attemptCount > 0);
+        CoordinatorServiceGrpc.CoordinatorServiceStub stub = getOrSwitchCoordinatorStub(forceSwitch);
+
         CompletableFuture<List<PeerRouting>> future = new CompletableFuture<>();
         RoutingObserver responseObserver = new RoutingObserver(future);
 
-        asyncStub.provideGlobalRoutingInfo(Void.newBuilder().build(), responseObserver);
+        stub.provideGlobalRoutingInfo(Void.newBuilder().build(), responseObserver);
+
         future.orTimeout(defaultTimeout.toMillis(), TimeUnit.MILLISECONDS).thenAccept(peerRoutingList -> {
             try {
                 int maxShards = responseObserver.getMaxShards();
@@ -117,6 +175,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 newTargets.stream()
                         .filter(t -> !oldTargets.contains(t))
                         .forEach(target -> newRoutingTableTarget.put(target, newFastCacheClient(target)));
+
                 oldTargets.stream().filter(t -> !newTargets.contains(t)).forEach(target -> {
                     HurriCacheClientInterface oldClient = newRoutingTableTarget.remove(target);
                     if (oldClient != null) {
@@ -137,8 +196,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 isUpdating.set(false);
             }
         }).exceptionally(ex -> {
-            isUpdating.set(false);
-            log.atWarn().log("Exception obtaining routing information asynchronously", ex);
+            log.atWarn().log("[COORDINATOR FAILOVER] Failed to fetch topology from coordinator. Switching to next node...", ex);
+            // Рекурсивная попытка запроса со следующим координатором
+            scheduledExecutorService.execute(() -> requestRoutingInfoFromCoordinator(attemptCount + 1));
             return null;
         });
     }
@@ -171,7 +231,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     @Override
     public String getTarget() {
-        return asyncStub.getChannel().toString();
+        ManagedChannel channel = activeCoordinatorChannel.get();
+        return channel != null ? channel.toString() : "UNKNOWN";
     }
 
     @Override
@@ -348,7 +409,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                       Duration ttl,
                                                       int clientId,
                                                       Duration timeout) {
-        return execute(keyHint, c -> c.createQueue(key,keyHint , initialValue, ttl, clientId, timeout));
+        return execute(keyHint, c -> c.createQueue(key, keyHint, initialValue, ttl, clientId, timeout));
     }
 
     @Override
@@ -356,7 +417,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                      Duration ttl,
                                                      int clientId,
                                                      Duration timeout) {
-        return execute(keyHint, c -> c.createList(key,keyHint , initialValue, ttl, clientId, timeout ));
+        return execute(keyHint, c -> c.createList(key, keyHint, initialValue, ttl, clientId, timeout));
     }
 
     @Override
@@ -517,7 +578,12 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             scheduledExecutorService.shutdownNow();
             Thread.currentThread().interrupt();
         }
-        channel.shutdown();
+
+        ManagedChannel coordinatorChannel = activeCoordinatorChannel.get();
+        if (coordinatorChannel != null) {
+            coordinatorChannel.shutdown();
+        }
+
         routing_info.get().routingTable.values().forEach(HurriCacheClientInterface::shutdown);
     }
 
@@ -636,7 +702,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     public CompletableFuture<KeyHintData> createSet(byte[] key,
                                                     KeyHintData keyHint,
                                                     List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return execute(keyHint, c -> c.createSet(key,keyHint , initialValue, ttl, clientId, timeout));
+        return execute(keyHint, c -> c.createSet(key, keyHint, initialValue, ttl, clientId, timeout));
     }
 
     @Override
@@ -707,7 +773,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                        byte[] elementKey,
                                                        int clientId,
                                                        Duration timeout) {
-        return execute(hint, c -> c.getContainerValue(key, hint,elementKey, clientId, timeout));
+        return execute(hint, c -> c.getContainerValue(key, hint, elementKey, clientId, timeout));
     }
 
     @Override
@@ -716,7 +782,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                                 byte[] elementKey,
                                                                 int clientId,
                                                                 Duration timeout) {
-        return execute(hint, c -> c.getAndRemoveContainerValue(key, hint,elementKey, clientId, timeout));
+        return execute(hint, c -> c.getAndRemoveContainerValue(key, hint, elementKey, clientId, timeout));
     }
 
     @Override
@@ -725,7 +791,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                            byte[] elementKey,
                                                            int clientId,
                                                            Duration timeout) {
-        return execute(hint, c -> c.containsContainerKey(key, hint,elementKey, clientId, timeout));
+        return execute(hint, c -> c.containsContainerKey(key, hint, elementKey, clientId, timeout));
     }
 
     @Override
@@ -735,7 +801,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                           byte[] value,
                                                           int clientId,
                                                           Duration timeout) {
-        return execute(hint, c -> c.updateContainerValue(key, hint,elementKey,value, clientId, timeout));
+        return execute(hint, c -> c.updateContainerValue(key, hint, elementKey, value, clientId, timeout));
     }
 
     @Override
@@ -744,7 +810,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                           byte[] elementKey,
                                                           int clientId,
                                                           Duration timeout) {
-        return execute(hint, c -> c.removeFromContainer(key, hint,elementKey, clientId, timeout));
+        return execute(hint, c -> c.removeFromContainer(key, hint, elementKey, clientId, timeout));
     }
 
     @Override
@@ -754,7 +820,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                         List<Payload> container_values,
                                                         int clientId,
                                                         Duration timeout) {
-        return execute(hint, c -> c.addElementHashMap(key, hint,container_keys,container_values, clientId, timeout));
+        return execute(hint, c -> c.addElementHashMap(key, hint, container_keys, container_values, clientId, timeout));
     }
 
     @Override
@@ -764,7 +830,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                            List<Payload> container_values,
                                                            int clientId,
                                                            Duration timeout) {
-        return execute(hint, c -> c.addElementOrderedMap(key, hint,container_keys,container_values, clientId, timeout));    }
+        return execute(hint, c -> c.addElementOrderedMap(key, hint, container_keys, container_values, clientId, timeout));
+    }
 
     @Override
     public CompletableFuture<Boolean> addElementOrdered(byte[] key,
@@ -772,6 +839,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                         List<OrderedPayload> data,
                                                         int clientId,
                                                         Duration timeout) {
-        return execute(hint, c -> c.addElementOrdered(key, hint,data, clientId, timeout));
+        return execute(hint, c -> c.addElementOrdered(key, hint, data, clientId, timeout));
     }
 }

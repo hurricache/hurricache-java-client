@@ -69,7 +69,7 @@ public class FastCacheAsyncSmartClientTest {
 
     @BeforeEach
     void setUp() throws NoSuchFieldException, IllegalAccessException {
-        client = new FastCacheAsyncSmartClient(mock(ManagedChannel.class), 0, Duration.ofSeconds(100));
+        client = new FastCacheAsyncSmartClient(mock(String.class), 0, Duration.ofSeconds(100));
         client.shutdown();
         // 2. Inject Mocked scheduledExecutorService into private field via Reflection
         Field executorField = FastCacheAsyncSmartClient.class.getDeclaredField("scheduledExecutorService");
