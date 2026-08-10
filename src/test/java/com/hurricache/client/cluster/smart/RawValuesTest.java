@@ -5,12 +5,15 @@ import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import org.junit.jupiter.api.AssertionFailureBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class RawValuesTest extends TestBaseCluster {
 
@@ -247,5 +250,25 @@ public class RawValuesTest extends TestBaseCluster {
         byte[] bytes1 = client.getAndDeleteValue(testKey, keyHint).get();
         Assertions.assertEquals(testValue, new String(bytes1));
     }
+
+    @Test
+    void singleCreateGetDeleteNoKeyHint() throws ExecutionException, InterruptedException {
+        String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
+        String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
+        String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
+        KeyHintData keyHint = client.setMode(Mode.MASTER).createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        Thread.sleep(150);
+        byte[] bytes = client.getValue(testKey).get();
+        Assertions.assertNotNull(keyHint);
+        Assertions.assertEquals(testValue, new String(bytes));
+        byte[] bytes1 = client.getAndDeleteValue(testKey, keyHint).get();
+        Assertions.assertEquals(testValue, new String(bytes1));
+        Thread.sleep(150);
+        assertThrows(ExecutionException.class, () -> {
+            client.getValue(testKey).get();
+        });
+
+    }
+
 
 }
