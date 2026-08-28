@@ -93,6 +93,31 @@ public class AtomicOperationsTest extends TestBaseCluster {
     }
 
     @Test
+    void atomicAddAndSubTest1() throws ExecutionException, InterruptedException {
+        String testKey = "atomicAddSubKey" + UUID.randomUUID();
+
+        KeyHintData hint = client.setMode(Mode.MASTER)
+                .atomicCreate(testKey, 50L).get();
+        Thread.sleep(150);
+
+        // Прибавляем 25 -> на сервере станет 75, но возвращается старое значение (50)
+        long afterAdd = client.setMode(Mode.BACKUP)
+                .atomicAdd(testKey, hint, 25L).get();
+        Assertions.assertEquals(50L, afterAdd);
+        Thread.sleep(150);
+        // Вычитаем 10 -> на сервере станет 65, но возвращается старое значение (75)
+        long afterSub = client.setMode(Mode.MASTER)
+                .atomicSub(testKey, hint, 10L).get();
+        Assertions.assertEquals(75L, afterSub);
+
+        Thread.sleep(150);
+        long backupValue = client.setMode(Mode.BACKUP)
+                .atomicOr(testKey, hint, 0L).get();
+        Assertions.assertEquals(65L, backupValue);
+    }
+
+
+    @Test
     void atomicBitwiseOpsTest() throws ExecutionException, InterruptedException {
         String testKey = "atomicBitwiseKey" + UUID.randomUUID();
 

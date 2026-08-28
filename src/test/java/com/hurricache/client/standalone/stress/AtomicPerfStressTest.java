@@ -1,8 +1,8 @@
-package com.hurricache.client.cluster.stress;
+package com.hurricache.client.standalone.stress;
 
+import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,11 +10,19 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AtomicPerfStressTest {
 
@@ -22,7 +30,7 @@ public class AtomicPerfStressTest {
     private static final int DURATION_SECONDS = 15; // Время теста на один пресет ключей
     private static final int MAX_IN_FLIGHT_PER_THREAD = 120; // Окно отправки
 
-    private static FastCacheAsyncSmartClient client;
+    private static FastCacheAsyncSimpleClient client;
 
     private static class AtomicMetrics {
         final LongAdder successOps = new LongAdder(); // cite: 6
@@ -32,10 +40,10 @@ public class AtomicPerfStressTest {
     @BeforeAll
     public static void setup() {
         // Инициализируем Smart-клиент
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
-                return Duration.ofMinutes(15);
+                return Duration.ofMinutes(5);
             }
         };
     }

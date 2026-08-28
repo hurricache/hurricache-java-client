@@ -1,8 +1,7 @@
-package com.hurricache.client.cluster.stress;
+package com.hurricache.client.standalone.stress;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.FastCacheAsyncSmartClient;
-import com.hurricache.client.intf.HurriCacheClientInterface;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.AfterEach;
@@ -15,14 +14,18 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
 public class FastCacheRawStressTest {
 
     private final String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
-    private static final int THREAD_COUNT = 4;
-    private static final int OPERATIONS_PER_THREAD = 800_000;
+    private static final int THREAD_COUNT = 32;
+    private static final int OPERATIONS_PER_THREAD = 100_000;
     private static final int PIPELINE_BATCH_SIZE = 256;
     private static final int EXPECTED_TOTAL_OPS = THREAD_COUNT * OPERATIONS_PER_THREAD;
     private static final int BATCH_TIMEOUT_SECONDS = 10;
@@ -31,7 +34,7 @@ public class FastCacheRawStressTest {
     private static final byte[] PREALLOCATED_UPDATE = "value_data_payload_placeholder_for_stress_testing_updated".getBytes(StandardCharsets.UTF_8);
 
 //    private HurriCacheClientInterface client;
-    private FastCacheAsyncSmartClient client;
+    private FastCacheAsyncSimpleClient client;
     private ExecutorService executor;
 
     // Кэш сгенерированных ключей: [threadId][opId]
@@ -50,24 +53,13 @@ public class FastCacheRawStressTest {
             }
         }
 
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(5);
             }
         };
 
-        client.setMode(Mode.LB_SMART);
-//        client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000,  0, Duration.ofSeconds(5)) {
-//                        @Override
-//                        public Duration getDefaultTtl() {
-//                            return Duration.ofMinutes(5);
-//                        }
-//                    };
-
-        while (!client.getReadyFlag()) {
-            Thread.sleep(100);
-        }
     }
 
     @AfterEach

@@ -1,5 +1,6 @@
 package com.hurricache;
 
+import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,9 +15,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * Base class for in-memory gRPC tests.
  * Provides a mock FastCache server implementation for testing the client without a physical server.
  */
-public abstract class TestBaseCluster {
+public abstract class TestStandAlone {
 
-    protected FastCacheAsyncSmartClient client;
+    protected FastCacheAsyncSimpleClient client;
     private static final String ALPHA_NUMERIC_POOL = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
     private static final int KEY_SIZE = 1024;
@@ -51,10 +52,10 @@ public abstract class TestBaseCluster {
 
     @BeforeEach
     void setUp() throws IOException {
-        client = new FastCacheAsyncSmartClient(List.of("127.0.0.1:51000","127.0.0.1:61000"), 0, Duration.ofSeconds(3600)) {
+        client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
-                return Duration.ofMinutes(3);
+                return Duration.ofMinutes(5);
             }
         };
 

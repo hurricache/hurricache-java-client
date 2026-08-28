@@ -1,6 +1,7 @@
-package com.hurricache.client.cluster.stress;
+package com.hurricache.client.standalone.stress;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.TestStandAlone;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.LockType;
@@ -21,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ContainerStressTest extends TestBaseCluster {
+public class ContainerStressTest extends TestStandAlone {
 
     private final int THREAD_COUNT = 8; // Matching i9 logical cores
     private final int OPS_PER_THREAD = 5000;
