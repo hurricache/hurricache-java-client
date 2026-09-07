@@ -21,9 +21,9 @@ import java.util.concurrent.atomic.LongAdder;
 public class FastCacheRawStressTest {
 
     private final String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
-    private static final int THREAD_COUNT = 4;
-    private static final int OPERATIONS_PER_THREAD = 800_000;
-    private static final int PIPELINE_BATCH_SIZE = 256;
+    private static final int THREAD_COUNT = 1;
+    private static final int OPERATIONS_PER_THREAD = 4*800_000;
+    private static final int PIPELINE_BATCH_SIZE = 1024;
     private static final int EXPECTED_TOTAL_OPS = THREAD_COUNT * OPERATIONS_PER_THREAD;
     private static final int BATCH_TIMEOUT_SECONDS = 10;
 
@@ -50,7 +50,7 @@ public class FastCacheRawStressTest {
             }
         }
 
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncSmartClient("192.168.0.123", 51000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(5);

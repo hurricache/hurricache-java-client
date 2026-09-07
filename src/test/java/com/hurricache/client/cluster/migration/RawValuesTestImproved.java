@@ -8,13 +8,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RawValuesTestImproved extends AdvancedTest {
-
+    @Override
+    protected Duration getTestTtl() {
+        return Duration.ofMinutes(15);
+    }
 
     @Test
     void createKeyValueLoopMigration() throws InterruptedException {

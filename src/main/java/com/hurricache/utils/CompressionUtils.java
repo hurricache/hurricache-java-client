@@ -13,15 +13,15 @@ import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4SafeDecompressor;
 
+
 public class CompressionUtils {
     private static final LZ4Factory factory = LZ4Factory.fastestInstance();
-    private static final int COMPRESSION_THRESHOLD = 1024; // 1KB
 
 
-    public static Key.Builder compressKeyIfNeeded(byte[] data, Integer clientId) {
+    public static Key.Builder compressKeyIfNeeded(byte[] data, Integer clientId, Integer compressionThreshold) {
         KeyBinaryPayload.Builder payloadBuilder = KeyBinaryPayload.newBuilder();
         Key.Builder keyBuilder = Key.newBuilder();
-        if (data.length > COMPRESSION_THRESHOLD) {
+        if (data != null && compressionThreshold != null &&data.length > compressionThreshold) {
             LZ4Compressor compressor = factory.fastCompressor();
             int maxCompressedLength = compressor.maxCompressedLength(data.length);
             byte[] compressed = new byte[maxCompressedLength];
@@ -31,12 +31,12 @@ public class CompressionUtils {
             payloadBuilder.setSize(compressedLength);
 
             keyBuilder.setCompressionInfo(CompressedInfo.newBuilder()
-                    .setEnabled(true)
-                    .setRawSize(data.length)
-                    .build());
+                                                  .setEnabled(true)
+                                                  .setRawSize(data.length)
+                                                  .build());
         } else {
-            payloadBuilder.setPayload(ByteString.copyFrom(data));
-            payloadBuilder.setSize(data.length);
+            payloadBuilder.setPayload(data != null ? ByteString.copyFrom(data) : ByteString.EMPTY);
+            payloadBuilder.setSize(data != null ? data.length : 0);
         }
         if (clientId != null) {
             keyBuilder.setClientId(clientId);
@@ -45,11 +45,11 @@ public class CompressionUtils {
         return keyBuilder.setPayload(payloadBuilder.build());
     }
 
-    public static Value.Builder compressIfNeeded(byte[] data) {
+    public static Value.Builder compressIfNeeded(byte[] data, Integer compressionThreshold) {
         BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
         Value.Builder valueBuilder = Value.newBuilder();
 
-        if (data.length > COMPRESSION_THRESHOLD) {
+        if (data != null && compressionThreshold != null &&data.length > compressionThreshold ) {
             LZ4Compressor compressor = factory.fastCompressor();
             int maxCompressedLength = compressor.maxCompressedLength(data.length);
             byte[] compressed = new byte[maxCompressedLength];
@@ -59,16 +59,17 @@ public class CompressionUtils {
             payloadBuilder.setSize(compressedLength);
 
             valueBuilder.setCompressionInfo(CompressedInfo.newBuilder()
-                    .setEnabled(true)
-                    .setRawSize(data.length)
-                    .build());
+                                                    .setEnabled(true)
+                                                    .setRawSize(data.length)
+                                                    .build());
         } else {
-            payloadBuilder.setPayload(ByteString.copyFrom(data));
-            payloadBuilder.setSize(data.length);
+            payloadBuilder.setPayload(data != null ? ByteString.copyFrom(data) : ByteString.EMPTY);
+            payloadBuilder.setSize(data != null ? data.length : 0);
         }
 
         return valueBuilder.setValue(payloadBuilder.build());
     }
+
 
     public static byte[] decompressIfNeeded(ValueResponse responseValue) {
         return decompressIfNeeded(responseValue.getValueUnordered());
@@ -95,6 +96,7 @@ public class CompressionUtils {
         }
         return data;
     }
+
     public static byte[] decompressIfNeeded(OrderedValue responseValue) {
         BinaryPayload payload = responseValue.getValue();
         byte[] data = payload.getPayload().toByteArray();
@@ -108,6 +110,4 @@ public class CompressionUtils {
         }
         return data;
     }
-
-
 }

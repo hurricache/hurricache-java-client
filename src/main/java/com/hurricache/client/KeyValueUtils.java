@@ -15,15 +15,15 @@ import java.time.Duration;
 
 public class KeyValueUtils {
 
-    public static Key.Builder createUnorderedKey(byte[] keyStr, int clientId) {
-        return createUnorderedKey(keyStr, null, clientId);
+    public static Key.Builder createUnorderedKey(byte[] keyStr, int clientId, Integer compressionThreshold) {
+        return createUnorderedKey(keyStr, null, clientId,compressionThreshold );
     }
 
     /**
      * Creates a Key using a pre-calculated KeyHint (Strong/Week hashes).
      */
-    public static Key.Builder createUnorderedKey(byte[] key, KeyHintData hint, int clientId) {
-        Key.Builder builder = CompressionUtils.compressKeyIfNeeded(key, clientId);
+    public static Key.Builder createUnorderedKey(byte[] key, KeyHintData hint, int clientId, Integer compressionThreshold) {
+        Key.Builder builder = CompressionUtils.compressKeyIfNeeded(key, clientId,compressionThreshold);
             if (hint != null) {
                 KeyHint.Builder khBuilder = KeyHint.newBuilder();
                 if (hint.hasWeekHash()) khBuilder.setWeekHash(hint.getWeek_hash());
@@ -54,8 +54,8 @@ public class KeyValueUtils {
     /**
      * Helper to wrap raw bytes into a Protobuf Value object.
      */
-    public static Value.Builder createUnorderedValue(byte[] data, Duration ttl) {
-        Value.Builder builder = CompressionUtils.compressIfNeeded(data);
+    public static Value.Builder createUnorderedValue(byte[] data, Duration ttl, Integer compressionThreshold) {
+        Value.Builder builder = CompressionUtils.compressIfNeeded(data,compressionThreshold);
         if (ttl != null && !ttl.isZero()) builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         return builder;
     }

@@ -54,10 +54,14 @@ public abstract class TestBaseCluster {
         client = new FastCacheAsyncSmartClient(List.of("127.0.0.1:51000","127.0.0.1:61000"), 0, Duration.ofSeconds(3600)) {
             @Override
             public Duration getDefaultTtl() {
-                return Duration.ofMinutes(3);
+                return getTestTtl();
             }
         };
 
+    }
+
+    protected Duration getTestTtl(){
+        return Duration.ofMinutes(3);
     }
 
     @AfterEach

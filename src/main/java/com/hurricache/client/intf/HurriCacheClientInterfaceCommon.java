@@ -227,4 +227,14 @@ public interface HurriCacheClientInterfaceCommon {
     default CompletableFuture<Long> getTtl(String key, int clientId) {
         return getTtl(serializeKey(key), null, clientId, getDefaultTimeout());
     }
+
+    /**
+     * Gets the default compression threshold in bytes.
+     *
+     * @return default compression threshold.
+     */
+    default int getDefaultCompressionThreshold() {
+        return DEFAULT_COMPRESSION_THRESHOLD;
+    }
+    public static final int DEFAULT_COMPRESSION_THRESHOLD = 1024; // 1KB[cite: 3]
 }

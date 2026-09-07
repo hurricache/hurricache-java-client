@@ -48,6 +48,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     private final Mode mode = Mode.MASTER_THAN_BACKUP;
     private Mode configuredMode = Mode.MASTER_THAN_BACKUP;
+    private int defaultCompressionThreshold;
     private final ThreadLocal<Mode> currentModeOverride = new ThreadLocal<>();
 
     record RoutingInfo(int max_shards,
@@ -76,7 +77,32 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                      int defaultClientId,
                                      Duration timeout) {
         this(List.of(coordinatorAddresses), defaultClientId, timeout);
+        this.defaultCompressionThreshold = DEFAULT_COMPRESSION_THRESHOLD;
     }
+
+    public FastCacheAsyncSmartClient(String coordinatorAddresses,
+                                     int defaultClientId,
+                                     Duration timeout,int defaultCompressionThreshold) {
+        this(List.of(coordinatorAddresses), defaultClientId, timeout);
+        this.defaultCompressionThreshold = defaultCompressionThreshold;
+
+    }
+    public FastCacheAsyncSmartClient(List<String> coordinatorAddresses,
+                                     int defaultClientId,
+                                     Duration timeout,int defaultCompressionThreshold) {
+        if (coordinatorAddresses == null || coordinatorAddresses.isEmpty()) {
+            throw new IllegalArgumentException("Coordinator addresses list cannot be empty");
+        }
+        this.coordinatorAddresses = List.copyOf(coordinatorAddresses);
+        this.defaultClientId = defaultClientId;
+        this.defaultTimeout = timeout;
+        this.configuredMode = Mode.MASTER_THAN_BACKUP;
+        this.defaultCompressionThreshold = defaultCompressionThreshold;
+        initCoordinatorChannel(0);
+        this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
+
+    }
+
     public FastCacheAsyncSmartClient(List<String> coordinatorAddresses,
                                      int defaultClientId,
                                      Duration timeout) {
@@ -87,10 +113,12 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
         this.configuredMode = Mode.MASTER_THAN_BACKUP;
-
+        this.defaultCompressionThreshold = DEFAULT_COMPRESSION_THRESHOLD;
         initCoordinatorChannel(0);
         this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
+
     }
+
 
     // Обратная совместимость для одного координатора
     public FastCacheAsyncSmartClient(String coordinatorHost,
@@ -208,7 +236,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target).maxInboundMessageSize(64 * 1024 * 1024)
                                                       .usePlaintext()
                                                       .directExecutor()
-                                                      .build(), defaultClientId, defaultTimeout) {
+                                                      .build(), defaultClientId, defaultTimeout,getDefaultCompressionThreshold()) {
             @Override
             public Duration getDefaultTtl() {
                 return FastCacheAsyncSmartClient.this.getDefaultTtl();
@@ -222,6 +250,10 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             @Override
             public Duration getDefaultTimeout() {
                 return FastCacheAsyncSmartClient.this.getDefaultTimeout();
+            }
+            @Override
+            public int getDefaultCompressionThreshold() {
+                return FastCacheAsyncSmartClient.this.defaultCompressionThreshold;
             }
         };
     }
@@ -848,5 +880,10 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 throw new CompletionException(e);
             }
         });
+    }
+
+    @Override
+    public int getDefaultCompressionThreshold() {
+        return defaultCompressionThreshold;
     }
 }
