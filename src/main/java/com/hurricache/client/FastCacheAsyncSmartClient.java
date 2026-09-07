@@ -7,12 +7,15 @@ import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.ContainerType;
+import com.hurricache.grpc.Key;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
+import com.hurricache.grpc.OrderedKey;
+import com.hurricache.grpc.Value;
 import com.hurricache.grpc.coordinator.CoordinatorServiceGrpc;
 import com.hurricache.grpc.coordinator.NodeRole;
 import com.hurricache.grpc.coordinator.PeerRouting;
-import com.hurricache.grpc.coordinator.Void;
+import com.hurricache.utils.CompressionUtils;
 import com.hurricache.utils.Pair;
 import com.hurricache.utils.RoutingObserver;
 import io.grpc.ManagedChannel;
@@ -24,6 +27,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +40,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.hurricache.client.FastCacheAsyncSimpleClient.MAX_RPC_SIZE;
 import static com.hurricache.grpc.coordinator.NodeRole.BACKUP;
 import static com.hurricache.grpc.coordinator.NodeRole.MASTER;
 
@@ -47,7 +53,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     private final AtomicReference<CoordinatorServiceGrpc.CoordinatorServiceStub> activeCoordinatorStub = new AtomicReference<>();
 
     private final Mode mode = Mode.MASTER_THAN_BACKUP;
-    private Mode configuredMode = Mode.MASTER_THAN_BACKUP;
+    private final Mode configuredMode = Mode.MASTER_THAN_BACKUP;
     private int defaultCompressionThreshold;
     private final ThreadLocal<Mode> currentModeOverride = new ThreadLocal<>();
 
@@ -96,7 +102,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         this.coordinatorAddresses = List.copyOf(coordinatorAddresses);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
-        this.configuredMode = Mode.MASTER_THAN_BACKUP;
         this.defaultCompressionThreshold = defaultCompressionThreshold;
         initCoordinatorChannel(0);
         this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
@@ -112,7 +117,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         this.coordinatorAddresses = List.copyOf(coordinatorAddresses);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
-        this.configuredMode = Mode.MASTER_THAN_BACKUP;
         this.defaultCompressionThreshold = DEFAULT_COMPRESSION_THRESHOLD;
         initCoordinatorChannel(0);
         this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
@@ -183,7 +187,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         CompletableFuture<List<PeerRouting>> future = new CompletableFuture<>();
         RoutingObserver responseObserver = new RoutingObserver(future);
 
-        stub.provideGlobalRoutingInfo(Void.newBuilder().build(), responseObserver);
+        stub.provideGlobalRoutingInfo(com.hurricache.grpc.coordinator.Void.newBuilder().build(), responseObserver);
 
         future.orTimeout(defaultTimeout.toMillis(), TimeUnit.MILLISECONDS).thenAccept(peerRoutingList -> {
             try {
@@ -336,6 +340,10 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     private <T> CompletableFuture<T> execute(KeyHintData hint, Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
+        Mode overrideMode = currentModeOverride.get();
+        if (overrideMode != null){
+            return execute(hint, overrideMode, action);
+        }
         return execute(hint, null, action);
     }
 
@@ -434,7 +442,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                       Duration ttl,
                                                       int clientId,
                                                       Duration timeout) {
-        return execute(keyHint, c -> c.createQueue(key, keyHint, initialValue, ttl, clientId, timeout));
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.QUEUE);
     }
 
     @Override
@@ -442,7 +450,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                      Duration ttl,
                                                      int clientId,
                                                      Duration timeout) {
-        return execute(keyHint, c -> c.createList(key, keyHint, initialValue, ttl, clientId, timeout));
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.LIST);
     }
 
     @Override
@@ -450,7 +458,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                        Duration ttl,
                                                        int clientId,
                                                        Duration timeout) {
-        return execute(keyHint, c -> c.createVector(key, keyHint, initialValue, ttl, clientId, timeout));
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.VECTOR);
     }
 
     @Override
@@ -727,7 +735,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     public CompletableFuture<KeyHintData> createSet(byte[] key,
                                                     KeyHintData keyHint,
                                                     List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return execute(keyHint, c -> c.createSet(key, keyHint, initialValue, ttl, clientId, timeout));
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.SET);
     }
 
     @Override
@@ -757,17 +765,56 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<KeyHintData> createOrderedSet(byte[] key, List<OrderedPayload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return execute(null, c -> c.createOrderedSet(key, initialValue, ttl, clientId, timeout));
+        List<OrderedPayload> firstChunk = new ArrayList<>();
+        List<OrderedPayload> remaining = new ArrayList<>();
+        splitOrderedPayloads(initialValue, firstChunk, remaining, clientId);
+
+        return createContainerWithChunks(
+                key, null, ttl, clientId, timeout,
+                c -> c.createOrderedSet(key, firstChunk, ttl, clientId, timeout),
+                remaining,
+                null,
+                // Пробрасываем hint, полученный от первого вызова createOrderedSet
+                (hint, chunkKeys) -> executeWrite(hint, c -> c.addElementOrdered(key, hint, chunkKeys, clientId, timeout))
+        );
     }
 
     @Override
     public CompletableFuture<KeyHintData> createMap(byte[] key, Map<Payload, Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return execute(null, c -> c.createMap(key, initialValue, ttl, clientId, timeout));
+        Map<Payload, Payload> firstChunkMap = new LinkedHashMap<>();
+        List<Payload> remainingKeys = new ArrayList<>();
+        List<Payload> remainingValues = new ArrayList<>();
+
+        splitMapEntries(initialValue, firstChunkMap, remainingKeys, remainingValues, clientId, ttl);
+
+        return createContainerWithChunks(
+                key, null, ttl, clientId, timeout,
+                c -> c.createMap(key, firstChunkMap, ttl, clientId, timeout),
+                remainingKeys,
+                remainingValues,
+                (chunkKeys, chunkValues) -> executeWrite(null, c -> c.addElementHashMap(key, null, chunkKeys, chunkValues, clientId, timeout))
+        );
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createOrderedMap(byte[] key, Map<OrderedPayload, Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return execute(null, c -> c.createOrderedMap(key, initialValue, ttl, clientId, timeout));
+    public CompletableFuture<KeyHintData> createOrderedMap(byte[] key,
+                                                           Map<OrderedPayload, Payload> initialValue,
+                                                           Duration ttl,
+                                                           int clientId,
+                                                           Duration timeout) {
+        Map<OrderedPayload, Payload> firstChunkMap = new LinkedHashMap<>();
+        List<OrderedPayload> remainingKeys = new ArrayList<>();
+        List<Payload> remainingValues = new ArrayList<>();
+
+        splitOrderedMapEntries(initialValue, firstChunkMap, remainingKeys, remainingValues, clientId, ttl);
+
+        return createContainerWithChunks(
+                key, null, ttl, clientId, timeout,
+                c -> c.createOrderedMap(key, firstChunkMap, ttl, clientId, timeout),
+                remainingKeys,
+                remainingValues,
+                (chunkKeys, chunkValues) -> executeWrite(null, c -> c.addElementOrderedMap(key, null, chunkKeys, chunkValues, clientId, timeout))
+        );
     }
 
     @Override
@@ -885,5 +932,217 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     @Override
     public int getDefaultCompressionThreshold() {
         return defaultCompressionThreshold;
+    }
+
+    private static void repDelay() {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Универсальный метод создания контейнеров для смарт-клиента.
+     * 1. Создает контейнер с первыми первичными чанками данных через роутинг.
+     * 2. При наличии оставшихся данных ожидает репликации (repDelay).
+     * 3. Попоследовательно отправляет оставшиеся чанки через роутер smart-клиента на основе полученного hint.
+     */
+    private <K, V> CompletableFuture<KeyHintData> createContainerWithChunks(
+            byte[] key,
+            KeyHintData hint,
+            Duration ttl,
+            int clientId,
+            Duration timeout,
+            Function<HurriCacheClientInterface, CompletableFuture<KeyHintData>> createCall,
+            List<K> remainingKeys,
+            List<V> remainingValues,
+            BiFunction<List<K>, List<V>, CompletableFuture<?>> chunkSender) {
+
+        // 1. Выполняем создание контейнера (первый чанк уходит внутри createCall)
+        CompletableFuture<KeyHintData> createFuture = execute(hint, createCall);
+
+        // Если нет оставшихся элементов, сразу возвращаем результат
+        if (remainingKeys == null || remainingKeys.isEmpty()) {
+            return createFuture;
+        }
+
+        // 2. Ждем ответа с hint, делаем паузу на репликацию и досылаем остаток по чанкам
+        return createFuture.thenCompose(resHint ->
+                                                CompletableFuture.runAsync(FastCacheAsyncSmartClient::repDelay)
+                                                        .thenCompose(ignored -> sendRemainingChunksInPipeline(
+                                                                key, resHint, remainingKeys, remainingValues, clientId, timeout, chunkSender
+                                                        ))
+                                                        .thenApply(ignored -> resHint)
+        );
+    }
+
+    /**
+     * Конвейерная последовательная отправка чанков с использованием роутинга smart-клиента.
+     */
+    private <K, V> CompletableFuture<java.lang.Void> sendRemainingChunksInPipeline(
+            byte[] key,
+            KeyHintData hint,
+            List<K> keys,
+            List<V> values,
+            int clientId,
+            Duration timeout,
+            BiFunction<List<K>, List<V>, CompletableFuture<?>> chunkSender) {
+
+        if (keys == null || keys.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        List<Pair<List<K>, List<V>>> chunks = partitionChunks(keys, values, clientId);
+
+        CompletableFuture<java.lang.Void> pipeline = CompletableFuture.completedFuture(null);
+
+        for (Pair<List<K>, List<V>> chunk : chunks) {
+            pipeline = pipeline.thenCompose(v ->
+                                                    chunkSender.apply(chunk.first, chunk.second)
+                                                            .<java.lang.Void>thenApply(res -> null)
+            );
+        }
+
+        return pipeline;
+    }
+
+    private <K, V> List<Pair<List<K>, List<V>>> partitionChunks(List<K> keys, List<V> values, int clientId) {
+        List<Pair<List<K>, List<V>>> chunks = new ArrayList<>();
+        List<K> currentKeys = new ArrayList<>();
+        List<V> currentValues = new ArrayList<>();
+        long currentChunkSize = 0;
+
+        for (int i = 0; i < keys.size(); i++) {
+            K k = keys.get(i);
+            V v = (values != null && i < values.size()) ? values.get(i) : null;
+
+            long itemSize = calculateSerializedSize(k, v, clientId);
+
+            if (!currentKeys.isEmpty() && (currentChunkSize + itemSize > MAX_RPC_SIZE)) {
+                chunks.add(Pair.of(new ArrayList<>(currentKeys), new ArrayList<>(currentValues)));
+                currentKeys.clear();
+                currentValues.clear();
+                currentChunkSize = 0;
+            }
+
+            currentKeys.add(k);
+            if (v != null) currentValues.add(v);
+            currentChunkSize += itemSize;
+        }
+
+        if (!currentKeys.isEmpty()) {
+            chunks.add(Pair.of(currentKeys, currentValues));
+        }
+
+        return chunks;
+    }
+
+    private long calculateSerializedSize(Object keyOrPayload, Object valuePayload, int clientId) {
+        long size = 0;
+        if (keyOrPayload instanceof OrderedPayload op) {
+            long order = op.getOrder() != null ? op.getOrder() : 0L;
+            size += KeyValueUtils.createOrderedKey(op.getValue(), order, clientId).build().getSerializedSize();
+        } else if (keyOrPayload instanceof Payload p) {
+            size += KeyValueUtils.createUnorderedKey(p.getValue(), clientId, null).build().getSerializedSize();
+        }
+
+        if (valuePayload instanceof Payload vp) {
+            size += KeyValueUtils.createUnorderedValue(vp.getValue(), null, getDefaultCompressionThreshold()).build().getSerializedSize();
+        }
+        return size;
+    }
+
+    private CompletableFuture<KeyHintData> createUnorderedContainerSmart(
+            byte[] key,
+            KeyHintData keyHint,
+            List<Payload> initialValue,
+            Duration ttl,
+            int clientId,
+            Duration timeout,
+            ContainerType type) {
+
+        List<Payload> firstChunk = new ArrayList<>();
+        List<Payload> remaining = new ArrayList<>();
+        splitPayloads(initialValue, firstChunk, remaining, clientId);
+
+        return createContainerWithChunks(
+                key, keyHint, ttl, clientId, timeout,
+                c -> switch (type) {
+                    case QUEUE -> c.createQueue(key, keyHint, firstChunk, ttl, clientId, timeout);
+                    case LIST -> c.createList(key, keyHint, firstChunk, ttl, clientId, timeout);
+                    case VECTOR -> c.createVector(key, keyHint, firstChunk, ttl, clientId, timeout);
+                    case SET -> c.createSet(key, keyHint, firstChunk, ttl, clientId, timeout);
+                    default -> throw new IllegalArgumentException("Unsupported type: " + type);
+                },
+                remaining,
+                null,
+                (chunkKeys, nullValues) -> executeWrite(keyHint, c -> c.addElementToTail(key, keyHint, chunkKeys, clientId, timeout))
+        );
+    }
+    private void splitPayloads(List<Payload> source, List<Payload> firstChunk, List<Payload> remaining, int clientId) {
+        if (source == null) return;
+        long currentChunkSize = 128; // базовый размер обертки
+        for (Payload p : source) {
+            long elemSize = CompressionUtils.compressIfNeeded(p.getValue(), getDefaultCompressionThreshold()).build().getSerializedSize();
+            if (remaining.isEmpty() && (currentChunkSize + elemSize <= MAX_RPC_SIZE)) {
+                firstChunk.add(p);
+                currentChunkSize += elemSize;
+            } else {
+                remaining.add(p);
+            }
+        }
+    }
+
+    private void splitOrderedPayloads(List<OrderedPayload> source, List<OrderedPayload> firstChunk, List<OrderedPayload> remaining, int clientId) {
+        if (source == null) return;
+        long currentChunkSize = 128;
+        for (OrderedPayload op : source) {
+            long order = op.getOrder() != null ? op.getOrder() : 0L;
+            long elemSize = KeyValueUtils.createOrderedValue(op.getValue(), order, null).build().getSerializedSize();
+            if (remaining.isEmpty() && (currentChunkSize + elemSize <= MAX_RPC_SIZE)) {
+                firstChunk.add(op);
+                currentChunkSize += elemSize;
+            } else {
+                remaining.add(op);
+            }
+        }
+    }
+
+    private void splitMapEntries(Map<Payload, Payload> source, Map<Payload, Payload> firstChunk, List<Payload> remainingKeys, List<Payload> remainingValues, int clientId, Duration ttl) {
+        if (source == null) return;
+        long currentChunkSize = 128;
+        for (Map.Entry<Payload, Payload> entry : source.entrySet()) {
+            Key kVal = KeyValueUtils.createUnorderedKey(entry.getKey().getValue(), clientId, null).build();
+            Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl, null).build();
+            long pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
+
+            if (remainingKeys.isEmpty() && (currentChunkSize + pairSize <= MAX_RPC_SIZE)) {
+                firstChunk.put(entry.getKey(), entry.getValue());
+                currentChunkSize += pairSize;
+            } else {
+                remainingKeys.add(entry.getKey());
+                remainingValues.add(entry.getValue());
+            }
+        }
+    }
+
+    private void splitOrderedMapEntries(Map<OrderedPayload, Payload> source, Map<OrderedPayload, Payload> firstChunk, List<OrderedPayload> remainingKeys, List<Payload> remainingValues, int clientId, Duration ttl) {
+        if (source == null) return;
+        long currentChunkSize = 128;
+        for (Map.Entry<OrderedPayload, Payload> entry : source.entrySet()) {
+            long order = entry.getKey().getOrder() != null ? entry.getKey().getOrder() : 0L;
+            OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId).build();
+            Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl, getDefaultCompressionThreshold()).build();
+            long pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
+
+            if (remainingKeys.isEmpty() && (currentChunkSize + pairSize <= MAX_RPC_SIZE)) {
+                firstChunk.put(entry.getKey(), entry.getValue());
+                currentChunkSize += pairSize;
+            } else {
+                remainingKeys.add(entry.getKey());
+                remainingValues.add(entry.getValue());
+            }
+        }
     }
 }

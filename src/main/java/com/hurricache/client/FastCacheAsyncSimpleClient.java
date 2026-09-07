@@ -9,6 +9,7 @@ import com.hurricache.grpc.*;
 import com.hurricache.utils.CompletableFutureObserver;
 import com.hurricache.utils.CompressionUtils;
 import com.hurricache.utils.DecompressingObserver;
+import com.hurricache.utils.Pair;
 import com.hurricache.utils.StreamBatchMapObserver;
 import com.hurricache.utils.StreamBatchOrderedMapObserver;
 import com.hurricache.utils.StreamBatchOrderedObserver;
@@ -17,11 +18,13 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
@@ -31,7 +34,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     private final Duration defaultTimeout;
     private int defaultCompressionThreshold;
     private final String target;
-    private static final long MAX_RPC_SIZE = 4 * 1024 * 1024 - 1024 * 1024 / 2;
+    static final long MAX_RPC_SIZE = 4 * 1024 * 1024 - 1024 * 1024 / 2;
 
     private enum AddType { TAIL, HEAD, POSITION,NON_POSITION }
 
@@ -277,7 +280,6 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             if (remainingTail.isEmpty()) {
                 return CompletableFuture.completedFuture(keyHint1);
             } else {
-                repDelay();
                 return sendTailInChunks(keyProto, keyHint1, remainingTail, timeout);
             }
         });
@@ -323,49 +325,116 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             if (remainingTail.isEmpty()) {
                 return CompletableFuture.completedFuture(keyHint);
             } else {
-                repDelay();
                 return sendTailInChunksOrdered(protoKey, keyHint, remainingTail, ttl, timeout);
             }
         });
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createMap(byte[] key, Map<Payload, Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<KeyHintData> createMap(byte[] key,
+                                                    Map<Payload, Payload> initialValue,
+                                                    Duration ttl,
+                                                    int clientId,
+                                                    Duration timeout) {
         CreateContainerRequest.Builder builder = CreateContainerRequest.newBuilder();
         if (ttl != null && !ttl.isZero()) {
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
+
         Key protoKey = KeyValueUtils.createUnorderedKey(key, clientId, getDefaultCompressionThreshold()).build();
         builder.setKey(protoKey).setType(ContainerType.MAP);
 
         long currentChunkSize = protoKey.getSerializedSize();
 
+        // Списки для элементов, которые не поместились в первый gRPC-запрос
+        List<Payload> remainingKeys = new ArrayList<>();
+        List<Payload> remainingValues = new ArrayList<>();
+
         if (initialValue != null) {
             for (Map.Entry<Payload, Payload> entry : initialValue.entrySet()) {
                 Key kVal = KeyValueUtils.createUnorderedKey(entry.getKey().getValue(), clientId, null).build();
-                Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl,  null).build();
+                Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl, null).build();
 
                 int pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
-                if (currentChunkSize + pairSize > MAX_RPC_SIZE) {
-                    break;
-                }
-                builder.addKeyUnordered(kVal);
-                builder.addValueUnordered(vVal);
 
-                currentChunkSize += pairSize;
+                // Если текущая пара влезает в первый чанк createContainer
+                if (remainingKeys.isEmpty() && (currentChunkSize + pairSize <= MAX_RPC_SIZE)) {
+                    builder.addKeyUnordered(kVal);
+                    builder.addValueUnordered(vVal);
+                    currentChunkSize += pairSize;
+                } else {
+                    // Все последующие элементы уходят в буфер для addElementHashMap
+                    remainingKeys.add(entry.getKey());
+                    remainingValues.add(entry.getValue());
+                }
             }
         }
 
         CompletableFuture<KeyHintData> createFuture = new CompletableFuture<>();
+
+        // 1. Создаем контейнер с первой порцией данных
         getStub(timeout).createContainer(builder.build(), new CompletableFutureObserver<>(createFuture, keyHintResponse -> {
             KeyHint keyHint = keyHintResponse.getKeyHint();
             return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash());
         }));
-        return createFuture;
+
+        // 2. Если все элементы поместились в 1-й чанк, сразу возвращаем результат
+        if (remainingKeys.isEmpty()) {
+            return createFuture;
+        }
+
+        // 3. Если остались элементы, после успешного создания контейнера доотправляем оставшиеся чанки
+        return createFuture.thenCompose(hint -> sendRemainingChunks(key, hint, remainingKeys, remainingValues, clientId, ttl, timeout)
+                .thenApply(ignored -> hint));
     }
 
-    @Override
-    public CompletableFuture<KeyHintData> createOrderedMap(byte[] key, Map<OrderedPayload, Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
+    private CompletableFuture<Void> sendRemainingChunks(byte[] key,
+                                                        KeyHintData hint,
+                                                        List<Payload> keys,
+                                                        List<Payload> values,
+                                                        int clientId,
+                                                        Duration ttl,
+                                                        Duration timeout) {
+        List<CompletableFuture<Integer>> chunkFutures = new ArrayList<>();
+
+        List<Payload> currentChunkKeys = new ArrayList<>();
+        List<Payload> currentChunkValues = new ArrayList<>();
+        long currentChunkSize = 0;
+
+        for (int i = 0; i < keys.size(); i++) {
+            Payload k = keys.get(i);
+            Payload v = values.get(i);
+
+            Key kVal = KeyValueUtils.createUnorderedKey(k.getValue(), clientId, null).build();
+            Value vVal = KeyValueUtils.createUnorderedValue(v.getValue(), ttl, null).build();
+            int pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
+
+            if (!currentChunkKeys.isEmpty() && (currentChunkSize + pairSize > MAX_RPC_SIZE)) {
+                // Отправляем сформированный чанк
+                chunkFutures.add(addElementHashMap(key, hint, new ArrayList<>(currentChunkKeys), new ArrayList<>(currentChunkValues), clientId, timeout));
+                currentChunkKeys.clear();
+                currentChunkValues.clear();
+                currentChunkSize = 0;
+            }
+
+            currentChunkKeys.add(k);
+            currentChunkValues.add(v);
+            currentChunkSize += pairSize;
+        }
+
+        if (!currentChunkKeys.isEmpty()) {
+            chunkFutures.add(addElementHashMap(key, hint, currentChunkKeys, currentChunkValues, clientId, timeout));
+        }
+
+        // Ждем завершения отправки всех остаточных чанков
+        return CompletableFuture.allOf(chunkFutures.toArray(new CompletableFuture[0]));
+    }
+
+    public CompletableFuture<KeyHintData> createOrderedMap(byte[] key,
+                                                           Map<OrderedPayload, Payload> initialValue,
+                                                           Duration ttl,
+                                                           int clientId,
+                                                           Duration timeout) {
         CreateContainerRequest.Builder builder = CreateContainerRequest.newBuilder();
         if (ttl != null && !ttl.isZero()) {
             builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
@@ -375,6 +444,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
         long currentChunkSize = protoKey.getSerializedSize();
 
+        List<OrderedPayload> remainingKeys = new ArrayList<>();
+        List<Payload> remainingValues = new ArrayList<>();
+
         if (initialValue != null) {
             for (Map.Entry<OrderedPayload, Payload> entry : initialValue.entrySet()) {
                 long order = entry.getKey().getOrder() != null ? entry.getKey().getOrder() : 0L;
@@ -382,22 +454,92 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl, getDefaultCompressionThreshold()).build();
 
                 int pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
-                if (currentChunkSize + pairSize > MAX_RPC_SIZE) {
-                    break;
-                }
-                builder.addKeyOrdered(kVal);
-                builder.addValueUnordered(vVal);
 
-                currentChunkSize += pairSize;
+                // Первый чанк уходит сразу в createContainer
+                if (remainingKeys.isEmpty() && (currentChunkSize + pairSize <= MAX_RPC_SIZE)) {
+                    builder.addKeyOrdered(kVal);
+                    builder.addValueUnordered(vVal);
+                    currentChunkSize += pairSize;
+                } else {
+                    remainingKeys.add(entry.getKey());
+                    remainingValues.add(entry.getValue());
+                }
             }
         }
 
         CompletableFuture<KeyHintData> createFuture = new CompletableFuture<>();
+
         getStub(timeout).createContainer(builder.build(), new CompletableFutureObserver<>(createFuture, keyHintResponse -> {
             KeyHint keyHint = keyHintResponse.getKeyHint();
             return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash());
         }));
-        return createFuture;
+
+        if (remainingKeys.isEmpty()) {
+            return createFuture;
+        }
+
+
+        return createFuture.thenCompose(hint ->
+                                                sendRemainingOrderedChunks(
+                                                        key, hint, remainingKeys, remainingValues, clientId, timeout,
+                                                        getDefaultCompressionThreshold(),
+                                                        (chunkKeys, chunkValues) -> addElementOrderedMap(key, hint, chunkKeys, chunkValues, clientId, timeout)
+                                                ).thenApply(ignored -> hint)
+        );
+    }
+
+    protected static CompletableFuture<Void> sendRemainingOrderedChunks(byte[] key,
+                                                                        KeyHintData hint,
+                                                                        List<OrderedPayload> keys,
+                                                                        List<Payload> values,
+                                                                        int clientId,
+                                                                        Duration timeout,
+                                                                        Integer compressionThreshold,
+                                                                        BiFunction<List<OrderedPayload>, List<Payload>, CompletableFuture<?>> chunkSender) {
+        if (keys.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        List<Pair<List<OrderedPayload>, List<Payload>>> chunks = new ArrayList<>();
+        List<OrderedPayload> currentKeys = new ArrayList<>();
+        List<Payload> currentValues = new ArrayList<>();
+        long currentChunkSize = 0;
+
+        for (int i = 0; i < keys.size(); i++) {
+            OrderedPayload k = keys.get(i);
+            Payload v = values.get(i);
+
+            long order = k.getOrder() != null ? k.getOrder() : 0L;
+            OrderedKey kVal = KeyValueUtils.createOrderedKey(k.getValue(), order, clientId).build();
+            Value vVal = KeyValueUtils.createUnorderedValue(v.getValue(), null, compressionThreshold).build();
+
+            int pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
+
+            if (!currentKeys.isEmpty() && (currentChunkSize + pairSize > MAX_RPC_SIZE)) {
+                chunks.add(Pair.of(new ArrayList<>(currentKeys), new ArrayList<>(currentValues)));
+                currentKeys.clear();
+                currentValues.clear();
+                currentChunkSize = 0;
+            }
+
+            currentKeys.add(k);
+            currentValues.add(v);
+            currentChunkSize += pairSize;
+        }
+
+        if (!currentKeys.isEmpty()) {
+            chunks.add(Pair.of(currentKeys, currentValues));
+        }
+
+        // Чанки идут строго по цепочке: следующий отправляется только после ответа на предыдущий
+        CompletableFuture<Void> pipeline = CompletableFuture.completedFuture(null);
+        for (Pair<List<OrderedPayload>, List<Payload>> chunk : chunks) {
+            pipeline = pipeline.thenCompose(v ->
+                                                    chunkSender.apply(chunk.first, chunk.second)
+            ).thenAccept(res -> {});
+        }
+
+        return pipeline;
     }
 
     // =========================================================================
@@ -505,6 +647,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .setType(ContainerType.ORDERED_SET)
                 .setPos(startWeight)
                 .setEnd(endWeight)
+                .setReverse(reverse)
                 .build();
 
         CompletableFuture<List<OrderedPayload>> rawFuture = new CompletableFuture<>();
@@ -844,13 +987,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // HELPER & UTILITY METHODS
     // =========================================================================
 
-    private static void repDelay() {
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
-        }
-    }
+
 
     private Key buildKey(byte[] key, KeyHintData hint, int clientId) {
         int cid = (clientId != 0) ? clientId : defaultClientId;
@@ -1161,6 +1298,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         if (container_values == null || container_values.isEmpty()) {
             return CompletableFuture.completedFuture(0);
         }
+        if (container_keys.size() != container_values.size()) {
+            throw new IllegalArgumentException("container_keys and container_values must have the same size");
+        }
         int size = Math.min(container_keys.size(), container_values.size());
 
         Key protoKey = buildKey(key, hint, clientId);
@@ -1195,6 +1335,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         }
         if (container_values == null || container_values.isEmpty()) {
             return CompletableFuture.completedFuture(0);
+        }
+        if (container_keys.size() != container_values.size()){
+            throw new IllegalArgumentException("container_keys and container_values must be the same size");
         }
         int size = Math.min(container_keys.size(), container_values.size());
 
