@@ -130,7 +130,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             expectedPayloads.add(new OrderedPayload(rawData, (long) i * 10)); // Вес = i * 10
         }
 
-        CompletableFuture<KeyHintData> future = client.createOrderedSet(key, expectedPayloads, getTestTtl(), 0, TIMEOUT);
+        CompletableFuture<KeyHintData> future = client.createOrderedSet(key, expectedPayloads, getTestTtl(), 0, null);
         KeyHintData hint = future.get();
         assertNotNull(hint);
         Thread.sleep(1000);

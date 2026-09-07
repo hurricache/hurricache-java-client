@@ -774,8 +774,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 c -> c.createOrderedSet(key, firstChunk, ttl, clientId, timeout),
                 remaining,
                 null,
-                // Пробрасываем hint, полученный от первого вызова createOrderedSet
-                (hint, chunkKeys) -> executeWrite(hint, c -> c.addElementOrdered(key, hint, chunkKeys, clientId, timeout))
+                (chunkKeys, nullValues) -> executeWrite(null, c -> c.addElementOrdered(key, null, chunkKeys, clientId, timeout))
         );
     }
 
@@ -1077,7 +1076,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 },
                 remaining,
                 null,
-                (chunkKeys, nullValues) -> executeWrite(keyHint, c -> c.addElementToTail(key, keyHint, chunkKeys, clientId, timeout))
+                (chunkKeys, nullValues) -> executeWrite(keyHint, c -> c.addElement(key, keyHint, chunkKeys, clientId, timeout))
         );
     }
     private void splitPayloads(List<Payload> source, List<Payload> firstChunk, List<Payload> remaining, int clientId) {

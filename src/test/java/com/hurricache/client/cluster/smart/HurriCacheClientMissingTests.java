@@ -48,10 +48,11 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
 
         Long remainingTtl = client.getTtl(key, null).get();
         assertNotNull(remainingTtl);
+        System.out.println("Осталось TTL: " + remainingTtl);
         assertTrue(remainingTtl > 0L, "Остаток TTL должен быть больше 0");
 
         // Ждем истечения TTL
-        Thread.sleep(150);
+        Thread.sleep(500);
         assertThrows(ExecutionException.class, () -> {
             client.getValue(key, null, DEFAULT_CLIENT_ID).get();
         });

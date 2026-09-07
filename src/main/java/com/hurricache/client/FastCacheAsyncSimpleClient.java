@@ -32,7 +32,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     private final ManagedChannel channel;
     private final int defaultClientId;
     private final Duration defaultTimeout;
-    private int defaultCompressionThreshold;
+    private final int defaultCompressionThreshold;
     private final String target;
     static final long MAX_RPC_SIZE = 4 * 1024 * 1024 - 1024 * 1024 / 2;
 
@@ -280,7 +280,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             if (remainingTail.isEmpty()) {
                 return CompletableFuture.completedFuture(keyHint1);
             } else {
-                return sendTailInChunks(keyProto, keyHint1, remainingTail, timeout);
+                return sendTailInChunks(keyProto,type, keyHint1, remainingTail, timeout);
             }
         });
     }
@@ -1019,7 +1019,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         return builder.build();
     }
 
-    private CompletableFuture<KeyHintData> sendTailInChunks(Key protoKey, KeyHintData originalHint, List<Payload> tail, Duration timeout) {
+    private CompletableFuture<KeyHintData> sendTailInChunks(Key protoKey,
+                                                            ContainerType type,
+                                                            KeyHintData originalHint, List<Payload> tail, Duration timeout) {
         KeyHint originalProtoHint = buildProtoKeyHint(originalHint);
         long currentChunkSize = originalProtoHint.getSerializedSize() + 32;
 
@@ -1040,18 +1042,37 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             splitIndex++;
         }
 
-        CompletableFuture<BoolResponse> tailFuture = new CompletableFuture<>();
-        getStub(timeout).addElementToTail(builder.build(), new CompletableFutureObserver<>(tailFuture));
-
         List<Payload> nextTail = tail.subList(splitIndex, tail.size());
 
-        return tailFuture.thenCompose(response -> {
-            if (nextTail.isEmpty() && response.getValue()) {
-                return CompletableFuture.completedFuture(originalHint);
-            } else {
-                return sendTailInChunks(protoKey, originalHint, nextTail, timeout);
+        switch (type){
+            case SET -> {
+                CompletableFuture<IntResponse> tailFuture = new CompletableFuture<>();
+                getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(tailFuture));
+                return tailFuture.thenCompose(response -> {
+                    if (nextTail.isEmpty() ) {
+                        return CompletableFuture.completedFuture(originalHint);
+                    } else {
+                        return sendTailInChunks(protoKey, type, originalHint, nextTail, timeout);
+                    }
+                });
             }
-        });
+            default ->  {
+                CompletableFuture<BoolResponse> tailFuture = new CompletableFuture<>();
+                getStub(timeout).addElementToTail(builder.build(), new CompletableFutureObserver<>(tailFuture));
+                return tailFuture.thenCompose(response -> {
+                    if (nextTail.isEmpty() && response.getValue()) {
+                        return CompletableFuture.completedFuture(originalHint);
+                    } else {
+                        return sendTailInChunks(protoKey, type, originalHint, nextTail, timeout);
+                    }
+                });
+            }
+        }
+
+
+
+
+
     }
 
     private CompletableFuture<KeyHintData> sendTailInChunksOrdered(Key protoKey, KeyHintData originalHint, List<OrderedPayload> tail, Duration ttl, Duration timeout) {
@@ -1066,23 +1087,21 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             long order = payload.getOrder() != null ? payload.getOrder() : 0L;
             OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, ttl).build();
             int elemSize = orderedValue.getSerializedSize();
-
-            if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
-                break;
-            }
-
             builder.addValueOrdered(orderedValue);
             currentChunkSize += elemSize;
             splitIndex++;
+            if (currentChunkSize + elemSize > MAX_RPC_SIZE) {
+                break;
+            }
         }
 
-        CompletableFuture<BoolResponse> tailFuture = new CompletableFuture<>();
-        getStub(timeout).addElementToTail(builder.build(), new CompletableFutureObserver<>(tailFuture));
+        CompletableFuture<Integer> tailFuture = new CompletableFuture<>();
+        getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(tailFuture, IntResponse::getSize));
 
         List<OrderedPayload> nextTail = tail.subList(splitIndex, tail.size());
 
         return tailFuture.thenCompose(response -> {
-            if (nextTail.isEmpty() && response.getValue()) {
+            if (nextTail.isEmpty()) {
                 return CompletableFuture.completedFuture(originalHint);
             } else {
                 return sendTailInChunksOrdered(protoKey, originalHint, nextTail, ttl, timeout);
