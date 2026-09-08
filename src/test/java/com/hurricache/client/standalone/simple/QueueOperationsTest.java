@@ -29,12 +29,12 @@ public class QueueOperationsTest extends TestBase {
         Assertions.assertNotNull(keyHint);
 
         // 2. addElementToTail
-        boolean added = client.addElementToTail(
+        Integer added = client.addElementToTail(
                 qKey,
                 keyHint,
                 List.of(Payload.of(second.getBytes(StandardCharsets.UTF_8)))
         ).get();
-        Assertions.assertTrue(added);
+        Assertions.assertTrue(added == 1);
 
         // 3. getHead (Peek without removing)
         Payload headData = client.getHead(qKey, keyHint).get();

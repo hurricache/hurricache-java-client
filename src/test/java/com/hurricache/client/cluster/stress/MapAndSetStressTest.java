@@ -37,7 +37,7 @@ public class MapAndSetStressTest extends TestBaseCluster {
         int threadsCount = 20;
         int itemsPerThread = 50;
         int totalOperations = threadsCount * itemsPerThread;
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        List<CompletableFuture<Integer>> futures = new ArrayList<>();
 
         // --- Замер времени начала ---
         long startTimeNs = System.nanoTime();
@@ -45,7 +45,7 @@ public class MapAndSetStressTest extends TestBaseCluster {
         // Штурмуем сет параллельно из разных потоков вперемешку через Master и Backup
         for (int i = 0; i < threadsCount; i++) {
             final int threadId = i;
-            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
                 try {
                     List<Payload> batch = new ArrayList<>();
                     for (int j = 0; j < itemsPerThread; j++) {

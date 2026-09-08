@@ -62,6 +62,7 @@ public class LargeContainerCreationTest extends TestBaseCluster {
 
         CompletableFuture<KeyHintData> future = client.createList(key, null, payloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
+        Thread.sleep(500);
 
         assertNotNull(hint);
 
@@ -77,7 +78,7 @@ public class LargeContainerCreationTest extends TestBaseCluster {
 
         CompletableFuture<KeyHintData> future = client.createVector(key, null, payloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
-
+        Thread.sleep(500);
         assertNotNull(hint);
 
         List<Payload> streamed = client.streamVector(key, hint, 0, TIMEOUT).get();
@@ -110,7 +111,7 @@ public class LargeContainerCreationTest extends TestBaseCluster {
             payloads.add(new OrderedPayload(rawData, (long) i));
         }
 
-        CompletableFuture<KeyHintData> future = client.createOrderedSet(key, payloads, getTestTtl(), 0, TIMEOUT);
+        CompletableFuture<KeyHintData> future = client.createOrderedSet(key ,null, payloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
 
         assertNotNull(hint);
@@ -131,7 +132,7 @@ public class LargeContainerCreationTest extends TestBaseCluster {
             map.put(Payload.of(subKey), Payload.of(value));
         }
 
-        CompletableFuture<KeyHintData> future = client.createMap(key, map, getTestTtl(), 0, TIMEOUT);
+        CompletableFuture<KeyHintData> future = client.createMap(key,null , map, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
 
         assertNotNull(hint);
@@ -152,9 +153,9 @@ public class LargeContainerCreationTest extends TestBaseCluster {
             orderedMap.put(OrderedPayload.of(subKey, (long) i), Payload.of(value));
         }
 
-        CompletableFuture<KeyHintData> future = client.createOrderedMap(key, orderedMap, getTestTtl(), 0, TIMEOUT);
+        CompletableFuture<KeyHintData> future = client.createOrderedMap(key, null, orderedMap, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
-
+        Thread.sleep(1000);
         assertNotNull(hint);
 
         Map<OrderedPayload, Payload> streamedMap = client.streamOrderedMap(key, hint, 0, TIMEOUT).get();

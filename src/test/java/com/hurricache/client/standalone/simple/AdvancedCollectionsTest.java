@@ -25,7 +25,7 @@ public class AdvancedCollectionsTest extends TestBase {
         ).get();
 
         // addElementToHead -> [Head, Middle]
-        Boolean boolResponse = client.addElementToHead(
+        Integer boolResponse = client.addElementToHead(
                 listKey,
                 keyHintResponse,
                 List.of(Payload.of("Head".getBytes(StandardCharsets.UTF_8)))

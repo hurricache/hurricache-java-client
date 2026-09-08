@@ -31,11 +31,11 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
 
         Thread.sleep(500);
         // 2. addElementToTail
-        boolean added = client.setMode(Mode.BACKUP)
+        int added = client.setMode(Mode.BACKUP)
                 .addElementToTail(qKey, keyHint, List.of(Payload.of(second.getBytes(StandardCharsets.UTF_8))))
                 .get();
 
-        Assertions.assertTrue(added);
+        Assertions.assertTrue(added == 1);
 
         // 3. getHead (Peek without removing)
         Payload headData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
@@ -78,11 +78,11 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
 
         Thread.sleep(500);
         // 2. addElementToTail on master
-        boolean added = client.setMode(Mode.MASTER)
+        int added = client.setMode(Mode.MASTER)
                 .addElementToTail(qKey, keyHint, List.of(Payload.of(second.getBytes(StandardCharsets.UTF_8))))
                 .get();
 
-        Assertions.assertTrue(added);
+        Assertions.assertTrue(added == 1);
 
         // 3. getHead (Peek without removing)
         Payload headData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();

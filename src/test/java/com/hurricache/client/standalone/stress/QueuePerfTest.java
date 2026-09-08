@@ -163,7 +163,7 @@ public class QueuePerfTest {
                 byte[] payload = generate100ByteString(writerId + "-" + i++);
                 client.addElementToTail(QUEUE_NAME, queueKeyHint, List.of(Payload.of(payload))).whenComplete((success, ex) -> {
                     inFlightWindow.release(); // Освобождаем слот сразу по завершению сетевой операции
-                    if (ex == null && success) {
+                    if (ex == null && success == 1) {
                         metrics.produced.increment();
                     } else {
                         metrics.failedWrites.increment();

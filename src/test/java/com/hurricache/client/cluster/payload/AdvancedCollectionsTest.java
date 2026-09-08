@@ -32,13 +32,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // addElementToHead -> [Head, Middle]
         byte[] head = createLargePayload(VALUE_SIZE);
-        Boolean boolResponse = client.setMode(Mode.BACKUP)
+        Integer intResp = client.setMode(Mode.BACKUP)
                 .addElementToHead(listKey, keyHint, List.of(Payload.of(head)))
                 .get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         byte[] newPos1 = createLargePayload(VALUE_SIZE);
-        Integer boolResponse1 = client.setMode(Mode.BACKUP)
+        Integer intResp1 = client.setMode(Mode.BACKUP)
                 .addElementToPosition(listKey, keyHint, List.of(Payload.of(newPos1)), 1)
                 .get();
 
@@ -65,7 +65,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // addElementToHead -> [Head, Middle]
         byte[] head1 = createLargePayload(VALUE_SIZE);
-        Boolean boolResponse = client.setMode(Mode.MASTER)
+        Integer boolResponse = client.setMode(Mode.MASTER)
                 .addElementToHead(listKey, keyHint, List.of(Payload.of(head1)))
                 .get();
 

@@ -29,7 +29,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // addElementToHead -> [Head, Middle]
-        Boolean boolResponse = client.setMode(Mode.BACKUP)
+        Integer boolResponse = client.setMode(Mode.BACKUP)
                 .addElementToHead(listKey, keyHint, List.of(Payload.of("Head".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
@@ -59,7 +59,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // addElementToHead -> [Head, Middle]
-        Boolean boolResponse = client.setMode(Mode.MASTER)
+        Integer boolResponse = client.setMode(Mode.MASTER)
                 .addElementToHead(listKey, keyHint, List.of(Payload.of("Head".getBytes(StandardCharsets.UTF_8))))
                 .get();
 

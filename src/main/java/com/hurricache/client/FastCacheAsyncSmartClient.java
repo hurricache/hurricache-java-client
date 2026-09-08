@@ -11,6 +11,7 @@ import com.hurricache.grpc.Key;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import com.hurricache.grpc.OrderedKey;
+import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.coordinator.CoordinatorServiceGrpc;
 import com.hurricache.grpc.coordinator.NodeRole;
@@ -32,7 +33,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,13 +49,11 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.hurricache.client.FastCacheAsyncSimpleClient.MAX_RPC_SIZE;
 import static com.hurricache.grpc.coordinator.NodeRole.BACKUP;
 import static com.hurricache.grpc.coordinator.NodeRole.MASTER;
 
 public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
-    // Поддержка множественных координаторов
     private final List<String> coordinatorAddresses;
     private final AtomicInteger activeCoordinatorIndex = new AtomicInteger(0);
     private final AtomicReference<ManagedChannel> activeCoordinatorChannel = new AtomicReference<>();
@@ -77,25 +84,23 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     private final AtomicInteger randomShard = new AtomicInteger(0);
     private static final Logger log = LogManager.getLogger(FastCacheAsyncSmartClient.class);
 
-    // Конструктор для списка координаторов (строки вида "host:port")
-
-    public FastCacheAsyncSmartClient(String coordinatorAddresses,
-                                     int defaultClientId,
-                                     Duration timeout) {
+    public FastCacheAsyncSmartClient(String coordinatorAddresses, int defaultClientId, Duration timeout) {
         this(List.of(coordinatorAddresses), defaultClientId, timeout);
         this.defaultCompressionThreshold = DEFAULT_COMPRESSION_THRESHOLD;
     }
 
     public FastCacheAsyncSmartClient(String coordinatorAddresses,
                                      int defaultClientId,
-                                     Duration timeout,int defaultCompressionThreshold) {
+                                     Duration timeout,
+                                     int defaultCompressionThreshold) {
         this(List.of(coordinatorAddresses), defaultClientId, timeout);
         this.defaultCompressionThreshold = defaultCompressionThreshold;
-
     }
+
     public FastCacheAsyncSmartClient(List<String> coordinatorAddresses,
                                      int defaultClientId,
-                                     Duration timeout,int defaultCompressionThreshold) {
+                                     Duration timeout,
+                                     int defaultCompressionThreshold) {
         if (coordinatorAddresses == null || coordinatorAddresses.isEmpty()) {
             throw new IllegalArgumentException("Coordinator addresses list cannot be empty");
         }
@@ -105,12 +110,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         this.defaultCompressionThreshold = defaultCompressionThreshold;
         initCoordinatorChannel(0);
         this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
-
     }
 
-    public FastCacheAsyncSmartClient(List<String> coordinatorAddresses,
-                                     int defaultClientId,
-                                     Duration timeout) {
+    public FastCacheAsyncSmartClient(List<String> coordinatorAddresses, int defaultClientId, Duration timeout) {
         if (coordinatorAddresses == null || coordinatorAddresses.isEmpty()) {
             throw new IllegalArgumentException("Coordinator addresses list cannot be empty");
         }
@@ -120,11 +122,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         this.defaultCompressionThreshold = DEFAULT_COMPRESSION_THRESHOLD;
         initCoordinatorChannel(0);
         this.scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
-
     }
 
-
-    // Обратная совместимость для одного координатора
     public FastCacheAsyncSmartClient(String coordinatorHost,
                                      int coordinatorPort,
                                      int defaultClientId,
@@ -145,10 +144,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             }
         }
 
-        ManagedChannel newChannel = ManagedChannelBuilder.forTarget(address)
-                .directExecutor()
-                .usePlaintext()
-                .build();
+        ManagedChannel newChannel = ManagedChannelBuilder.forTarget(address).directExecutor().usePlaintext().build();
 
         activeCoordinatorChannel.set(newChannel);
         activeCoordinatorStub.set(CoordinatorServiceGrpc.newStub(newChannel));
@@ -170,7 +166,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         if (!isUpdating.compareAndSet(false, true)) {
             return;
         }
-
         requestRoutingInfoFromCoordinator(0);
     }
 
@@ -196,8 +191,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
                 ConcurrentHashMap<String, HurriCacheClientInterface> newRoutingTableTarget = new ConcurrentHashMap<>(
                         currentInfo.routingTableTarget);
-                ConcurrentHashMap<Pair<NodeRole, Integer>, HurriCacheClientInterface> newRoutingTable
-                        = new ConcurrentHashMap<>();
+                ConcurrentHashMap<Pair<NodeRole, Integer>, HurriCacheClientInterface> newRoutingTable = new ConcurrentHashMap<>();
 
                 Set<String> newTargets = peerRoutingList.stream()
                         .map(PeerRouting::getTarget)
@@ -229,7 +223,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             }
         }).exceptionally(ex -> {
             log.atWarn().log("[COORDINATOR FAILOVER] Failed to fetch topology from coordinator. Switching to next node...", ex);
-            // Добавлена задержка (Backoff), чтобы не спамить запросами при сбое
             long delayMs = 100L * (attemptCount + 1);
             scheduledExecutorService.schedule(() -> requestRoutingInfoFromCoordinator(attemptCount + 1), delayMs, TimeUnit.MILLISECONDS);
             return null;
@@ -237,10 +230,14 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     private HurriCacheClientInterface newFastCacheClient(String target) {
-        return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target).maxInboundMessageSize(64 * 1024 * 1024)
+        return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target)
+                                                      .maxInboundMessageSize(64 * 1024 * 1024)
                                                       .usePlaintext()
                                                       .directExecutor()
-                                                      .build(), defaultClientId, defaultTimeout,getDefaultCompressionThreshold()) {
+                                                      .build(),
+                                              defaultClientId,
+                                              defaultTimeout,
+                                              getDefaultCompressionThreshold()) {
             @Override
             public Duration getDefaultTtl() {
                 return FastCacheAsyncSmartClient.this.getDefaultTtl();
@@ -255,6 +252,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             public Duration getDefaultTimeout() {
                 return FastCacheAsyncSmartClient.this.getDefaultTimeout();
             }
+
             @Override
             public int getDefaultCompressionThreshold() {
                 return FastCacheAsyncSmartClient.this.defaultCompressionThreshold;
@@ -284,19 +282,20 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     private <T> CompletableFuture<T> executeWrite(KeyHintData hint,
                                                   Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
+        Mode methodDefaultMode = currentModeOverride.get();
+        if (methodDefaultMode != null){
+            return execute(hint, methodDefaultMode, action);
+        }
         return execute(hint, Mode.MASTER_THAN_BACKUP, action);
     }
 
     private <T> CompletableFuture<T> execute(KeyHintData hint,
                                              Mode methodDefaultMode,
                                              Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
-
         return ensureReady().thenCompose(v -> {
             Mode baseMode = (methodDefaultMode != null) ? methodDefaultMode : configuredMode;
-
             RoutingInfo routingInfo = routing_info.get();
 
-            // Защищённый расчёт номера шарда без отрицательных индексов
             int shard;
             if (hint == null || hint.getWeek_hash() == null) {
                 shard = (randomShard.incrementAndGet() & Integer.MAX_VALUE) % routingInfo.max_shards;
@@ -309,13 +308,16 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             HurriCacheClientInterface backup = getRoute(routingInfo, shard, BACKUP);
 
             if (master == null && backup == null) {
-                return CompletableFuture.failedFuture(new RuntimeException(
-                        "No healthy endpoints available for shard allocation"));
+                return CompletableFuture.failedFuture(new RuntimeException("No healthy endpoints available for shard allocation"));
             }
 
             Mode effectiveMode = baseMode;
-            if (master == null) effectiveMode = Mode.BACKUP;
-            if (backup == null) effectiveMode = Mode.MASTER;
+            if (master == null) {
+                effectiveMode = Mode.BACKUP;
+            }
+            if (backup == null) {
+                effectiveMode = Mode.MASTER;
+            }
 
             return switch (effectiveMode) {
                 case MASTER -> action.apply(master)
@@ -339,12 +341,13 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         });
     }
 
-    private <T> CompletableFuture<T> execute(KeyHintData hint, Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
+    private <T> CompletableFuture<T> execute(KeyHintData hint,
+                                             Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
         Mode overrideMode = currentModeOverride.get();
-        if (overrideMode != null){
+        if (overrideMode != null) {
             return execute(hint, overrideMode, action);
         }
-        return execute(hint, null, action);
+        return execute(hint, configuredMode, action);
     }
 
     private <T> BiFunction<T, Throwable, CompletableFuture<T>> fallbackGuard(int shard,
@@ -352,7 +355,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                                              Function<HurriCacheClientInterface, CompletableFuture<T>> action,
                                                                              HurriCacheClientInterface currentEndpoint,
                                                                              HurriCacheClientInterface fallbackEndpoint) {
-
         return (result, ex) -> {
             if (ex == null) {
                 return CompletableFuture.completedFuture(result);
@@ -372,9 +374,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 scheduledExecutorService.execute(this::init);
 
                 if (fallbackEndpoint != null) {
-                    log.atInfo()
-                            .log("[FAILOVER] Failing over pipeline execution target to: {}",
-                                 fallbackEndpoint.getTarget());
+                    log.atInfo().log("[FAILOVER] Failing over pipeline execution target to: {}", fallbackEndpoint.getTarget());
                     return action.apply(fallbackEndpoint);
                 }
             }
@@ -438,30 +438,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createQueue(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
-                                                      Duration ttl,
-                                                      int clientId,
-                                                      Duration timeout) {
-        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.QUEUE);
-    }
-
-    @Override
-    public CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
-                                                     Duration ttl,
-                                                     int clientId,
-                                                     Duration timeout) {
-        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.LIST);
-    }
-
-    @Override
-    public CompletableFuture<KeyHintData> createVector(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
-                                                       Duration ttl,
-                                                       int clientId,
-                                                       Duration timeout) {
-        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.VECTOR);
-    }
-
-    @Override
     public CompletableFuture<Payload> getAndRemoveTail(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return executeWrite(hint, c -> c.getAndRemoveTail(key, hint, clientId, timeout));
     }
@@ -474,15 +450,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<Payload> getFront(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return execute(hint, c -> c.getFront(key, hint, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> addElementToTail(byte[] key,
-                                                       KeyHintData hint,
-                                                       List<Payload> data,
-                                                       int clientId,
-                                                       Duration timeout) {
-        return executeWrite(hint, c -> c.addElementToTail(key, hint, data, clientId, timeout));
     }
 
     @Override
@@ -522,8 +489,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                                           int end,
                                                                           int clientId,
                                                                           Duration timeout) {
-        return execute(hint, c -> c.streamElementInRangeUnordered(key, hint,
-                                                                  containerType, start, end, clientId, timeout));
+        return execute(hint, c -> c.streamElementInRangeUnordered(key, hint, containerType, start, end, clientId, timeout));
     }
 
     @Override
@@ -549,25 +515,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                                     int clientId,
                                                                     Duration timeout) {
         return executeWrite(hint, c -> c.getAndRemoveElementAtPosition(key, hint, pos, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> addElementToHead(byte[] key,
-                                                       KeyHintData hint,
-                                                       List<Payload> data,
-                                                       int clientId,
-                                                       Duration timeout) {
-        return executeWrite(hint, c -> c.addElementToHead(key, hint, data, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<Integer> addElementToPosition(byte[] key,
-                                                           KeyHintData hint,
-                                                           List<Payload> data,
-                                                           int pos,
-                                                           int clientId,
-                                                           Duration timeout) {
-        return executeWrite(hint, c -> c.addElementToPosition(key, hint, data, pos, clientId, timeout));
     }
 
     @Override
@@ -658,63 +605,99 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     // =========================================================================
 
     @Override
-    public CompletableFuture<KeyHintData> atomicCreate(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<KeyHintData> atomicCreate(byte[] key,
+                                                       KeyHintData hint,
+                                                       long value,
+                                                       Duration ttl,
+                                                       int clientId,
+                                                       Duration timeout) {
         return executeWrite(hint, c -> c.atomicCreate(key, hint, value, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<KeyHintData> atomicStore(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<KeyHintData> atomicStore(byte[] key,
+                                                      KeyHintData hint,
+                                                      long value,
+                                                      Duration ttl,
+                                                      int clientId,
+                                                      Duration timeout) {
         return executeWrite(hint, c -> c.atomicStore(key, hint, value, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Long> atomicExchange(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<Long> atomicExchange(byte[] key,
+                                                  KeyHintData hint,
+                                                  long value,
+                                                  Duration ttl,
+                                                  int clientId,
+                                                  Duration timeout) {
         return executeWrite(hint, c -> c.atomicExchange(key, hint, value, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Long> atomicAdd(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<Long> atomicAdd(byte[] key,
+                                             KeyHintData hint,
+                                             long delta,
+                                             Duration ttl,
+                                             int clientId,
+                                             Duration timeout) {
         return executeWrite(hint, c -> c.atomicAdd(key, hint, delta, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Long> atomicSub(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<Long> atomicSub(byte[] key,
+                                             KeyHintData hint,
+                                             long delta,
+                                             Duration ttl,
+                                             int clientId,
+                                             Duration timeout) {
         return executeWrite(hint, c -> c.atomicSub(key, hint, delta, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Long> atomicAnd(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<Long> atomicAnd(byte[] key,
+                                             KeyHintData hint,
+                                             long mask,
+                                             Duration ttl,
+                                             int clientId,
+                                             Duration timeout) {
         return executeWrite(hint, c -> c.atomicAnd(key, hint, mask, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Long> atomicOr(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<Long> atomicOr(byte[] key,
+                                            KeyHintData hint,
+                                            long mask,
+                                            Duration ttl,
+                                            int clientId,
+                                            Duration timeout) {
         return executeWrite(hint, c -> c.atomicOr(key, hint, mask, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Long> atomicXor(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<Long> atomicXor(byte[] key,
+                                             KeyHintData hint,
+                                             long mask,
+                                             Duration ttl,
+                                             int clientId,
+                                             Duration timeout) {
         return executeWrite(hint, c -> c.atomicXor(key, hint, mask, ttl, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData hint, long expectedValue, long newValue, Duration ttl, int clientId, Duration timeout) {
+    public CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key,
+                                                               KeyHintData hint,
+                                                               long expectedValue,
+                                                               long newValue,
+                                                               Duration ttl,
+                                                               int clientId,
+                                                               Duration timeout) {
         return executeWrite(hint, c -> c.atomicCompareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout));
     }
 
     public FastCacheAsyncSmartClient setMode(Mode mode) {
         this.currentModeOverride.set(mode);
         return this;
-    }
-
-    @Override
-    public CompletableFuture<Boolean> addElementToPositionBefore(byte[] key, KeyHintData hint, List<Payload> data, Payload pos, int clientId, Duration timeout) {
-        return executeWrite(hint, c -> c.addElementToPositionBefore(key, hint, data, pos, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> addElementToPositionAfter(byte[] key, KeyHintData hint, List<Payload> data, Payload pos, int clientId, Duration timeout) {
-        return executeWrite(hint, c -> c.addElementToPositionAfter(key, hint, data, pos, clientId, timeout));
     }
 
     // =========================================================================
@@ -724,18 +707,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<Integer> getSize(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return execute(hint, c -> c.getSize(key, hint, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> addElement(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
-        return executeWrite(hint, c -> c.addElement(key, hint, data, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<KeyHintData> createSet(byte[] key,
-                                                    KeyHintData keyHint,
-                                                    List<Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.SET);
     }
 
     @Override
@@ -749,10 +720,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return executeWrite(hint, c -> c.removeFromContainer(key, hint, type, values, keys, clientId, timeout));
     }
 
-    // =========================================================================
-    // ATOMIC READ OPERATIONS DISPATCH
-    // =========================================================================
-
     @Override
     public CompletableFuture<Long> atomicLoad(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return execute(hint, c -> c.atomicLoad(key, hint, clientId, timeout));
@@ -764,155 +731,41 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<KeyHintData> createOrderedSet(byte[] key, List<OrderedPayload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        List<OrderedPayload> firstChunk = new ArrayList<>();
-        List<OrderedPayload> remaining = new ArrayList<>();
-        splitOrderedPayloads(initialValue, firstChunk, remaining, clientId);
-
-        return createContainerWithChunks(
-                key, null, ttl, clientId, timeout,
-                c -> c.createOrderedSet(key, firstChunk, ttl, clientId, timeout),
-                remaining,
-                null,
-                (chunkKeys, nullValues) -> executeWrite(null, c -> c.addElementOrdered(key, null, chunkKeys, clientId, timeout))
-        );
-    }
-
-    @Override
-    public CompletableFuture<KeyHintData> createMap(byte[] key, Map<Payload, Payload> initialValue, Duration ttl, int clientId, Duration timeout) {
-        Map<Payload, Payload> firstChunkMap = new LinkedHashMap<>();
-        List<Payload> remainingKeys = new ArrayList<>();
-        List<Payload> remainingValues = new ArrayList<>();
-
-        splitMapEntries(initialValue, firstChunkMap, remainingKeys, remainingValues, clientId, ttl);
-
-        return createContainerWithChunks(
-                key, null, ttl, clientId, timeout,
-                c -> c.createMap(key, firstChunkMap, ttl, clientId, timeout),
-                remainingKeys,
-                remainingValues,
-                (chunkKeys, chunkValues) -> executeWrite(null, c -> c.addElementHashMap(key, null, chunkKeys, chunkValues, clientId, timeout))
-        );
-    }
-
-    @Override
-    public CompletableFuture<KeyHintData> createOrderedMap(byte[] key,
-                                                           Map<OrderedPayload, Payload> initialValue,
-                                                           Duration ttl,
-                                                           int clientId,
-                                                           Duration timeout) {
-        Map<OrderedPayload, Payload> firstChunkMap = new LinkedHashMap<>();
-        List<OrderedPayload> remainingKeys = new ArrayList<>();
-        List<Payload> remainingValues = new ArrayList<>();
-
-        splitOrderedMapEntries(initialValue, firstChunkMap, remainingKeys, remainingValues, clientId, ttl);
-
-        return createContainerWithChunks(
-                key, null, ttl, clientId, timeout,
-                c -> c.createOrderedMap(key, firstChunkMap, ttl, clientId, timeout),
-                remainingKeys,
-                remainingValues,
-                (chunkKeys, chunkValues) -> executeWrite(null, c -> c.addElementOrderedMap(key, null, chunkKeys, chunkValues, clientId, timeout))
-        );
-    }
-
-    @Override
-    public CompletableFuture<Integer> addElementWithWeight(byte[] key,
-                                                           KeyHintData hint,
-                                                           List<OrderedPayload> data,
-                                                           int clientId,
-                                                           Duration timeout) {
-        return executeWrite(hint, c -> c.addElementWithWeight(key, hint, data, clientId, timeout));
-    }
-
-    @Override
     public CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return execute(hint, c -> c.streamMap(key, hint, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key,
-                                                                            KeyHintData hint,
-                                                                            int clientId,
-                                                                            Duration timeout) {
+    public CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return execute(hint, c -> c.streamOrderedMap(key, hint, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<byte[]> getContainerValue(byte[] key,
-                                                       KeyHintData hint,
-                                                       byte[] elementKey,
-                                                       int clientId,
-                                                       Duration timeout) {
+    public CompletableFuture<byte[]> getContainerValue(byte[] key, KeyHintData hint, byte[] elementKey, int clientId, Duration timeout) {
         return execute(hint, c -> c.getContainerValue(key, hint, elementKey, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<byte[]> getAndRemoveContainerValue(byte[] key,
-                                                                KeyHintData hint,
-                                                                byte[] elementKey,
-                                                                int clientId,
-                                                                Duration timeout) {
+    public CompletableFuture<byte[]> getAndRemoveContainerValue(byte[] key, KeyHintData hint, byte[] elementKey, int clientId, Duration timeout) {
         return executeWrite(hint, c -> c.getAndRemoveContainerValue(key, hint, elementKey, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Boolean> containsContainerKey(byte[] key,
-                                                           KeyHintData hint,
-                                                           byte[] elementKey,
-                                                           int clientId,
-                                                           Duration timeout) {
+    public CompletableFuture<Boolean> containsContainerKey(byte[] key, KeyHintData hint, byte[] elementKey, int clientId, Duration timeout) {
         return execute(hint, c -> c.containsContainerKey(key, hint, elementKey, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<byte[]> updateContainerValue(byte[] key,
-                                                          KeyHintData hint,
-                                                          byte[] elementKey,
-                                                          byte[] value,
-                                                          int clientId,
-                                                          Duration timeout) {
+    public CompletableFuture<byte[]> updateContainerValue(byte[] key, KeyHintData hint, byte[] elementKey, byte[] value, int clientId, Duration timeout) {
         return executeWrite(hint, c -> c.updateContainerValue(key, hint, elementKey, value, clientId, timeout));
     }
 
     @Override
-    public CompletableFuture<Integer> removeFromContainer(byte[] key,
-                                                          KeyHintData hint,
-                                                          byte[] elementKey,
-                                                          int clientId,
-                                                          Duration timeout) {
+    public CompletableFuture<Integer> removeFromContainer(byte[] key, KeyHintData hint, byte[] elementKey, int clientId, Duration timeout) {
         return executeWrite(hint, c -> c.removeFromContainer(key, hint, elementKey, clientId, timeout));
     }
 
-    @Override
-    public CompletableFuture<Integer> addElementHashMap(byte[] key,
-                                                        KeyHintData hint,
-                                                        List<Payload> container_keys,
-                                                        List<Payload> container_values,
-                                                        int clientId,
-                                                        Duration timeout) {
-        return executeWrite(hint, c -> c.addElementHashMap(key, hint, container_keys, container_values, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<Integer> addElementOrderedMap(byte[] key,
-                                                           KeyHintData hint,
-                                                           List<OrderedPayload> container_keys,
-                                                           List<Payload> container_values,
-                                                           int clientId,
-                                                           Duration timeout) {
-        return executeWrite(hint, c -> c.addElementOrderedMap(key, hint, container_keys, container_values, clientId, timeout));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> addElementOrdered(byte[] key,
-                                                        KeyHintData hint,
-                                                        List<OrderedPayload> data,
-                                                        int clientId,
-                                                        Duration timeout) {
-        return executeWrite(hint, c -> c.addElementOrdered(key, hint, data, clientId, timeout));
-    }
-    private CompletableFuture<java.lang.Void> ensureReady() {
+    private CompletableFuture<Void> ensureReady() {
         if (readyFlag.get()) {
             return CompletableFuture.completedFuture(null);
         }
@@ -941,66 +794,183 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         }
     }
 
-    /**
-     * Универсальный метод создания контейнеров для смарт-клиента.
-     * 1. Создает контейнер с первыми первичными чанками данных через роутинг.
-     * 2. При наличии оставшихся данных ожидает репликации (repDelay).
-     * 3. Попоследовательно отправляет оставшиеся чанки через роутер smart-клиента на основе полученного hint.
-     */
-    private <K, V> CompletableFuture<KeyHintData> createContainerWithChunks(
-            byte[] key,
-            KeyHintData hint,
-            Duration ttl,
-            int clientId,
-            Duration timeout,
-            Function<HurriCacheClientInterface, CompletableFuture<KeyHintData>> createCall,
-            List<K> remainingKeys,
-            List<V> remainingValues,
-            BiFunction<List<K>, List<V>, CompletableFuture<?>> chunkSender) {
+    // =========================================================================
+    // CONTAINER CREATION WITH CHUNKING & ROUTING
+    // =========================================================================
 
-        // 1. Выполняем создание контейнера (первый чанк уходит внутри createCall)
-        CompletableFuture<KeyHintData> createFuture = execute(hint, createCall);
+    @FunctionalInterface
+    private interface DirectChunkSender<K, V> {
+        CompletableFuture<?> send(HurriCacheClientInterface simpleClient, KeyHintData hint, List<K> keys, List<V> values);
+    }
 
-        // Если нет оставшихся элементов, сразу возвращаем результат
+    @Override
+    public CompletableFuture<KeyHintData> createQueue(byte[] key,
+                                                      KeyHintData keyHint,
+                                                      List<Payload> initialValue,
+                                                      Duration ttl,
+                                                      int clientId,
+                                                      Duration timeout) {
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.QUEUE);
+    }
+
+    @Override
+    public CompletableFuture<KeyHintData> createList(byte[] key,
+                                                     KeyHintData keyHint,
+                                                     List<Payload> initialValue,
+                                                     Duration ttl,
+                                                     int clientId,
+                                                     Duration timeout) {
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.LIST);
+    }
+
+    @Override
+    public CompletableFuture<KeyHintData> createVector(byte[] key,
+                                                       KeyHintData keyHint,
+                                                       List<Payload> initialValue,
+                                                       Duration ttl,
+                                                       int clientId,
+                                                       Duration timeout) {
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.VECTOR);
+    }
+
+    @Override
+    public CompletableFuture<KeyHintData> createSet(byte[] key,
+                                                    KeyHintData keyHint,
+                                                    List<Payload> initialValue,
+                                                    Duration ttl,
+                                                    int clientId,
+                                                    Duration timeout) {
+        return createUnorderedContainerSmart(key, keyHint, initialValue, ttl, clientId, timeout, ContainerType.SET);
+    }
+
+    @Override
+    public CompletableFuture<KeyHintData> createOrderedSet(byte[] key,
+                                                           KeyHintData keyHint,
+                                                           List<OrderedPayload> initialValue,
+                                                           Duration ttl,
+                                                           int clientId,
+                                                           Duration timeout) {
+        List<OrderedPayload> firstChunk = new ArrayList<>();
+        List<OrderedPayload> remaining = new ArrayList<>();
+        splitOrderedPayloads(initialValue, firstChunk, remaining, clientId);
+
+        return createContainerWithChunks(key, keyHint, ttl, clientId, timeout,
+                                         c -> c.createOrderedSet(key, keyHint, firstChunk, ttl, clientId, timeout),
+                                         remaining, null,
+                                         (simpleClient, resHint, chunkKeys, chunkValues) ->
+                                                 simpleClient.addElementOrdered(key, resHint, chunkKeys, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<KeyHintData> createMap(byte[] key,
+                                                    KeyHintData keyHint,
+                                                    Map<Payload, Payload> initialValue,
+                                                    Duration ttl,
+                                                    int clientId,
+                                                    Duration timeout) {
+        Map<Payload, Payload> firstChunkMap = new LinkedHashMap<>();
+        List<Payload> remainingKeys = new ArrayList<>();
+        List<Payload> remainingValues = new ArrayList<>();
+
+        splitMapEntries(initialValue, firstChunkMap, remainingKeys, remainingValues, clientId, ttl);
+
+        return createContainerWithChunks(key, keyHint, ttl, clientId, timeout,
+                                         c -> c.createMap(key, keyHint, firstChunkMap, ttl, clientId, timeout),
+                                         remainingKeys, remainingValues,
+                                         (simpleClient, resHint, chunkKeys, chunkValues) ->
+                                                 simpleClient.addElementHashMap(key, resHint, chunkKeys, chunkValues, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<KeyHintData> createOrderedMap(byte[] key,
+                                                           KeyHintData keyHint,
+                                                           Map<OrderedPayload, Payload> initialValue,
+                                                           Duration ttl,
+                                                           int clientId,
+                                                           Duration timeout) {
+        Map<OrderedPayload, Payload> firstChunkMap = new LinkedHashMap<>();
+        List<OrderedPayload> remainingKeys = new ArrayList<>();
+        List<Payload> remainingValues = new ArrayList<>();
+
+        splitOrderedMapEntries(initialValue, firstChunkMap, remainingKeys, remainingValues, clientId, ttl);
+
+        return createContainerWithChunks(key, keyHint, ttl, clientId, timeout,
+                                         c -> c.createOrderedMap(key, keyHint, firstChunkMap, ttl, clientId, timeout),
+                                         remainingKeys, remainingValues,
+                                         (simpleClient, resHint, chunkKeys, chunkValues) ->
+                                                 simpleClient.addElementOrderedMap(key, resHint, chunkKeys, chunkValues, clientId, timeout));
+    }
+
+    private CompletableFuture<KeyHintData> createUnorderedContainerSmart(byte[] key,
+                                                                         KeyHintData keyHint,
+                                                                         List<Payload> initialValue,
+                                                                         Duration ttl,
+                                                                         int clientId,
+                                                                         Duration timeout,
+                                                                         ContainerType type) {
+        List<Payload> firstChunk = new ArrayList<>();
+        List<Payload> remaining = new ArrayList<>();
+        splitPayloads(initialValue, firstChunk, remaining, clientId);
+
+        return createContainerWithChunks(key, keyHint, ttl, clientId, timeout,
+                                         c -> switch (type) {
+                                             case QUEUE -> c.createQueue(key, keyHint, firstChunk, ttl, clientId, timeout);
+                                             case LIST -> c.createList(key, keyHint, firstChunk, ttl, clientId, timeout);
+                                             case VECTOR -> c.createVector(key, keyHint, firstChunk, ttl, clientId, timeout);
+                                             case SET -> c.createSet(key, keyHint, firstChunk, ttl, clientId, timeout);
+                                             default -> throw new IllegalArgumentException("Unsupported type: " + type);
+                                         },
+                                         remaining, null,
+                                         (simpleClient, resHint, chunkKeys, chunkValues) -> switch (type) {
+                                             case QUEUE, LIST, VECTOR -> simpleClient.addElementToTail(key, resHint, chunkKeys, clientId, timeout);
+                                             case SET -> simpleClient.addElement(key, resHint, chunkKeys, clientId, timeout);
+                                             default -> throw new IllegalArgumentException("Unsupported type: " + type);
+                                         }
+        );
+    }
+
+    private <K, V> CompletableFuture<KeyHintData> createContainerWithChunks(byte[] key,
+                                                                            KeyHintData hint,
+                                                                            Duration ttl,
+                                                                            int clientId,
+                                                                            Duration timeout,
+                                                                            Function<HurriCacheClientInterface, CompletableFuture<KeyHintData>> createCall,
+                                                                            List<K> remainingKeys,
+                                                                            List<V> remainingValues,
+                                                                            DirectChunkSender<K, V> chunkSender) {
+        CompletableFuture<KeyHintData> createFuture = executeWrite(hint, createCall);
+
         if (remainingKeys == null || remainingKeys.isEmpty()) {
             return createFuture;
         }
 
-        // 2. Ждем ответа с hint, делаем паузу на репликацию и досылаем остаток по чанкам
         return createFuture.thenCompose(resHint ->
                                                 CompletableFuture.runAsync(FastCacheAsyncSmartClient::repDelay)
-                                                        .thenCompose(ignored -> sendRemainingChunksInPipeline(
-                                                                key, resHint, remainingKeys, remainingValues, clientId, timeout, chunkSender
-                                                        ))
+                                                        .thenCompose(ignored -> sendRemainingChunksInPipeline(resHint,
+                                                                                                              remainingKeys,
+                                                                                                              remainingValues,
+                                                                                                              clientId,
+                                                                                                              chunkSender))
                                                         .thenApply(ignored -> resHint)
         );
     }
 
-    /**
-     * Конвейерная последовательная отправка чанков с использованием роутинга smart-клиента.
-     */
-    private <K, V> CompletableFuture<java.lang.Void> sendRemainingChunksInPipeline(
-            byte[] key,
-            KeyHintData hint,
-            List<K> keys,
-            List<V> values,
-            int clientId,
-            Duration timeout,
-            BiFunction<List<K>, List<V>, CompletableFuture<?>> chunkSender) {
-
+    private <K, V> CompletableFuture<Void> sendRemainingChunksInPipeline(KeyHintData hint,
+                                                                         List<K> keys,
+                                                                         List<V> values,
+                                                                         int clientId,
+                                                                         DirectChunkSender<K, V> chunkSender) {
         if (keys == null || keys.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
 
         List<Pair<List<K>, List<V>>> chunks = partitionChunks(keys, values, clientId);
-
-        CompletableFuture<java.lang.Void> pipeline = CompletableFuture.completedFuture(null);
+        CompletableFuture<Void> pipeline = CompletableFuture.completedFuture(null);
 
         for (Pair<List<K>, List<V>> chunk : chunks) {
-            pipeline = pipeline.thenCompose(v ->
-                                                    chunkSender.apply(chunk.first, chunk.second)
-                                                            .<java.lang.Void>thenApply(res -> null)
-            );
+            pipeline = pipeline.thenCompose(v -> executeWrite(hint, simpleClient ->
+                    chunkSender.send(simpleClient, hint, chunk.first, chunk.second)
+            )).<Void>thenApply(res -> null);
         }
 
         return pipeline;
@@ -1026,7 +996,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             }
 
             currentKeys.add(k);
-            if (v != null) currentValues.add(v);
+            if (v != null) {
+                currentValues.add(v);
+            }
             currentChunkSize += itemSize;
         }
 
@@ -1052,36 +1024,10 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return size;
     }
 
-    private CompletableFuture<KeyHintData> createUnorderedContainerSmart(
-            byte[] key,
-            KeyHintData keyHint,
-            List<Payload> initialValue,
-            Duration ttl,
-            int clientId,
-            Duration timeout,
-            ContainerType type) {
-
-        List<Payload> firstChunk = new ArrayList<>();
-        List<Payload> remaining = new ArrayList<>();
-        splitPayloads(initialValue, firstChunk, remaining, clientId);
-
-        return createContainerWithChunks(
-                key, keyHint, ttl, clientId, timeout,
-                c -> switch (type) {
-                    case QUEUE -> c.createQueue(key, keyHint, firstChunk, ttl, clientId, timeout);
-                    case LIST -> c.createList(key, keyHint, firstChunk, ttl, clientId, timeout);
-                    case VECTOR -> c.createVector(key, keyHint, firstChunk, ttl, clientId, timeout);
-                    case SET -> c.createSet(key, keyHint, firstChunk, ttl, clientId, timeout);
-                    default -> throw new IllegalArgumentException("Unsupported type: " + type);
-                },
-                remaining,
-                null,
-                (chunkKeys, nullValues) -> executeWrite(keyHint, c -> c.addElement(key, keyHint, chunkKeys, clientId, timeout))
-        );
-    }
     private void splitPayloads(List<Payload> source, List<Payload> firstChunk, List<Payload> remaining, int clientId) {
         if (source == null) return;
-        long currentChunkSize = 128; // базовый размер обертки
+        long currentChunkSize = 128;
+
         for (Payload p : source) {
             long elemSize = CompressionUtils.compressIfNeeded(p.getValue(), getDefaultCompressionThreshold()).build().getSerializedSize();
             if (remaining.isEmpty() && (currentChunkSize + elemSize <= MAX_RPC_SIZE)) {
@@ -1143,5 +1089,359 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 remainingValues.add(entry.getValue());
             }
         }
+    }
+
+    // =========================================================================
+    // CHUNKED ELEMENT ADDITION METHODS
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<Integer> addElement(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        for (List<Payload> chunk : chunks) {
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElement(key, hint, chunk, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        for (List<Payload> chunk : chunks) {
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementToTail(key, hint, chunk, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementToHead(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        for (int i = chunks.size() - 1; i >= 0; i--) {
+            List<Payload> chunk = chunks.get(i);
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementToHead(key, hint, chunk, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementOrdered(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        List<List<OrderedPayload>> chunks = splitOrderedPayloads(key, hint, data, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        for (List<OrderedPayload> chunk : chunks) {
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementOrdered(key, hint, chunk, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        List<List<OrderedPayload>> chunks = splitOrderedPayloads(key, hint, data, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        for (List<OrderedPayload> chunk : chunks) {
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementWithWeight(key, hint, chunk, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Payload> data, int pos, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        int currentPos = pos;
+        for (List<Payload> chunk : chunks) {
+            final int targetPos = currentPos;
+            final int chunkSize = chunk.size();
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementToPosition(key, hint, chunk, targetPos, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+            currentPos += chunkSize;
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementToPositionBefore(byte[] key, KeyHintData hint, List<Payload> data, Payload pos, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
+
+        CompletableFuture<Integer> future = executeWrite(hint, c -> c.addElementToPositionBefore(key, hint, chunks.get(0), pos, clientId, timeout));
+        Payload currentPivot = chunks.get(0).get(chunks.get(0).size() - 1);
+
+        for (int i = 1; i < chunks.size(); i++) {
+            List<Payload> chunk = chunks.get(i);
+            Payload nextPivot = chunk.get(chunk.size() - 1);
+            Payload anchor = currentPivot;
+
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementToPositionAfter(key, hint, chunk, anchor, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+            currentPivot = nextPivot;
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementToPositionAfter(byte[] key, KeyHintData hint, List<Payload> data, Payload pos, int clientId, Duration timeout) {
+        if (data == null || data.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+        List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        Payload currentPivot = pos;
+        for (List<Payload> chunk : chunks) {
+            Payload anchor = currentPivot;
+            Payload nextPivot = chunk.get(chunk.size() - 1);
+
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementToPositionAfter(key, hint, chunk, anchor, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+            currentPivot = nextPivot;
+        }
+        return future;
+    }
+
+    // =========================================================================
+    // MAP CHUNKED ELEMENT ADDITION METHODS
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<Integer> addElementHashMap(byte[] key,
+                                                        KeyHintData hint,
+                                                        List<Payload> container_keys,
+                                                        List<Payload> container_values,
+                                                        int clientId,
+                                                        Duration timeout) {
+        if (container_keys == null || container_keys.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        List<Pair<List<Payload>, List<Payload>>> chunks = splitMapPayloads(key, hint, container_keys, container_values, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        for (Pair<List<Payload>, List<Payload>> chunk : chunks) {
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementHashMap(key, hint, chunk.first, chunk.second, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+        }
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Integer> addElementOrderedMap(byte[] key,
+                                                           KeyHintData hint,
+                                                           List<OrderedPayload> container_keys,
+                                                           List<Payload> container_values,
+                                                           int clientId,
+                                                           Duration timeout) {
+        if (container_keys == null || container_keys.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        List<Pair<List<OrderedPayload>, List<Payload>>> chunks = splitOrderedMapPayloads(key, hint, container_keys, container_values, clientId);
+        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
+
+        for (Pair<List<OrderedPayload>, List<Payload>> chunk : chunks) {
+            future = future.thenCompose(addedCount ->
+                                                executeWrite(hint, c -> c.addElementOrderedMap(key, hint, chunk.first, chunk.second, clientId, timeout))
+                                                        .thenApply(res -> addedCount + res)
+            );
+        }
+        return future;
+    }
+
+    private List<Pair<List<Payload>, List<Payload>>> splitMapPayloads(byte[] key,
+                                                                      KeyHintData hint,
+                                                                      List<Payload> keys,
+                                                                      List<Payload> values,
+                                                                      int clientId) {
+        List<Pair<List<Payload>, List<Payload>>> chunks = new ArrayList<>();
+        Key protoKey = KeyValueUtils.createUnorderedKey(key, clientId, null).build();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
+
+        List<Payload> currentKeys = new ArrayList<>();
+        List<Payload> currentValues = new ArrayList<>();
+
+        for (int i = 0; i < keys.size(); i++) {
+            Payload k = keys.get(i);
+            Payload v = (values != null && i < values.size()) ? values.get(i) : null;
+
+            Key kProto = KeyValueUtils.createUnorderedKey(k.getValue(), clientId, null).build();
+            Value vProto = v != null
+                           ? KeyValueUtils.createUnorderedValue(v.getValue(), null, getDefaultCompressionThreshold()).build()
+                           : Value.getDefaultInstance();
+
+            long pairSize = kProto.getSerializedSize() + vProto.getSerializedSize();
+
+            if (!currentKeys.isEmpty() && (currentChunkSize + pairSize > MAX_RPC_SIZE)) {
+                chunks.add(Pair.of(currentKeys, currentValues));
+                currentKeys = new ArrayList<>();
+                currentValues = new ArrayList<>();
+                currentChunkSize = protoKey.getSerializedSize() + 32;
+            }
+
+            currentKeys.add(k);
+            if (v != null) {
+                currentValues.add(v);
+            }
+            currentChunkSize += pairSize;
+        }
+
+        if (!currentKeys.isEmpty()) {
+            chunks.add(Pair.of(currentKeys, currentValues));
+        }
+
+        return chunks;
+    }
+
+    private List<Pair<List<OrderedPayload>, List<Payload>>> splitOrderedMapPayloads(byte[] key,
+                                                                                    KeyHintData hint,
+                                                                                    List<OrderedPayload> keys,
+                                                                                    List<Payload> values,
+                                                                                    int clientId) {
+        List<Pair<List<OrderedPayload>, List<Payload>>> chunks = new ArrayList<>();
+        Key protoKey = KeyValueUtils.createUnorderedKey(key, clientId, null).build();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
+
+        List<OrderedPayload> currentKeys = new ArrayList<>();
+        List<Payload> currentValues = new ArrayList<>();
+
+        for (int i = 0; i < keys.size(); i++) {
+            OrderedPayload k = keys.get(i);
+            Payload v = (values != null && i < values.size()) ? values.get(i) : null;
+
+            long order = k.getOrder() != null ? k.getOrder() : 0L;
+            OrderedKey kProto = KeyValueUtils.createOrderedKey(k.getValue(), order, clientId).build();
+            Value vProto = v != null
+                           ? KeyValueUtils.createUnorderedValue(v.getValue(), null, getDefaultCompressionThreshold()).build()
+                           : Value.getDefaultInstance();
+
+            long pairSize = kProto.getSerializedSize() + vProto.getSerializedSize();
+
+            if (!currentKeys.isEmpty() && (currentChunkSize + pairSize > MAX_RPC_SIZE)) {
+                chunks.add(Pair.of(currentKeys, currentValues));
+                currentKeys = new ArrayList<>();
+                currentValues = new ArrayList<>();
+                currentChunkSize = protoKey.getSerializedSize() + 32;
+            }
+
+            currentKeys.add(k);
+            if (v != null) {
+                currentValues.add(v);
+            }
+            currentChunkSize += pairSize;
+        }
+
+        if (!currentKeys.isEmpty()) {
+            chunks.add(Pair.of(currentKeys, currentValues));
+        }
+
+        return chunks;
+    }
+
+    private List<List<Payload>> splitUnorderedPayloads(byte[] key, KeyHintData hint, List<Payload> data, int clientId) {
+        List<List<Payload>> chunks = new ArrayList<>();
+        Key protoKey = KeyValueUtils.createUnorderedKey(key, clientId, null).build();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
+
+        List<Payload> currentChunk = new ArrayList<>();
+
+        for (Payload payload : data) {
+            Value.Builder compressedValue = CompressionUtils.compressIfNeeded(payload.getValue(), getDefaultCompressionThreshold());
+            int elemSize = compressedValue.build().getSerializedSize();
+
+            if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {
+                chunks.add(currentChunk);
+                currentChunk = new ArrayList<>();
+                currentChunkSize = protoKey.getSerializedSize() + 32;
+            }
+
+            currentChunk.add(payload);
+            currentChunkSize += elemSize;
+        }
+
+        if (!currentChunk.isEmpty()) {
+            chunks.add(currentChunk);
+        }
+
+        return chunks;
+    }
+
+    private List<List<OrderedPayload>> splitOrderedPayloads(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId) {
+        List<List<OrderedPayload>> chunks = new ArrayList<>();
+        Key protoKey = KeyValueUtils.createUnorderedKey(key, clientId, null).build();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
+
+        List<OrderedPayload> currentChunk = new ArrayList<>();
+
+        for (OrderedPayload payload : data) {
+            long order = payload.getOrder() != null ? payload.getOrder() : 0L;
+            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, null).build();
+            int elemSize = orderedValue.getSerializedSize();
+
+            if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {
+                chunks.add(currentChunk);
+                currentChunk = new ArrayList<>();
+                currentChunkSize = protoKey.getSerializedSize() + 32;
+            }
+
+            currentChunk.add(payload);
+            currentChunkSize += elemSize;
+        }
+
+        if (!currentChunk.isEmpty()) {
+            chunks.add(currentChunk);
+        }
+
+        return chunks;
     }
 }

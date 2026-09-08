@@ -1,113 +1,67 @@
 package com.hurricache.utils;
 
-import com.hurricache.grpc.BinaryPayload;
-import com.hurricache.grpc.CompressedInfo;
 import com.hurricache.grpc.Key;
-import com.hurricache.grpc.KeyBinaryPayload;
 import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
-import com.google.protobuf.ByteString;
-import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4SafeDecompressor;
-
 
 public class CompressionUtils {
-    private static final LZ4Factory factory = LZ4Factory.fastestInstance();
 
+    private static final String PROPERTY_NAME = "hurricache.compression";
+    private static final boolean IS_GZIP;
+
+    static {
+        // Читаем проперти, по умолчанию можно использовать lz4 (или gzip, как вам привычнее)
+        String compressionType = System.getProperty(PROPERTY_NAME, "gzip");
+        IS_GZIP = "gzip".equalsIgnoreCase(compressionType) || "deflate".equalsIgnoreCase(compressionType);
+    }
 
     public static Key.Builder compressKeyIfNeeded(byte[] data, Integer clientId, Integer compressionThreshold) {
-        KeyBinaryPayload.Builder payloadBuilder = KeyBinaryPayload.newBuilder();
-        Key.Builder keyBuilder = Key.newBuilder();
-        if (data != null && compressionThreshold != null &&data.length > compressionThreshold) {
-            LZ4Compressor compressor = factory.fastCompressor();
-            int maxCompressedLength = compressor.maxCompressedLength(data.length);
-            byte[] compressed = new byte[maxCompressedLength];
-            int compressedLength = compressor.compress(data, 0, data.length, compressed, 0, maxCompressedLength);
-
-            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressedLength));
-            payloadBuilder.setSize(compressedLength);
-
-            keyBuilder.setCompressionInfo(CompressedInfo.newBuilder()
-                                                  .setEnabled(true)
-                                                  .setRawSize(data.length)
-                                                  .build());
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.compressKeyIfNeeded(data, clientId, compressionThreshold);
         } else {
-            payloadBuilder.setPayload(data != null ? ByteString.copyFrom(data) : ByteString.EMPTY);
-            payloadBuilder.setSize(data != null ? data.length : 0);
+            return LZ4CompressionUtils.compressKeyIfNeeded(data, clientId, compressionThreshold);
         }
-        if (clientId != null) {
-            keyBuilder.setClientId(clientId);
-        }
-
-        return keyBuilder.setPayload(payloadBuilder.build());
     }
 
     public static Value.Builder compressIfNeeded(byte[] data, Integer compressionThreshold) {
-        BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
-        Value.Builder valueBuilder = Value.newBuilder();
-
-        if (data != null && compressionThreshold != null &&data.length > compressionThreshold ) {
-            LZ4Compressor compressor = factory.fastCompressor();
-            int maxCompressedLength = compressor.maxCompressedLength(data.length);
-            byte[] compressed = new byte[maxCompressedLength];
-            int compressedLength = compressor.compress(data, 0, data.length, compressed, 0, maxCompressedLength);
-
-            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressedLength));
-            payloadBuilder.setSize(compressedLength);
-
-            valueBuilder.setCompressionInfo(CompressedInfo.newBuilder()
-                                                    .setEnabled(true)
-                                                    .setRawSize(data.length)
-                                                    .build());
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.compressIfNeeded(data, compressionThreshold);
         } else {
-            payloadBuilder.setPayload(data != null ? ByteString.copyFrom(data) : ByteString.EMPTY);
-            payloadBuilder.setSize(data != null ? data.length : 0);
+            return LZ4CompressionUtils.compressIfNeeded(data, compressionThreshold);
         }
-
-        return valueBuilder.setValue(payloadBuilder.build());
     }
 
-
     public static byte[] decompressIfNeeded(ValueResponse responseValue) {
-        return decompressIfNeeded(responseValue.getValueUnordered());
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.decompressIfNeeded(responseValue);
+        } else {
+            return LZ4CompressionUtils.decompressIfNeeded(responseValue);
+        }
     }
 
     public static byte[] decompressIfNeeded(UpdateValueResponse responseValue) {
-        if (responseValue.getResult()) {
-            return decompressIfNeeded(responseValue.getValue());
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.decompressIfNeeded(responseValue);
         } else {
-            return null;
+            return LZ4CompressionUtils.decompressIfNeeded(responseValue);
         }
     }
 
     public static byte[] decompressIfNeeded(Value responseValue) {
-        BinaryPayload payload = responseValue.getValue();
-        byte[] data = payload.getPayload().toByteArray();
-
-        if (responseValue.hasCompressionInfo() && responseValue.getCompressionInfo().getEnabled()) {
-            int rawSize = responseValue.getCompressionInfo().getRawSize();
-            LZ4SafeDecompressor decompressor = factory.safeDecompressor();
-            byte[] restored = new byte[rawSize];
-            decompressor.decompress(data, 0, data.length, restored, 0);
-            return restored;
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.decompressIfNeeded(responseValue);
+        } else {
+            return LZ4CompressionUtils.decompressIfNeeded(responseValue);
         }
-        return data;
     }
 
     public static byte[] decompressIfNeeded(OrderedValue responseValue) {
-        BinaryPayload payload = responseValue.getValue();
-        byte[] data = payload.getPayload().toByteArray();
-
-        if (responseValue.hasCompressionInfo() && responseValue.getCompressionInfo().getEnabled()) {
-            int rawSize = responseValue.getCompressionInfo().getRawSize();
-            LZ4SafeDecompressor decompressor = factory.safeDecompressor();
-            byte[] restored = new byte[rawSize];
-            decompressor.decompress(data, 0, data.length, restored, 0);
-            return restored;
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.decompressIfNeeded(responseValue);
+        } else {
+            return LZ4CompressionUtils.decompressIfNeeded(responseValue);
         }
-        return data;
     }
 }

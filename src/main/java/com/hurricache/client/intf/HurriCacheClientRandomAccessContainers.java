@@ -116,14 +116,14 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
     /**
      * Inserts elements immediately before a specified pivot element.
      */
-    CompletableFuture<Boolean> addElementToPositionBefore(byte[] key,
+    CompletableFuture<Integer> addElementToPositionBefore(byte[] key,
                                                           KeyHintData hint,
                                                           List<Payload> data,
                                                           Payload pivot,
                                                           int clientId,
                                                           Duration timeout);
 
-    default CompletableFuture<Boolean> addElementToPositionBefore(String key, List<Payload> data, Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionBefore(String key, List<Payload> data, Payload pivot) {
         return addElementToPositionBefore(serializeKey(key),
                                           null,
                                           data,
@@ -132,7 +132,7 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
                                           getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionBefore(String key,
+    default CompletableFuture<Integer> addElementToPositionBefore(String key,
                                                                   KeyHintData hint,
                                                                   List<Payload> data,
                                                                   Payload pivot) {
@@ -144,14 +144,14 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
                                           getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionBefore(String key,
+    default CompletableFuture<Integer> addElementToPositionBefore(String key,
                                                                   List<Payload> data,
                                                                   Payload pivot,
                                                                   int clientId) {
         return addElementToPositionBefore(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionBefore(byte[] key,
+    default CompletableFuture<Integer> addElementToPositionBefore(byte[] key,
                                                                   KeyHintData hint,
                                                                   List<Payload> data,
                                                                   Payload pivot) {
@@ -161,14 +161,14 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
     /**
      * Inserts elements immediately after a specified pivot element.
      */
-    CompletableFuture<Boolean> addElementToPositionAfter(byte[] key,
+    CompletableFuture<Integer> addElementToPositionAfter(byte[] key,
                                                          KeyHintData hint,
                                                          List<Payload> data,
                                                          Payload pivot,
                                                          int clientId,
                                                          Duration timeout);
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(String key, List<Payload> data, Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionAfter(String key, List<Payload> data, Payload pivot) {
         return addElementToPositionAfter(serializeKey(key),
                                          null,
                                          data,
@@ -177,7 +177,7 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
                                          getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(String key,
+    default CompletableFuture<Integer> addElementToPositionAfter(String key,
                                                                  KeyHintData hint,
                                                                  List<Payload> data,
                                                                  Payload pivot) {
@@ -189,14 +189,14 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
                                          getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(String key,
+    default CompletableFuture<Integer> addElementToPositionAfter(String key,
                                                                  List<Payload> data,
                                                                  Payload pivot,
                                                                  int clientId) {
         return addElementToPositionAfter(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToPositionAfter(byte[] key,
+    default CompletableFuture<Integer> addElementToPositionAfter(byte[] key,
                                                                  KeyHintData hint,
                                                                  List<Payload> data,
                                                                  Payload pivot) {

@@ -134,10 +134,10 @@ public class MapAndSetCollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // 2. Add elements (sadd) on Backup
-        Boolean added = client.setMode(Mode.BACKUP)
+        Integer added = client.setMode(Mode.BACKUP)
                 .addElement(setKey, keyHint, List.of(p("item3")))
                 .get();
-        Assertions.assertTrue(added);
+        Assertions.assertTrue(added == 1);
         Thread.sleep(500);
         // 3. Verify Size on Master
         Integer size = client.setMode(Mode.MASTER).getSize(setKey, keyHint).get();

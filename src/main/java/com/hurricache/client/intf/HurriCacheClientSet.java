@@ -32,21 +32,21 @@ public interface HurriCacheClientSet extends HurriCacheClientInterfaceCommon{
     /**
      * Adds elements to an unordered container (e.g., Set,HashSet).
      */
-    CompletableFuture<Boolean> addElement(byte[] key,
+    CompletableFuture<Integer> addElement(byte[] key,
                                           KeyHintData hint,
                                           List<Payload> data,
                                           int clientId,
                                           Duration timeout);
 
-    default CompletableFuture<Boolean> addElement(String key, List<Payload> data) {
+    default CompletableFuture<Integer> addElement(String key, List<Payload> data) {
         return addElement(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElement(String key, KeyHintData hint, List<Payload> data) {
+    default CompletableFuture<Integer> addElement(String key, KeyHintData hint, List<Payload> data) {
         return addElement(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElement(byte[] key, KeyHintData hint, List<Payload> data) {
+    default CompletableFuture<Integer> addElement(byte[] key, KeyHintData hint, List<Payload> data) {
         return addElement(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
     /**

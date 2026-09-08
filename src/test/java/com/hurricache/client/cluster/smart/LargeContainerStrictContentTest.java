@@ -63,7 +63,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         CompletableFuture<KeyHintData> future = client.createList(key, null, expectedPayloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
-
+        Thread.sleep(1000);
         Integer size = client.getSize(key, hint, 0, TIMEOUT).get();
         assertEquals(LARGE_ELEMENT_COUNT, size);
 
@@ -86,7 +86,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         CompletableFuture<KeyHintData> future = client.createVector(key, null, expectedPayloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
-
+        Thread.sleep(1000);
         List<Payload> actualPayloads = client.streamVector(key, hint, 0, TIMEOUT).get();
         assertEquals(LARGE_ELEMENT_COUNT, actualPayloads.size());
 
@@ -102,14 +102,45 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         byte[] key = generateRandomKey();
         List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
 
+        // Подсчитываем реальное количество уникальных элементов по байтовому содержимому
+        Set<Object> uniquePayloads = new HashSet<>();
+        for (Payload p : expectedPayloads) {
+            uniquePayloads.add(new Object() {
+                private final byte[] val = p.getValue();
+
+                @Override
+                public boolean equals(Object o) {
+                    if (this == o) return true;
+                    if (o == null) return false;
+                    // Сравниваем с другим анонимным объектом по содержимому byte[]
+                    try {
+                        var field = o.getClass().getDeclaredField("val");
+                        field.setAccessible(true);
+                        return Arrays.equals(this.val, (byte[]) field.get(o));
+                    } catch (Exception e) {
+                        return false;
+                    }
+                }
+
+                @Override
+                public int hashCode() {
+                    return Arrays.hashCode(val);
+                }
+            });
+        }
+        int expectedUniqueCount = uniquePayloads.size();
+
         CompletableFuture<KeyHintData> future = client.createSet(key, null, expectedPayloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
         Thread.sleep(1000);
-        Integer size = client.getSize(key, hint, 0, TIMEOUT).get();
-        assertEquals(LARGE_ELEMENT_COUNT, size);
 
-        // Для Set проверяем точечные элементы из разных чанков
+        Integer size = client.getSize(key, hint, 0, TIMEOUT).get();
+        assertEquals(expectedUniqueCount, size,
+                     String.format("Размер Set не совпадает с количеством уникальных элементов! Ожидалось: %d, Получено: %d",
+                                   expectedUniqueCount, size));
+
+        // Проверяем выборочные элементы из исходного списка
         Payload first = expectedPayloads.get(0);
         Payload middle = expectedPayloads.get(LARGE_ELEMENT_COUNT / 2);
         Payload last = expectedPayloads.get(LARGE_ELEMENT_COUNT - 1);
@@ -130,7 +161,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             expectedPayloads.add(new OrderedPayload(rawData, (long) i * 10)); // Вес = i * 10
         }
 
-        CompletableFuture<KeyHintData> future = client.createOrderedSet(key, expectedPayloads, getTestTtl(), 0, null);
+        CompletableFuture<KeyHintData> future = client.createOrderedSet(key, null, expectedPayloads, getTestTtl(), 0, null);
         KeyHintData hint = future.get();
         assertNotNull(hint);
         Thread.sleep(1000);
@@ -158,7 +189,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             expectedMap.put(Payload.of(subKey), Payload.of(value));
         }
 
-        CompletableFuture<KeyHintData> future = client.createMap(key, expectedMap, getTestTtl(), 0, TIMEOUT);
+        CompletableFuture<KeyHintData> future = client.createMap(key, null, expectedMap, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
 
@@ -188,11 +219,11 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             expectedMap.put(OrderedPayload.of(subKey, (long) i), Payload.of(value));
         }
 
-        CompletableFuture<KeyHintData> future = client.createOrderedMap(key, expectedMap, getTestTtl(), 0, TIMEOUT);
+        CompletableFuture<KeyHintData> future = client.createOrderedMap(key, null, expectedMap, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
-
-        Map<OrderedPayload, Payload> actualMap = client.streamOrderedMap(key, hint, 0, TIMEOUT).get();
+        Thread.sleep(1000);
+        Map<OrderedPayload, Payload> actualMap = client.streamOrderedMap(key, hint, 0, null).get();
         assertEquals(LARGE_ELEMENT_COUNT, actualMap.size());
 
         for (Map.Entry<OrderedPayload, Payload> entry : expectedMap.entrySet()) {

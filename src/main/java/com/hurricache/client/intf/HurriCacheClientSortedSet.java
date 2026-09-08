@@ -11,30 +11,21 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
     /**
      * Creates an OrderedSet container containing weight/score-ranked {@link OrderedPayload} elements.
      */
-    CompletableFuture<KeyHintData> createOrderedSet(byte[] key,
-                                                    List<OrderedPayload> initialValue,
+    CompletableFuture<KeyHintData> createOrderedSet(byte[] key, KeyHintData keyHint, List<OrderedPayload> initialValue,
                                                     Duration ttl,
                                                     int clientId,
                                                     Duration timeout);
 
     default CompletableFuture<KeyHintData> createOrderedSet(String key, List<OrderedPayload> initialValue) {
-        return createOrderedSet(serializeKey(key),
-                                initialValue == null
-                                ? Collections.emptyList()
-                                : initialValue,
-                                getDefaultTtl(),
-                                getDefaultClientId(),
-                                getDefaultTimeout());
+        return createOrderedSet(serializeKey(key), null, initialValue == null
+        ? Collections.emptyList()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createOrderedSet(byte[] key, List<OrderedPayload> initialValue) {
-        return createOrderedSet(key,
-                                initialValue == null
-                                ? Collections.emptyList()
-                                : initialValue,
-                                getDefaultTtl(),
-                                getDefaultClientId(),
-                                getDefaultTimeout());
+        return createOrderedSet(key,null , initialValue == null
+        ? Collections.emptyList()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**

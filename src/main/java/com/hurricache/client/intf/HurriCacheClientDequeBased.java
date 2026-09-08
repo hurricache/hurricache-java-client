@@ -122,45 +122,45 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
     /**
      * Appends a collection of elements to the tail of a container (Push Back).
      */
-    CompletableFuture<Boolean> addElementToTail(byte[] key,
+    CompletableFuture<Integer> addElementToTail(byte[] key,
                                                 KeyHintData hint,
                                                 List<Payload> data,
                                                 int clientId,
                                                 Duration timeout);
 
-    default CompletableFuture<Boolean> addElementToTail(String key, KeyHintData hint, List<Payload> data) {
+    default CompletableFuture<Integer> addElementToTail(String key, KeyHintData hint, List<Payload> data) {
         return addElementToTail(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToTail(String key,
+    default CompletableFuture<Integer> addElementToTail(String key,
                                                         KeyHintData hint,
                                                         List<Payload> data,
                                                         int clientId) {
         return addElementToTail(serializeKey(key), hint, data, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data) {
+    default CompletableFuture<Integer> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data) {
         return addElementToTail(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
      * Prepends a collection of elements to the head of a container (Push Front).
      */
-    CompletableFuture<Boolean> addElementToHead(byte[] key,
+    CompletableFuture<Integer> addElementToHead(byte[] key,
                                                 KeyHintData hint,
                                                 List<Payload> data,
                                                 int clientId,
                                                 Duration timeout);
 
-    default CompletableFuture<Boolean> addElementToHead(String key, List<Payload> data) {
+    default CompletableFuture<Integer> addElementToHead(String key, List<Payload> data) {
         return addElementToHead(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToHead(String key, KeyHintData hint, List<Payload> data) {
+    default CompletableFuture<Integer> addElementToHead(String key, KeyHintData hint, List<Payload> data) {
         return addElementToHead(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElementToHead(byte[] key, KeyHintData keyHint, List<Payload> data) {
+    default CompletableFuture<Integer> addElementToHead(byte[] key, KeyHintData keyHint, List<Payload> data) {
         return addElementToHead(key, keyHint, data, getDefaultClientId(), getDefaultTimeout());
     }
     /**
