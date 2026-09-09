@@ -351,7 +351,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 long order = payload.getOrder() != null
                              ? payload.getOrder()
                              : 0L;
-                OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, ttl).build();
+                OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, ttl, getDefaultCompressionThreshold()).build();
                 builder.addValueOrdered(orderedValue);
             }
         }
@@ -418,7 +418,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 long order = entry.getKey().getOrder() != null
                              ? entry.getKey().getOrder()
                              : 0L;
-                OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId).build();
+                OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId,getDefaultCompressionThreshold()).build();
                 Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(),
                                                                 ttl,
                                                                 getDefaultCompressionThreshold()).build();
@@ -623,7 +623,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         for (OrderedPayload datum : data) {
             OrderedValue.Builder compressedValue = KeyValueUtils.createOrderedValue(datum.getValue(),
                                                                                     datum.getOrder(),
-                                                                                    Duration.ZERO);
+                                                                                    Duration.ZERO, getDefaultCompressionThreshold());
             builder.addValueOrdered(compressedValue);
         }
 

@@ -1,9 +1,7 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
-import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
-import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -19,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,120 +29,156 @@ public class LockMethodProtectionTest extends TestBase {
     private final int intruderId = 2;
 
     @Test
-    @DisplayName("GLOBAL Lock: Blocks Unary Get/Update/Remove from others")
-    void testGlobalLockUnaryProtection() throws Exception {
-        try {
-            client.remove(testKey, 0xFFFFFFFF).get();
-        } catch (Exception e) {
-            //ignore
-        }
+    @DisplayName("GLOBAL Lock: Blocks Unary Get/Update/Remove from others - Create on Master")
+    void testGlobalLockUnaryProtectionCreateOnMaster() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get());
+        Thread.sleep(150);
 
-        // Ensure object exists
-        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get();
+        client.lockObject(testKey1, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
-        // Owner locks GLOBAL
-        client.lockObject(testKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
-
-        // 1. Intruder tries getValue
-        assertPermissionDenied(() -> client.getValue(testKey, intruderId).get());
-
-        // 2. Intruder tries updateValue
-        assertPermissionDenied(() -> client.updateKeyValue(testKey, "new".getBytes(), intruderId).get());
-
-        // 3. Intruder tries remove
-        assertPermissionDenied(() -> client.remove(testKey, intruderId).get());
+        assertPermissionDenied(() -> client.getValue(testKey1, intruderId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "new".getBytes(StandardCharsets.UTF_8), intruderId).get());
+        assertPermissionDenied(() -> client.remove(testKey1, intruderId).get());
     }
 
     @Test
-    @DisplayName("GLOBAL Lock: Blocks Collection operations from others")
-    void testGlobalLockCollectionProtection() throws Exception {
+    @DisplayName("GLOBAL Lock: Blocks Unary Get/Update/Remove from others - Create on Backup")
+    void testGlobalLockUnaryProtectionCreateOnBackup() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get());
+        Thread.sleep(500);
+
+        client.lockObject(testKey1, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+
+        assertPermissionDenied(() -> client.getValue(testKey1, intruderId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "new".getBytes(StandardCharsets.UTF_8), intruderId).get());
+        assertPermissionDenied(() -> client.remove(testKey1, intruderId).get());
+    }
+
+    @Test
+    @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Master")
+    void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
         String listKey = "global_list" + UUID.randomUUID();
 
-        KeyHintData keyHint = client.createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId).get();
-        client.lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        Assertions.assertNotNull(client.createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId).get());
+        Thread.sleep(150);
 
-        // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.getFront(listKey, keyHint, intruderId).get());
+        client.lockObject(listKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
-        // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.addElementToTail(listKey, keyHint,
-                Collections.singletonList(Payload.of("item2".getBytes())),
-                intruderId).get());
+        assertPermissionDenied(() -> client.getFront(listKey, intruderId).get());
+        assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Payload.of("item2".getBytes())), intruderId).get());
     }
 
-    // --- SECTION 2: WRITE LOCK PROTECTION ---
+    @Test
+    @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Backup")
+    void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
+        String listKey = "global_list" + UUID.randomUUID();
+
+        Assertions.assertNotNull(client.createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId).get());
+        Thread.sleep(150);
+
+        client.lockObject(listKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+
+        assertPermissionDenied(() -> client.getFront(listKey, intruderId).get());
+        assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Payload.of("item2".getBytes())), intruderId).get());
+    }
 
     @Test
-    @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write")
-    void testWriteLockProtection() throws Exception {
-        try {
-            client.remove(testKey, 0xFFFFFFFF).get();
-        } catch (Exception e) {
-            //ignore
-        }
-        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get();
+    @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Master")
+    void testWriteLockProtectionCreateOnMaster() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get());
+        Thread.sleep(150);
 
-        client.lockObject(testKey, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.lockObject(testKey1, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
-        // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.getValue(testKey, intruderId).get();
+        byte[] data = client.getValue(testKey1, intruderId).get();
         assertNotNull(data);
 
-        // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.updateKeyValue(testKey, "fail".getBytes(), intruderId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "fail".getBytes(StandardCharsets.UTF_8), intruderId).get());
 
-        // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.updateKeyValue(testKey, "success".getBytes(), ownerId).get();
+        byte[] ownerUpdate = client.updateKeyValue(testKey1, "success".getBytes(StandardCharsets.UTF_8), ownerId).get();
         assertNotNull(ownerUpdate);
     }
 
-    // --- SECTION 3: READ LOCK PROTECTION ---
-
     @Test
-    @DisplayName("READ Lock: Blocks all Writes but allows all Reads")
-    void testReadLockProtection() throws Exception {
-        try {
-            client.remove(testKey, 0xFFFFFFFF).get();
-        } catch (Exception e) {
-            //ignore
-        }
-        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
-        client.lockObject(testKey, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+    @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Backup")
+    void testWriteLockProtectionCreateOnBackup() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get());
+        Thread.sleep(150);
 
-        // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.getValue(testKey, intruderId).get());
+        client.lockObject(testKey1, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
-        // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.updateKeyValue(testKey, "bad".getBytes(), intruderId).get());
+        byte[] data = client.getValue(testKey1, intruderId).get();
+        assertNotNull(data);
 
-        // 3. Owner Write - SHOULD ALSO FAIL (Read locks block all mutations)
-        assertPermissionDenied(() -> client.updateKeyValue(testKey, "bad".getBytes(), ownerId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "fail".getBytes(StandardCharsets.UTF_8), intruderId).get());
+
+        byte[] ownerUpdate = client.updateKeyValue(testKey1, "success".getBytes(StandardCharsets.UTF_8), ownerId).get();
+        assertNotNull(ownerUpdate);
     }
 
-    // --- SECTION 4: LOCK COMPATIBILITY ---
+    @Test
+    @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Master")
+    void testReadLockProtectionCreateOnMaster() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Thread.sleep(150);
+
+        client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+
+        assertNotNull(client.getValue(testKey1, intruderId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "bad".getBytes(StandardCharsets.UTF_8), intruderId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "bad".getBytes(StandardCharsets.UTF_8), ownerId).get());
+    }
 
     @Test
-    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists")
-    void testLockCompatibility() throws Exception {
-        try {
-            client.remove(testKey, 0xFFFFFFFF).get();
-        } catch (Exception e) {
-            //ignore
-        }
-        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
-        // Client A has READ
-        client.lockObject(testKey, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+    @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Backup")
+    void testReadLockProtectionCreateOnBackup() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Thread.sleep(150);
 
-        // Client B tries WRITE
-        LockStatus res = client.lockObject(testKey, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+
+        assertNotNull(client.getValue(testKey1, intruderId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "bad".getBytes(StandardCharsets.UTF_8), intruderId).get());
+        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "bad".getBytes(StandardCharsets.UTF_8), ownerId).get());
+    }
+
+    @Test
+    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Master")
+    void testLockCompatibilityCreateOnMaster() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Thread.sleep(150);
+
+        client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+
+        LockStatus res = client.lockObject(testKey1, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, res);
 
-        // Client B tries READ - SHOULD SUCCEED (Shared Read)
-        LockStatus resRead = client.lockObject(testKey, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus resRead = client.lockObject(testKey1, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, resRead);
     }
 
-    // --- UTILITIES ---
+    @Test
+    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Backup")
+    void testLockCompatibilityCreateOnBackup() throws Exception {
+        String testKey1 = testKey + UUID.randomUUID();
+        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Thread.sleep(150);
+
+        client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+
+        LockStatus res = client.lockObject(testKey1, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.CANT_LOCK, res);
+
+        LockStatus resRead = client.lockObject(testKey1, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, resRead);
+    }
 
     private void assertPermissionDenied(Executable runnable) {
         ExecutionException e = assertThrows(ExecutionException.class, runnable);
@@ -152,5 +187,4 @@ public class LockMethodProtectionTest extends TestBase {
                 grpcEx.getStatus().getCode(),
                 "Expected PERMISSION_DENIED but got " + grpcEx.getStatus().getCode());
     }
-
 }

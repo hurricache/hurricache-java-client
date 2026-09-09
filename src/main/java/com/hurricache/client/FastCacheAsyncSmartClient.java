@@ -1013,9 +1013,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         long size = 0;
         if (keyOrPayload instanceof OrderedPayload op) {
             long order = op.getOrder() != null ? op.getOrder() : 0L;
-            size += KeyValueUtils.createOrderedKey(op.getValue(), order, clientId).build().getSerializedSize();
+            size += KeyValueUtils.createOrderedKey(op.getValue(), order, clientId,getDefaultCompressionThreshold()).build().getSerializedSize();
         } else if (keyOrPayload instanceof Payload p) {
-            size += KeyValueUtils.createUnorderedKey(p.getValue(), clientId, null).build().getSerializedSize();
+            size += KeyValueUtils.createUnorderedKey(p.getValue(), clientId, getDefaultCompressionThreshold()).build().getSerializedSize();
         }
 
         if (valuePayload instanceof Payload vp) {
@@ -1044,7 +1044,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         long currentChunkSize = 128;
         for (OrderedPayload op : source) {
             long order = op.getOrder() != null ? op.getOrder() : 0L;
-            long elemSize = KeyValueUtils.createOrderedValue(op.getValue(), order, null).build().getSerializedSize();
+            long elemSize = KeyValueUtils.createOrderedValue(op.getValue(), order, null, getDefaultCompressionThreshold()).build().getSerializedSize();
             if (remaining.isEmpty() && (currentChunkSize + elemSize <= MAX_RPC_SIZE)) {
                 firstChunk.add(op);
                 currentChunkSize += elemSize;
@@ -1077,7 +1077,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         long currentChunkSize = 128;
         for (Map.Entry<OrderedPayload, Payload> entry : source.entrySet()) {
             long order = entry.getKey().getOrder() != null ? entry.getKey().getOrder() : 0L;
-            OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId).build();
+            OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId,getDefaultCompressionThreshold()).build();
             Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl, getDefaultCompressionThreshold()).build();
             long pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
 
@@ -1360,7 +1360,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             Payload v = (values != null && i < values.size()) ? values.get(i) : null;
 
             long order = k.getOrder() != null ? k.getOrder() : 0L;
-            OrderedKey kProto = KeyValueUtils.createOrderedKey(k.getValue(), order, clientId).build();
+            OrderedKey kProto = KeyValueUtils.createOrderedKey(k.getValue(), order, clientId,getDefaultCompressionThreshold()).build();
             Value vProto = v != null
                            ? KeyValueUtils.createUnorderedValue(v.getValue(), null, getDefaultCompressionThreshold()).build()
                            : Value.getDefaultInstance();
@@ -1425,7 +1425,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
         for (OrderedPayload payload : data) {
             long order = payload.getOrder() != null ? payload.getOrder() : 0L;
-            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, null).build();
+            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, null, getDefaultCompressionThreshold()).build();
             int elemSize = orderedValue.getSerializedSize();
 
             if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {

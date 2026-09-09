@@ -1,42 +1,41 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
-import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class ControlOperationsTest extends TestBase {
 
     @Test
     void testTtlMethods() throws ExecutionException, InterruptedException {
-        String key = "ttlKey";
-        KeyHintData keyHint = client.createKeyValue(key, "data".getBytes()).get();
+        String key = "ttlKey" + UUID.randomUUID();
 
-        // Set TTL to 100 seconds
-        Boolean success = client.setTtl(key, keyHint, 100).get();
+        client.createKeyValue(key, "data".getBytes()).get();
+        Thread.sleep(500);
+
+        Boolean success = client.setTtl(key, null, 100).get();
         Assertions.assertTrue(success);
 
-        // Verify TTL
         Long res = client.getTtl(key).get();
-        Assertions.assertTrue(res > 0 && res <= 100);
+        Assertions.assertTrue(res > 0 && res <= 100, () -> res.toString() + " " + key);
     }
 
     @Test
     void testLockingMechanism() throws ExecutionException, InterruptedException {
-        String lockKey = "resourceKey";
-        client.createKeyValue(lockKey, "secure_data".getBytes()).get();
+        String lockKey = "resourceKey" + UUID.randomUUID();
 
-        // Client 1 acquires lock
+        client.createKeyValue(lockKey, "secure_data".getBytes()).get();
+        Thread.sleep(500);
+
         LockStatus lockRes = client.lockObject(lockKey, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
-        // Client 2 attempts to lock (should fail based on server logic)
         LockStatus lockResConflict = client.lockObject(lockKey, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
         Assertions.assertNotEquals(LockStatus.OK, lockResConflict);
     }

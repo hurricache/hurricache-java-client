@@ -6,6 +6,7 @@ import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.ContainerType;
+import com.hurricache.grpc.HurriCacheGrpcServiceGrpc;
 import com.hurricache.grpc.Key;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -13,6 +14,7 @@ import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.Value;
 import com.hurricache.utils.CompressionUtils;
+import io.grpc.ManagedChannelBuilder;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,6 +28,14 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
 
     public FastCacheAsyncStandaloneClient(FastCacheAsyncSimpleClient delegate) {
         this.delegate = delegate;
+    }
+
+    public FastCacheAsyncStandaloneClient(String host,
+                                      int port,
+                                      int defaultClientId,
+                                      Duration timeout
+                                      ) {
+        delegate = new FastCacheAsyncSimpleClient(host, port, defaultClientId,timeout, getDefaultCompressionThreshold());
     }
 
     // =========================================================================
@@ -47,10 +57,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         return delegate.getDefaultTimeout();
     }
 
-    @Override
-    public int getDefaultCompressionThreshold() {
-        return delegate.getDefaultCompressionThreshold();
-    }
+
 
     @Override
     public void shutdown() {
@@ -230,7 +237,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         List<OrderedPayload> firstChunk = new ArrayList<>();
         for (OrderedPayload payload : initialValue) {
             long order = payload.getOrder() != null ? payload.getOrder() : 0L;
-            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, ttl).build();
+            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, ttl, getDefaultCompressionThreshold()).build();
             int elemSize = orderedValue.getSerializedSize();
 
             if (!firstChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {
@@ -272,7 +279,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
 
         for (OrderedPayload payload : tail) {
             long order = payload.getOrder() != null ? payload.getOrder() : 0L;
-            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, null).build();
+            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, null, getDefaultCompressionThreshold()).build();
             int elemSize = orderedValue.getSerializedSize();
 
             if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {
@@ -384,7 +391,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
 
         for (Map.Entry<OrderedPayload, Payload> entry : initialValue.entrySet()) {
             long order = entry.getKey().getOrder() != null ? entry.getKey().getOrder() : 0L;
-            OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId).build();
+            OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId,getDefaultCompressionThreshold()).build();
             Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl, getDefaultCompressionThreshold()).build();
 
             int pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
@@ -437,7 +444,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
             Payload v = values.get(i);
 
             long order = k.getOrder() != null ? k.getOrder() : 0L;
-            OrderedKey kVal = KeyValueUtils.createOrderedKey(k.getValue(), order, clientId).build();
+            OrderedKey kVal = KeyValueUtils.createOrderedKey(k.getValue(), order, clientId,getDefaultCompressionThreshold()).build();
             Value vVal = KeyValueUtils.createUnorderedValue(v.getValue(), null, compressionThreshold).build();
 
             int pairSize = kVal.getSerializedSize() + vVal.getSerializedSize();
@@ -729,7 +736,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
 
         for (OrderedPayload payload : data) {
             long order = payload.getOrder() != null ? payload.getOrder() : 0L;
-            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, null).build();
+            OrderedValue orderedValue = KeyValueUtils.createOrderedValue(payload.getValue(), order, null, getDefaultCompressionThreshold()).build();
             int elemSize = orderedValue.getSerializedSize();
 
             if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {

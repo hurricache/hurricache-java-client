@@ -1,6 +1,5 @@
 package com.hurricache.utils;
 
-import com.google.protobuf.ByteString;
 import com.hurricache.grpc.BinaryPayload;
 import com.hurricache.grpc.CompressedInfo;
 import com.hurricache.grpc.Key;
@@ -10,51 +9,27 @@ import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
+import com.google.protobuf.ByteString;
+import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4SafeDecompressor;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
-public class GZIPCompressionUtils {
-    private static byte[] compressGzip(byte[] data) {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             GZIPOutputStream gzipOut = new GZIPOutputStream(baos)) {
-            gzipOut.write(data);
-            gzipOut.finish();
-            return baos.toByteArray();
-        } catch (IOException e) {
-            throw new RuntimeException("GZIP compression failed", e);
-        }
-    }
+public class LZ4CompressionUtils {
+    private static final LZ4Factory factory = LZ4Factory.fastestInstance();
 
-    private static byte[] decompressGzip(byte[] data, int rawSize) {
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
-             GZIPInputStream gzipIn = new GZIPInputStream(bais)) {
-            byte[] restored = new byte[rawSize];
-            int totalRead = 0;
-            while (totalRead < rawSize) {
-                int read = gzipIn.read(restored, totalRead, rawSize - totalRead);
-                if (read == -1) {
-                    break;
-                }
-                totalRead += read;
-            }
-            return restored;
-        } catch (IOException e) {
-            throw new RuntimeException("GZIP decompression failed", e);
-        }
-    }
 
     public static Key.Builder compressKeyIfNeeded(byte[] data, Integer clientId, Integer compressionThreshold) {
         KeyBinaryPayload.Builder payloadBuilder = KeyBinaryPayload.newBuilder();
         Key.Builder keyBuilder = Key.newBuilder();
-        if (data != null && compressionThreshold != null && data.length > compressionThreshold) {
-            byte[] compressed = compressGzip(data);
+        if (data != null && compressionThreshold != null &&data.length > compressionThreshold) {
+            LZ4Compressor compressor = factory.fastCompressor();
+            int maxCompressedLength = compressor.maxCompressedLength(data.length);
+            byte[] compressed = new byte[maxCompressedLength];
+            int compressedLength = compressor.compress(data, 0, data.length, compressed, 0, maxCompressedLength);
 
-            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressed.length));
-            payloadBuilder.setSize(compressed.length);
+            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressedLength));
+            payloadBuilder.setSize(compressedLength);
 
             keyBuilder.setCompressionInfo(CompressedInfo.newBuilder()
                                                   .setEnabled(true)
@@ -76,11 +51,14 @@ public class GZIPCompressionUtils {
                                                          Integer compressionThreshold) {
         KeyBinaryPayload.Builder payloadBuilder = KeyBinaryPayload.newBuilder();
         OrderedKey.Builder keyBuilder = OrderedKey.newBuilder();
-        if (data != null && compressionThreshold != null && data.length > compressionThreshold) {
-            byte[] compressed = compressGzip(data);
+        if (data != null && compressionThreshold != null &&data.length > compressionThreshold) {
+            LZ4Compressor compressor = factory.fastCompressor();
+            int maxCompressedLength = compressor.maxCompressedLength(data.length);
+            byte[] compressed = new byte[maxCompressedLength];
+            int compressedLength = compressor.compress(data, 0, data.length, compressed, 0, maxCompressedLength);
 
-            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressed.length));
-            payloadBuilder.setSize(compressed.length);
+            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressedLength));
+            payloadBuilder.setSize(compressedLength);
 
             keyBuilder.setCompressionInfo(CompressedInfo.newBuilder()
                                                   .setEnabled(true)
@@ -100,11 +78,14 @@ public class GZIPCompressionUtils {
         BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
         Value.Builder valueBuilder = Value.newBuilder();
 
-        if (data != null && compressionThreshold != null && data.length > compressionThreshold) {
-            byte[] compressed = compressGzip(data);
+        if (data != null && compressionThreshold != null &&data.length > compressionThreshold ) {
+            LZ4Compressor compressor = factory.fastCompressor();
+            int maxCompressedLength = compressor.maxCompressedLength(data.length);
+            byte[] compressed = new byte[maxCompressedLength];
+            int compressedLength = compressor.compress(data, 0, data.length, compressed, 0, maxCompressedLength);
 
-            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressed.length));
-            payloadBuilder.setSize(compressed.length);
+            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressedLength));
+            payloadBuilder.setSize(compressedLength);
 
             valueBuilder.setCompressionInfo(CompressedInfo.newBuilder()
                                                     .setEnabled(true)
@@ -137,7 +118,10 @@ public class GZIPCompressionUtils {
 
         if (responseValue.hasCompressionInfo() && responseValue.getCompressionInfo().getEnabled()) {
             int rawSize = responseValue.getCompressionInfo().getRawSize();
-            return decompressGzip(data, rawSize);
+            LZ4SafeDecompressor decompressor = factory.safeDecompressor();
+            byte[] restored = new byte[rawSize];
+            decompressor.decompress(data, 0, data.length, restored, 0);
+            return restored;
         }
         return data;
     }
@@ -148,7 +132,10 @@ public class GZIPCompressionUtils {
 
         if (responseValue.hasCompressionInfo() && responseValue.getCompressionInfo().getEnabled()) {
             int rawSize = responseValue.getCompressionInfo().getRawSize();
-            return decompressGzip(data, rawSize);
+            LZ4SafeDecompressor decompressor = factory.safeDecompressor();
+            byte[] restored = new byte[rawSize];
+            decompressor.decompress(data, 0, data.length, restored, 0);
+            return restored;
         }
         return data;
     }
@@ -157,11 +144,14 @@ public class GZIPCompressionUtils {
         BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
         OrderedValue.Builder valueBuilder = OrderedValue.newBuilder();
 
-        if (data != null && compressionThreshold != null && data.length > compressionThreshold) {
-            byte[] compressed = compressGzip(data);
+        if (data != null && compressionThreshold != null &&data.length > compressionThreshold ) {
+            LZ4Compressor compressor = factory.fastCompressor();
+            int maxCompressedLength = compressor.maxCompressedLength(data.length);
+            byte[] compressed = new byte[maxCompressedLength];
+            int compressedLength = compressor.compress(data, 0, data.length, compressed, 0, maxCompressedLength);
 
-            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressed.length));
-            payloadBuilder.setSize(compressed.length);
+            payloadBuilder.setPayload(ByteString.copyFrom(compressed, 0, compressedLength));
+            payloadBuilder.setSize(compressedLength);
 
             valueBuilder.setCompressionInfo(CompressedInfo.newBuilder()
                                                     .setEnabled(true)
@@ -172,6 +162,7 @@ public class GZIPCompressionUtils {
             payloadBuilder.setSize(data != null ? data.length : 0);
         }
         valueBuilder.setOrder(order);
+
         return valueBuilder.setValue(payloadBuilder.build());
     }
 

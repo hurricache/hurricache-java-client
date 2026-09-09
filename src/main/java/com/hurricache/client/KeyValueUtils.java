@@ -33,21 +33,19 @@ public class KeyValueUtils {
         return builder;
     }
 
-    public static OrderedKey.Builder createOrderedKey(byte[] keyStr,KeyHintData hint,long order, int clientId) {
-        OrderedKey.Builder builder = OrderedKey.newBuilder();
+    public static OrderedKey.Builder createOrderedKey(byte[] keyStr,KeyHintData hint,long order, int clientId, Integer compressionThreshold) {
+        OrderedKey.Builder builder = CompressionUtils.compressKeyIfNeeded(keyStr,order, clientId,compressionThreshold);
         if (hint != null) {
             KeyHint.Builder khBuilder = KeyHint.newBuilder();
             if (hint.hasWeekHash()) khBuilder.setWeekHash(hint.getWeek_hash());
             if (hint.hasStrongHash()) khBuilder.setStrongHash(hint.getStrong_hash());
             builder.setKeyHint(khBuilder);
         }
-        builder.setOrder(order).setClientId(clientId);
-        builder.setPayload(KeyBinaryPayload.newBuilder().setPayload(ByteString.copyFrom(keyStr)).setSize(keyStr.length));
         return builder;
     }
 
-    public static OrderedKey.Builder createOrderedKey(byte[] keyStr,long order, int clientId) {
-        return createOrderedKey(keyStr,null,order,clientId);
+    public static OrderedKey.Builder createOrderedKey(byte[] keyStr,long order, int clientId, Integer compressionThreshold) {
+        return createOrderedKey(keyStr,null,order,clientId,compressionThreshold);
     }
 
 
@@ -60,9 +58,8 @@ public class KeyValueUtils {
         return builder;
     }
 
-    public static OrderedValue.Builder createOrderedValue(byte[] data,long order,Duration ttl) {
-        OrderedValue.Builder builder = OrderedValue.newBuilder();
-        builder.setValue(BinaryPayload.newBuilder().setSize(data.length).setPayload(ByteString.copyFrom(data)).build());
+    public static OrderedValue.Builder createOrderedValue(byte[] data,long order,Duration ttl,Integer compressionThreshold) {
+        OrderedValue.Builder builder = CompressionUtils.compressIfNeeded(data,order,compressionThreshold);
         if (ttl != null && !ttl.isZero()) builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         builder.setOrder(order);
         return builder;

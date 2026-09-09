@@ -1,9 +1,11 @@
 package com.hurricache.utils;
 
 import com.hurricache.grpc.Key;
+import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.Value;
+import com.hurricache.grpc.ValueOrBuilder;
 import com.hurricache.grpc.ValueResponse;
 
 public class CompressionUtils {
@@ -24,12 +26,27 @@ public class CompressionUtils {
             return LZ4CompressionUtils.compressKeyIfNeeded(data, clientId, compressionThreshold);
         }
     }
+    public static OrderedKey.Builder compressKeyIfNeeded(byte[] data,long order, Integer clientId, Integer compressionThreshold) {
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.compressKeyIfNeeded(data,order, clientId, compressionThreshold);
+        } else {
+            return LZ4CompressionUtils.compressKeyIfNeeded(data,order, clientId, compressionThreshold);
+        }
+    }
 
     public static Value.Builder compressIfNeeded(byte[] data, Integer compressionThreshold) {
         if (IS_GZIP) {
             return GZIPCompressionUtils.compressIfNeeded(data, compressionThreshold);
         } else {
             return LZ4CompressionUtils.compressIfNeeded(data, compressionThreshold);
+        }
+    }
+
+    public static OrderedValue.Builder compressIfNeeded(byte[] data,long order, Integer compressionThreshold) {
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.compressIfNeeded(data,order, compressionThreshold);
+        } else {
+            return LZ4CompressionUtils.compressIfNeeded(data,order, compressionThreshold);
         }
     }
 
