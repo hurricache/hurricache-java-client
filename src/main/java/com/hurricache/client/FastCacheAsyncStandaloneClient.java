@@ -144,7 +144,13 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
                                                                            int clientId,
                                                                            Duration timeout) {
         if (initialValue == null || initialValue.isEmpty()) {
-            return delegate.createList(key, keyHint, initialValue, ttl, clientId, timeout);
+            switch (type) {
+                case QUEUE -> delegate.createQueue(key, keyHint, List.of(), ttl, clientId, timeout);
+                case VECTOR -> delegate.createVector(key, keyHint, List.of(), ttl, clientId, timeout);
+                case SET -> delegate.createSet(key, keyHint, List.of(), ttl, clientId, timeout);
+                default ->  delegate.createList(key, keyHint, List.of(), ttl, clientId, timeout);
+            }
+
         }
 
         Key protoKey = KeyValueUtils.createUnorderedKey(key, keyHint, clientId, getDefaultCompressionThreshold()).build();
@@ -543,7 +549,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElement(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElement(key, hint, data, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         return sendUnorderedChunksInSequence(key, hint, data, clientId, timeout,
@@ -554,7 +560,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElementToTail(key, hint, data, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         return sendUnorderedChunksInSequence(key, hint, data, clientId, timeout,
@@ -565,7 +571,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElementToHead(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElementToHead(key, hint, data, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
@@ -585,7 +591,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElementOrdered(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElementOrdered(key, hint, data, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         return sendOrderedChunksInSequence(key, hint, data, clientId, timeout,
@@ -596,7 +602,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElementWithWeight(key, hint, data, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         List<List<OrderedPayload>> chunks = splitOrderedPayloads(key, hint, data, clientId);
@@ -615,7 +621,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Payload> data, int pos, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElementToPosition(key, hint, data, pos, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
@@ -638,7 +644,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElementToPositionBefore(byte[] key, KeyHintData hint, List<Payload> data, Payload pivot, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElementToPositionBefore(key, hint, data, pivot, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
@@ -664,7 +670,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<Integer> addElementToPositionAfter(byte[] key, KeyHintData hint, List<Payload> data, Payload pivot, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
-            return delegate.addElementToPositionAfter(key, hint, data, pivot, clientId, timeout);
+            return CompletableFuture.completedFuture(0);
         }
 
         List<List<Payload>> chunks = splitUnorderedPayloads(key, hint, data, clientId);
