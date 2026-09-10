@@ -154,6 +154,23 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("third", remaining.get(1));
     }
 
+    @Test
+    @DisplayName("getAndRemoveFront: on single-element list (edge: empty after)")
+    void testGetAndRemoveFrontOnSingleElementList() throws ExecutionException, InterruptedException {
+        String key = "getAndRemoveFrontSingle" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("only".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Payload removed = client.getAndRemoveFront(key).get();
+        assertNotNull(removed);
+        Assertions.assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+
+        List<Payload> remaining = client.streamVector(key).get();
+        Assertions.assertEquals(0, remaining.size());
+    }
+
     // =========================================================================
     // 4. GET FRONT / GET HEAD
     // =========================================================================
@@ -186,6 +203,20 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("tail", all.get(1));
     }
 
+    @Test
+    @DisplayName("getFront: on single-element list (edge case)")
+    void testGetFrontOnSingleElementList() throws ExecutionException, InterruptedException {
+        String key = "getFrontSingle" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("only".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Payload front = client.getFront(key).get();
+        assertNotNull(front);
+        Assertions.assertEquals("only", new String(front.getValue(), StandardCharsets.UTF_8));
+    }
+
     // =========================================================================
     // 5. GET TAIL
     // =========================================================================
@@ -204,6 +235,24 @@ public class VectorOperationsTest extends TestBase {
         Payload tail = client.getTail(key).get();
         assertNotNull(tail);
         Assertions.assertEquals("last", new String(tail.getValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getTail: on single-element list (head == tail)")
+    void testGetTailOnSingleElementList() throws ExecutionException, InterruptedException {
+        String key = "getTailSingle" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("only".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Payload head = client.getHead(key).get();
+        Payload tail = client.getTail(key).get();
+
+        assertNotNull(head);
+        assertNotNull(tail);
+        Assertions.assertEquals("only", new String(head.getValue(), StandardCharsets.UTF_8));
+        Assertions.assertEquals("only", new String(tail.getValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -235,6 +284,23 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("second", remaining.get(1));
     }
 
+    @Test
+    @DisplayName("getAndRemoveTail: on single-element list (list becomes empty)")
+    void testGetAndRemoveTailOnSingleElementList() throws ExecutionException, InterruptedException {
+        String key = "getAndRemoveTailSingle" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("only".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Payload removed = client.getAndRemoveTail(key).get();
+        assertNotNull(removed);
+        Assertions.assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+
+        List<Payload> remaining = client.streamVector(key).get();
+        Assertions.assertEquals(0, remaining.size());
+    }
+
     // =========================================================================
     // 7. GET ELEMENT AT POSITION
     // =========================================================================
@@ -260,6 +326,36 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("pos0", new String(pos0.getValue(), StandardCharsets.UTF_8));
         Assertions.assertEquals("pos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
         Assertions.assertEquals("pos2", new String(pos2.getValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getElementAtPosition: position 0 (edge case)")
+    void testGetElementAtPositionZero() throws ExecutionException, InterruptedException {
+        String key = "getElementAtPositionZero" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Payload pos0 = client.getElementAtPosition(key, 0).get();
+        assertNotNull(pos0);
+        Assertions.assertEquals("first", new String(pos0.getValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getElementAtPosition: last position (edge case)")
+    void testGetElementAtPositionLast() throws ExecutionException, InterruptedException {
+        String key = "getElementAtPositionLast" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Payload last = client.getElementAtPosition(key, 1).get();
+        assertNotNull(last);
+        Assertions.assertEquals("second", new String(last.getValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -291,6 +387,31 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("c", remaining.get(1));
     }
 
+    @Test
+    @DisplayName("getAndRemoveElementAtPosition: position 0 (edge case)")
+    void testGetAndRemoveElementAtPositionFirst() throws ExecutionException, InterruptedException {
+        String key = "getAndRemoveElementAtPositionFirst" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("second".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("third".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Payload removed = client.getAndRemoveElementAtPosition(key, null, 0).get();
+        assertNotNull(removed);
+        Assertions.assertEquals("first", new String(removed.getValue(), StandardCharsets.UTF_8));
+
+        List<String> remaining = client.streamVector(key).get()
+                .stream()
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
+                .toList();
+
+        Assertions.assertEquals(2, remaining.size());
+        Assertions.assertEquals("second", remaining.get(0));
+        Assertions.assertEquals("third", remaining.get(1));
+    }
+
     // =========================================================================
     // 9. ADD ELEMENT AT POSITION
     // =========================================================================
@@ -317,6 +438,31 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(3, results.size());
         Assertions.assertEquals("first", results.get(0));
         Assertions.assertEquals("middle", results.get(1));
+        Assertions.assertEquals("last", results.get(2));
+    }
+
+    @Test
+    @DisplayName("addElementToPosition: insert at position == size (edge case)")
+    void testAddElementToPositionAtEnd() throws ExecutionException, InterruptedException {
+        String key = "addElementToPositionAtEnd" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Integer added = client.addElementToPosition(key, null,
+                                                    List.of(Payload.of("last".getBytes(StandardCharsets.UTF_8))), 2).get();
+        Assertions.assertTrue(added >= 0);
+
+        List<String> results = client.streamVector(key).get()
+                .stream()
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
+                .toList();
+
+        Assertions.assertEquals(3, results.size());
+        Assertions.assertEquals("first", results.get(0));
+        Assertions.assertEquals("second", results.get(1));
         Assertions.assertEquals("last", results.get(2));
     }
 
@@ -378,6 +524,32 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("pivot", results.get(2));
     }
 
+    @Test
+    @DisplayName("addElementToPositionBefore: insert before first element (edge case)")
+    void testAddElementToPositionBeforeFirst() throws ExecutionException, InterruptedException {
+        String key = "addElementToPositionBeforeFirst" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Integer added = client.addElementToPositionBefore(key,
+                                                          List.of(Payload.of("inserted".getBytes(StandardCharsets.UTF_8))),
+                                                          Payload.of("first".getBytes(StandardCharsets.UTF_8))).get();
+        Assertions.assertTrue(added >= 0);
+
+        List<String> results = client.streamVector(key).get()
+                .stream()
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
+                .toList();
+
+        Assertions.assertEquals(3, results.size());
+        Assertions.assertEquals("inserted", results.get(0));
+        Assertions.assertEquals("first", results.get(1));
+        Assertions.assertEquals("second", results.get(2));
+    }
+
     // =========================================================================
     // 12. ADD ELEMENT AT POSITION AFTER
     // =========================================================================
@@ -408,6 +580,32 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("tail", results.get(2));
     }
 
+    @Test
+    @DisplayName("addElementToPositionAfter: insert after last element (edge case)")
+    void testAddElementToPositionAfterLast() throws ExecutionException, InterruptedException {
+        String key = "addElementToPositionAfterLast" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("last".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        Integer added = client.addElementToPositionAfter(key,
+                                                         List.of(Payload.of("inserted".getBytes(StandardCharsets.UTF_8))),
+                                                         Payload.of("last".getBytes(StandardCharsets.UTF_8))).get();
+        Assertions.assertTrue(added >= 0);
+
+        List<String> results = client.streamVector(key).get()
+                .stream()
+                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
+                .toList();
+
+        Assertions.assertEquals(3, results.size());
+        Assertions.assertEquals("first", results.get(0));
+        Assertions.assertEquals("last", results.get(1));
+        Assertions.assertEquals("inserted", results.get(2));
+    }
+
     // =========================================================================
     // 13. STREAM ELEMENT IN RANGE UNORDERED
     // =========================================================================
@@ -434,6 +632,24 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals("4", new String(range.get(2).getValue(), StandardCharsets.UTF_8));
     }
 
+    @Test
+    @DisplayName("streamElementInRangeUnordered: full range [0, size-1] (edge case)")
+    void testStreamElementInRangeUnorderedFullRange() throws ExecutionException, InterruptedException {
+        String key = "streamElementInRangeFullRange" + UUID.randomUUID();
+
+        client.createVector(key, List.of(
+                Payload.of("0".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("2".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("3".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("4".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        List<Payload> range = client.streamElementInRangeUnordered(key, null, ContainerType.VECTOR, 0, 4).get();
+        assertNotNull(range);
+        Assertions.assertEquals(5, range.size());
+    }
+
     // =========================================================================
     // GET SIZE
     // =========================================================================
@@ -456,6 +672,20 @@ public class VectorOperationsTest extends TestBase {
 
         size = client.getSize(key).get();
         Assertions.assertEquals(4, size);
+    }
+
+    @Test
+    @DisplayName("remove: delete non-existent vector (edge case)")
+    void testRemoveNonExistentVector() throws ExecutionException, InterruptedException {
+        String key = "removeNonExistentVector" + UUID.randomUUID();
+
+        try {
+            client.remove(key).get();
+            Assertions.fail("Expected NOT_FOUND");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        }
     }
 
     // =========================================================================
@@ -898,6 +1128,35 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, ownerUnlockStatus);
     }
 
+    @Test
+    @DisplayName("unlockObject: unlock after vector deleted (NOT_FOUND)")
+    void testUnlockAfterVectorDeleted() throws ExecutionException, InterruptedException {
+        String key = "unlockAfterVectorDeleted" + UUID.randomUUID();
+        int ownerId = 13;
+
+        client.createVector(key, List.of(
+                Payload.of("data".getBytes(StandardCharsets.UTF_8))
+        )).get();
+
+        client.lockObject(key, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
+
+        // Owner deletes the vector
+        Boolean removed = client.remove(key, ownerId).get();
+        assertTrue(removed);
+
+        // Unlock returns NOT_FOUND
+        try {
+            client.unlockObject(key, ownerId).get();
+            Assertions.fail("Expected NOT_FOUND");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
     // =========================================================================
     // ERROR CASES
     // =========================================================================
@@ -926,6 +1185,93 @@ public class VectorOperationsTest extends TestBase {
 
         try {
             client.getAndRemoveTail(key).get();
+            Assertions.fail("Expected ExecutionException");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("getElementAtPosition on non-existent vector")
+    void testGetElementAtPositionOnMissingVector() {
+        String key = "getElementAtPositionMissing" + UUID.randomUUID();
+
+        try {
+            client.getElementAtPosition(key, 0).get();
+            Assertions.fail("Expected ExecutionException");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("getAndRemoveElementAtPosition on non-existent vector")
+    void testGetAndRemoveElementAtPositionOnMissingVector() {
+        String key = "getAndRemoveElementAtPositionMissing" + UUID.randomUUID();
+
+        try {
+            client.getAndRemoveElementAtPosition(key, null, 0).get();
+            Assertions.fail("Expected ExecutionException");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("addElementToPosition on non-existent vector")
+    void testAddElementToPositionOnMissingVector() {
+        String key = "addElementToPositionMissing" + UUID.randomUUID();
+
+        try {
+            client.addElementToPosition(key, null, List.of(Payload.of("x".getBytes(StandardCharsets.UTF_8))), 0).get();
+            Assertions.fail("Expected ExecutionException");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("removeElementAtPosition on non-existent vector")
+    void testRemoveElementAtPositionOnMissingVector() {
+        String key = "removeElementAtPositionMissing" + UUID.randomUUID();
+
+        try {
+            client.removeElementAtPosition(key, null, 0, 1).get();
+            Assertions.fail("Expected ExecutionException");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("addElementToPositionBefore on non-existent vector")
+    void testAddElementToPositionBeforeOnMissingVector() {
+        String key = "addElementToPositionBeforeMissing" + UUID.randomUUID();
+
+        try {
+            client.addElementToPositionBefore(key,
+                                              List.of(Payload.of("x".getBytes(StandardCharsets.UTF_8))),
+                                              Payload.of("pivot".getBytes(StandardCharsets.UTF_8))).get();
             Assertions.fail("Expected ExecutionException");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
