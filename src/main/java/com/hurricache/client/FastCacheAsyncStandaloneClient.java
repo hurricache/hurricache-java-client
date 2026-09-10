@@ -144,12 +144,12 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
                                                                            int clientId,
                                                                            Duration timeout) {
         if (initialValue == null || initialValue.isEmpty()) {
-            switch (type) {
+            return switch (type) {
                 case QUEUE -> delegate.createQueue(key, keyHint, List.of(), ttl, clientId, timeout);
                 case VECTOR -> delegate.createVector(key, keyHint, List.of(), ttl, clientId, timeout);
                 case SET -> delegate.createSet(key, keyHint, List.of(), ttl, clientId, timeout);
                 default ->  delegate.createList(key, keyHint, List.of(), ttl, clientId, timeout);
-            }
+            };
 
         }
 
