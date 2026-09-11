@@ -292,11 +292,9 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get Head/Front
         Payload head = client.setMode(Mode.BACKUP).getHead(key, keyHint).get();
-        Payload front = client.setMode(Mode.BACKUP).getFront(key, keyHint).get();
         Assertions.assertNotNull(head);
-        Assertions.assertNotNull(front);
         Assertions.assertEquals("head", new String(head.getValue(), StandardCharsets.UTF_8));
-        Assertions.assertEquals("head", new String(front.getValue(), StandardCharsets.UTF_8));
+
 
         // Get Tail
         Payload tail = client.setMode(Mode.BACKUP).getTail(key, keyHint).get();
@@ -320,11 +318,8 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get Head/Front
         Payload head = client.setMode(Mode.MASTER).getHead(key, keyHint).get();
-        Payload front = client.setMode(Mode.MASTER).getFront(key, keyHint).get();
         Assertions.assertNotNull(head);
-        Assertions.assertNotNull(front);
         Assertions.assertEquals("head", new String(head.getValue(), StandardCharsets.UTF_8));
-        Assertions.assertEquals("head", new String(front.getValue(), StandardCharsets.UTF_8));
 
         // Get Tail
         Payload tail = client.setMode(Mode.MASTER).getTail(key, keyHint).get();
@@ -345,7 +340,7 @@ public class CollectionsTest extends TestBaseCluster {
         Assertions.assertEquals("item1", new String(removed.getValue(), StandardCharsets.UTF_8));
 
         // Verify tail is now head
-        Payload newHead = client.getFront(key, keyHint).get();
+        Payload newHead = client.getHead(key, keyHint).get();
         Assertions.assertNotNull(newHead);
         Assertions.assertEquals("item2", new String(newHead.getValue(), StandardCharsets.UTF_8));
     }
@@ -413,7 +408,7 @@ public class CollectionsTest extends TestBaseCluster {
     void testCollectionNotFound() {
         String key = "nonExistentCollection" + UUID.randomUUID();
         try {
-            client.getFront(key).get();
+            client.getHead(key).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Server should return NOT_FOUND if key doesn't exist

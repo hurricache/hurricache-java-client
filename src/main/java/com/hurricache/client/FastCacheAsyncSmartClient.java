@@ -447,10 +447,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return executeWrite(hint, c -> c.getAndRemoveFront(key, hint, clientId, timeout));
     }
 
-    @Override
-    public CompletableFuture<Payload> getFront(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        return execute(hint, c -> c.getFront(key, hint, clientId, timeout));
-    }
 
     @Override
     public CompletableFuture<Payload> getElementAtPosition(byte[] key,
@@ -459,6 +455,24 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                            int clientId,
                                                            Duration timeout) {
         return execute(hint, c -> c.getElementAtPosition(key, hint, pos, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Payload> getElementWithWeight(byte[] key,
+                                                           KeyHintData hint,
+                                                           int pos,
+                                                           int clientId,
+                                                           Duration timeout) {
+        return execute(hint, c -> c.getElementWithWeight(key, hint, pos, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Payload> getAndRemoveElementWithWeight(byte[] key,
+                                                                    KeyHintData hint,
+                                                                    int pos,
+                                                                    int clientId,
+                                                                    Duration timeout) {
+        return execute(hint, c -> c.getAndRemoveElementWithWeight(key, hint, pos, clientId, timeout));
     }
 
     @Override
@@ -506,6 +520,11 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<List<Payload>> streamVector(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return execute(hint, c -> c.streamVector(key, hint, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<List<OrderedPayload>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
+        return execute(hint, c -> c.streamOrderedSet(key, hint, clientId, timeout));
     }
 
     @Override
@@ -863,7 +882,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                          c -> c.createOrderedSet(key, keyHint, firstChunk, ttl, clientId, timeout),
                                          remaining, null,
                                          (simpleClient, resHint, chunkKeys, chunkValues) ->
-                                                 simpleClient.addElementOrdered(key, resHint, chunkKeys, clientId, timeout));
+                                                 simpleClient.addElementWithWeight(key, resHint, chunkKeys, clientId, timeout));
     }
 
     @Override
@@ -928,7 +947,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                          remaining, null,
                                          (simpleClient, resHint, chunkKeys, chunkValues) -> switch (type) {
                                              case QUEUE, LIST, VECTOR -> simpleClient.addElementToTail(key, resHint, chunkKeys, clientId, timeout);
-                                             case SET -> simpleClient.addElement(key, resHint, chunkKeys, clientId, timeout);
+                                             case SET -> simpleClient.addElementUnordered(key, resHint, chunkKeys, clientId, timeout);
                                              default -> throw new IllegalArgumentException("Unsupported type: " + type);
                                          }
         );
@@ -1101,7 +1120,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     // =========================================================================
 
     @Override
-    public CompletableFuture<Integer> addElement(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
+    public CompletableFuture<Integer> addElementUnordered(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
             return CompletableFuture.completedFuture(0);
         }
@@ -1110,7 +1129,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
         for (List<Payload> chunk : chunks) {
             future = future.thenCompose(addedCount ->
-                                                executeWrite(hint, c -> c.addElement(key, hint, chunk, clientId, timeout))
+                                                executeWrite(hint, c -> c.addElementUnordered(key, hint, chunk, clientId, timeout))
                                                         .thenApply(res -> addedCount + res)
             );
         }
@@ -1153,23 +1172,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<Integer> addElementOrdered(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
-        if (data == null || data.isEmpty()) {
-            return CompletableFuture.completedFuture(0);
-        }
-        List<List<OrderedPayload>> chunks = splitOrderedPayloads(key, hint, data, clientId);
-        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
-
-        for (List<OrderedPayload> chunk : chunks) {
-            future = future.thenCompose(addedCount ->
-                                                executeWrite(hint, c -> c.addElementOrdered(key, hint, chunk, clientId, timeout))
-                                                        .thenApply(res -> addedCount + res)
-            );
-        }
-        return future;
-    }
-
-    @Override
     public CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
             return CompletableFuture.completedFuture(0);
@@ -1185,6 +1187,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         }
         return future;
     }
+
+
 
     @Override
     public CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Payload> data, int pos, int clientId, Duration timeout) {

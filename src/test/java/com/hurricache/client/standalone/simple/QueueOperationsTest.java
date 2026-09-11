@@ -14,10 +14,8 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -26,36 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueueOperationsTest extends TestBase {
-
-    private void assertLockDenied(CompletableFuture<?> future) {
-        try {
-            future.get();
-            Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
-            Assertions.assertTrue(cause.getStatus().getDescription().contains("Access Denied by Lock"),
-                                  "Expected 'Access Denied by Lock' but got: " + cause.getStatus().getDescription());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            Assertions.fail(e.getMessage());
-        }
-    }
-
-    private void assertUnsupportedMethod(CompletableFuture<?> future) {
-        try {
-            future.get();
-            Assertions.fail("Expected INTERNAL error for unsupported method");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
-            Assertions.assertTrue(cause.getStatus().getDescription().contains("Key not found or type is not correct"),
-                                  "Expected 'Key not found or type is not correct' but got: " + cause.getStatus().getDescription());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            Assertions.fail(e.getMessage());
-        }
-    }
 
     private static final int LARGE_ELEMENT_COUNT = 1500;
     private static final int PAYLOAD_SIZE = 8192;
@@ -203,10 +171,8 @@ public class QueueOperationsTest extends TestBase {
 
         Thread.sleep(500);
 
-        Payload front = client.getFront(key).get();
         Payload head = client.getHead(key).get();
 
-        assertEquals("first", new String(front.getValue(), StandardCharsets.UTF_8));
         assertEquals("first", new String(head.getValue(), StandardCharsets.UTF_8));
 
         Payload stillThere = client.getAndRemoveFront(key).get();
@@ -222,10 +188,8 @@ public class QueueOperationsTest extends TestBase {
 
         Thread.sleep(500);
 
-        Payload front = client.getFront(key).get();
         Payload head = client.getHead(key).get();
 
-        assertEquals("only", new String(front.getValue(), StandardCharsets.UTF_8));
         assertEquals("only", new String(head.getValue(), StandardCharsets.UTF_8));
     }
 
@@ -642,7 +606,7 @@ public class QueueOperationsTest extends TestBase {
         assertNotNull(payload);
 
         // Intruder cannot write
-        assertLockDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("intruder".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
+        assertDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("intruder".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
     }
 
     @Test
@@ -658,22 +622,22 @@ public class QueueOperationsTest extends TestBase {
         client.lockObject(keyStr, LockType.READ_LOCK, 0, Duration.ofSeconds(60)).get();
 
         // Intruder cannot add to tail
-        assertLockDenied(client.addElementToTail(key, null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
 
         // Intruder cannot add to head
-        assertLockDenied(client.addElementToHead(key, null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
+        assertDenied(client.addElementToHead(key, null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
 
         // Intruder cannot get and remove front
-        assertLockDenied(client.getAndRemoveFront(key, null, 1, TIMEOUT));
+        assertDenied(client.getAndRemoveFront(key, null, 1, TIMEOUT));
 
         // Intruder cannot get and remove tail
-        assertLockDenied(client.getAndRemoveTail(key, null, 1, TIMEOUT));
+        assertDenied(client.getAndRemoveTail(key, null, 1, TIMEOUT));
 
         // Intruder cannot remove head
-        assertLockDenied(client.removeHead(key, null, 1, TIMEOUT));
+        assertDenied(client.removeHead(key, null, 1, TIMEOUT));
 
         // Intruder cannot remove tail
-        assertLockDenied(client.removeTail(key, null, 1, TIMEOUT));
+        assertDenied(client.removeTail(key, null, 1, TIMEOUT));
     }
 
     // 15c. WRITE_LOCK behavior
@@ -708,7 +672,7 @@ public class QueueOperationsTest extends TestBase {
         }
 
         // Intruder cannot write
-        assertLockDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("intruder".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
+        assertDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("intruder".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
     }
 
     @Test
@@ -724,7 +688,7 @@ public class QueueOperationsTest extends TestBase {
 
         // Intruder cannot get front
         try {
-            client.getFront(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT).get();
+            client.getHead(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT).get();
             Assertions.fail("Intruder should be blocked");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -750,10 +714,10 @@ public class QueueOperationsTest extends TestBase {
         }
 
         // Intruder cannot get and remove front
-        assertLockDenied(client.getAndRemoveFront(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
+        assertDenied(client.getAndRemoveFront(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
 
         // Intruder cannot get and remove tail
-        assertLockDenied(client.getAndRemoveTail(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
+        assertDenied(client.getAndRemoveTail(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
     }
 
     @Test
@@ -768,22 +732,22 @@ public class QueueOperationsTest extends TestBase {
         client.lockObject(key, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
 
         // Intruder cannot add to tail
-        assertLockDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
+        assertDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
 
         // Intruder cannot add to head
-        assertLockDenied(client.addElementToHead(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
+        assertDenied(client.addElementToHead(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
 
         // Intruder cannot get and remove front
-        assertLockDenied(client.getAndRemoveFront(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
+        assertDenied(client.getAndRemoveFront(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
 
         // Intruder cannot get and remove tail
-        assertLockDenied(client.getAndRemoveTail(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
+        assertDenied(client.getAndRemoveTail(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
 
         // Intruder cannot remove head
-        assertLockDenied(client.removeHead(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
+        assertDenied(client.removeHead(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
 
         // Intruder cannot remove tail
-        assertLockDenied(client.removeTail(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
+        assertDenied(client.removeTail(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT));
     }
 
     // 15d. GLOBAL lock behavior
@@ -818,7 +782,7 @@ public class QueueOperationsTest extends TestBase {
         }
 
         // Intruder cannot write
-        assertLockDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("intruder".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
+        assertDenied(client.addElementToTail(key.getBytes(StandardCharsets.UTF_8), null, List.of(Payload.of("intruder".getBytes(StandardCharsets.UTF_8))), 1, TIMEOUT));
     }
 
     @Test
@@ -859,7 +823,7 @@ public class QueueOperationsTest extends TestBase {
 
         client.lockObject(key, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
 
-        assertLockDenied(client.lockObject(key, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)));
+        assertDenied(client.lockObject(key, LockType.WRITE_LOCK, 1, Duration.ofSeconds(60)));
 
     }
 
@@ -897,7 +861,7 @@ public class QueueOperationsTest extends TestBase {
 
         client.lockObject(key, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
 
-        assertLockDenied(client.unlockObject(key, intruderId));
+        assertDenied(client.unlockObject(key, intruderId));
 
 
         LockStatus successUnlock = client.unlockObject(key, ownerId).get();

@@ -28,21 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VectorOperationsTest extends TestBase {
 
-    private void assertLockDenied(java.util.concurrent.CompletableFuture<?> future) {
-        try {
-            future.get();
-            Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
-            Assertions.assertTrue(cause.getStatus().getDescription().contains("Access Denied by Lock"),
-                                  "Expected 'Access Denied by Lock' but got: " + cause.getStatus().getDescription());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            Assertions.fail(e.getMessage());
-        }
-    }
-
     private static final int LARGE_ELEMENT_COUNT = 1500;
     private static final int PAYLOAD_SIZE = 8192;
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
@@ -186,12 +171,9 @@ public class VectorOperationsTest extends TestBase {
         )).get();
 
         Payload head = client.getHead(key).get();
-        Payload front = client.getFront(key).get();
 
         assertNotNull(head);
-        assertNotNull(front);
         Assertions.assertEquals("head", new String(head.getValue(), StandardCharsets.UTF_8));
-        Assertions.assertEquals("head", new String(front.getValue(), StandardCharsets.UTF_8));
 
         // Vector should remain unchanged
         List<String> all = client.streamVector(key).get()
@@ -212,7 +194,7 @@ public class VectorOperationsTest extends TestBase {
                 Payload.of("only".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload front = client.getFront(key).get();
+        Payload front = client.getHead(key).get();
         assertNotNull(front);
         Assertions.assertEquals("only", new String(front.getValue(), StandardCharsets.UTF_8));
     }
@@ -791,13 +773,7 @@ public class VectorOperationsTest extends TestBase {
 
         Thread.sleep(2500);
 
-        try {
-            client.streamVector(key).get();
-            Assertions.fail("Expected NOT_FOUND after TTL expiry");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
+        assertNotFound(client.streamVector(key));
     }
 
     // =========================================================================
@@ -888,11 +864,11 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Reading works
-        Payload readData = client.getFront(key).get();
+        Payload readData = client.getHead(key).get();
         assertNotNull(readData);
 
         // Writer cannot add an element
-        assertLockDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
 
         // Unlock
         LockStatus unlockStatus = client.unlockObject(key, readerId).get();
@@ -915,7 +891,7 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads
-        Payload readData = client.getFront(key, ownerId).get();
+        Payload readData = client.getHead(key, ownerId).get();
         assertNotNull(readData);
 
         // Owner writes
@@ -923,10 +899,10 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertTrue(added >= 0);
 
         // Others cannot write
-        assertLockDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8))), otherId));
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8))), otherId));
 
         // Others cannot read
-        assertLockDenied(client.getFront(key, otherId));
+        assertDenied(client.getHead(key, otherId));
 
         LockStatus unlockStatus = client.unlockObject(key, ownerId).get();
         Assertions.assertEquals(LockStatus.OK, unlockStatus);
@@ -948,16 +924,16 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads
-        Payload readData = client.getFront(key).get();
+        Payload readData = client.getHead(key).get();
         assertNotNull(readData);
 
         // Others read in parallel
-        Payload otherReadData = client.getFront(key, otherReaderId).get();
+        Payload otherReadData = client.getHead(key, otherReaderId).get();
         assertNotNull(otherReadData);
 
         // Nobody can write (neither owner nor others)
-        assertLockDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
-        assertLockDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
 
         LockStatus unlockStatus = client.unlockObject(key, readerId).get();
         Assertions.assertEquals(LockStatus.OK, unlockStatus);
@@ -979,7 +955,7 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads
-        Payload readData = client.getFront(key, ownerId).get();
+        Payload readData = client.getHead(key, ownerId).get();
         assertNotNull(readData);
 
         // Owner writes
@@ -987,10 +963,10 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertTrue(added >= 0);
 
         // Others cannot read
-        assertLockDenied(client.getFront(key, otherId));
+        assertDenied(client.getHead(key, otherId));
 
         // Others cannot write
-        assertLockDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8)))));
 
         LockStatus unlockStatus = client.unlockObject(key, ownerId).get();
         Assertions.assertEquals(LockStatus.OK, unlockStatus);
@@ -1012,7 +988,7 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads - works
-        Payload readData = client.getFront(key, ownerId).get();
+        Payload readData = client.getHead(key, ownerId).get();
         assertNotNull(readData);
 
         Payload tailData = client.getTail(key, ownerId).get();
@@ -1026,10 +1002,10 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertTrue(added >= 0);
 
         // Others cannot read
-        assertLockDenied(client.getFront(key, otherId));
+        assertDenied(client.getHead(key, otherId));
 
         // Others cannot write
-        assertLockDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8))), otherId));
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("write".getBytes(StandardCharsets.UTF_8))), otherId));
 
         LockStatus unlockStatus = client.unlockObject(key, ownerId).get();
         Assertions.assertEquals(LockStatus.OK, unlockStatus);
@@ -1079,7 +1055,7 @@ public class VectorOperationsTest extends TestBase {
 
         client.lockObject(key, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
 
-        assertLockDenied(client.lockObject(key, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(60)));
+        assertDenied(client.lockObject(key, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(60)));
 
 
         // Owner can unlock
@@ -1120,7 +1096,7 @@ public class VectorOperationsTest extends TestBase {
 
         client.lockObject(key, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(60)).get();
 
-        assertLockDenied(client.unlockObject(key, intruderId));
+        assertDenied(client.unlockObject(key, intruderId));
 
 
         // Owner can unlock

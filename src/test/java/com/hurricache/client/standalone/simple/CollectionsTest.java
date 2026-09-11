@@ -92,11 +92,8 @@ public class CollectionsTest extends TestBase {
         client.addElementToTail(key, null, List.of(Payload.of("tail".getBytes(StandardCharsets.UTF_8)))).get();
 
         Payload head = client.getHead(key).get();
-        Payload front = client.getFront(key).get();
         Assertions.assertNotNull(head);
-        Assertions.assertNotNull(front);
         Assertions.assertEquals("head", new String(head.getValue(), StandardCharsets.UTF_8));
-        Assertions.assertEquals("head", new String(front.getValue(), StandardCharsets.UTF_8));
 
         Payload tail = client.getTail(key).get();
         Assertions.assertNotNull(tail);
@@ -114,7 +111,7 @@ public class CollectionsTest extends TestBase {
         Assertions.assertNotNull(removed);
         Assertions.assertEquals("item1", new String(removed.getValue(), StandardCharsets.UTF_8));
 
-        Payload newHead = client.getFront(key).get();
+        Payload newHead = client.getHead(key).get();
         Assertions.assertNotNull(newHead);
         Assertions.assertEquals("item2", new String(newHead.getValue(), StandardCharsets.UTF_8));
     }
@@ -171,7 +168,7 @@ public class CollectionsTest extends TestBase {
     void testCollectionNotFound() {
         String key = "nonExistentCollection" + UUID.randomUUID();
         try {
-            client.getFront(key).get();
+            client.getHead(key).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertTrue(cause.getStatus().getCode() == Status.Code.NOT_FOUND

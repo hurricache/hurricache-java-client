@@ -56,25 +56,28 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
                                               getDefaultTimeout());
     }
 
+
+
     /**
-     * Adds weighted elements to an {@link OrderedSet}.
+     * Fetches a slice (range) of elements from an unordered container based on position indexes.
      */
-    CompletableFuture<Integer> addElementWithWeight(byte[] key,
-                                                    KeyHintData hint,
-                                                    List<OrderedPayload> data,
-                                                    int clientId,
-                                                    Duration timeout);
+    CompletableFuture<List<OrderedPayload>> streamOrderedSet(byte[] key, KeyHintData hint,int clientId,
+                                               Duration timeout);
 
-    default CompletableFuture<Integer> addElementWithWeight(String key, List<OrderedPayload> data) {
-        return addElementWithWeight(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<OrderedPayload>> streamOrderedSet(String key,
+                                                       KeyHintData hint) {
+        return streamOrderedSet(serializeKey(key),
+                         hint,
+                         getDefaultClientId(),
+                         getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint, List<OrderedPayload> data) {
-        return addElementWithWeight(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data) {
-        return addElementWithWeight(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<OrderedPayload>> streamOrderedSet(String key,KeyHintData hint,
+                                                       int clientId) {
+        return streamOrderedSet(serializeKey(key),
+                         hint,
+                         clientId,
+                         getDefaultTimeout());
     }
 
 }

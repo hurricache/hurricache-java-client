@@ -10,6 +10,8 @@ import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -273,9 +275,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get Head/Front
         Payload head = client.setMode(Mode.BACKUP).getHead(key, keyHint).get();
-        Payload front = client.setMode(Mode.BACKUP).getFront(key, keyHint).get();
         Assertions.assertArrayEquals(zero, head.getValue());
-        Assertions.assertArrayEquals(zero, front.getValue());
 
         // Get Tail
         Payload tail = client.setMode(Mode.BACKUP).getTail(key, keyHint).get();
@@ -298,9 +298,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get Head/Front
         Payload head = client.setMode(Mode.MASTER).getHead(key, keyHint).get();
-        Payload front = client.setMode(Mode.MASTER).getFront(key, keyHint).get();
         Assertions.assertArrayEquals(zero, head.getValue());
-        Assertions.assertArrayEquals(zero, front.getValue());
 
         // Get Tail
         Payload tail = client.setMode(Mode.MASTER).getTail(key, keyHint).get();
@@ -320,7 +318,7 @@ public class CollectionsTest extends TestBaseCluster {
         Assertions.assertArrayEquals(head, removedHead.getValue());
 
         // Verify tail is now head
-        Payload newHead = client.getFront(key, keyHint).get();
+        Payload newHead = client.getHead(key, keyHint).get();
         Assertions.assertArrayEquals(tail, newHead.getValue());
     }
 
@@ -381,7 +379,7 @@ public class CollectionsTest extends TestBaseCluster {
     void testCollectionNotFound() {
         byte[] key = createLargePayload(KEY_SIZE);
         try {
-            client.getFront(key).get();
+            client.getHead(key, null, 0, Duration.ofSeconds(1)).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Server should return NOT_FOUND if key doesn't exist

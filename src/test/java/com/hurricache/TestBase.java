@@ -1,13 +1,18 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncStandaloneClient;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Base class for in-memory gRPC tests.
@@ -40,6 +45,49 @@ public abstract class TestBase {
     void tearDown() throws InterruptedException {
         if (client != null) {
             client.shutdown();
+        }
+    }
+
+    protected void assertDenied(java.util.concurrent.CompletableFuture<?> future) {
+        try {
+            future.get();
+            Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
+            Assertions.assertTrue(cause.getStatus().getDescription().contains("Access Denied by Lock"),
+                                  "Expected 'Access Denied by Lock' but got: " + cause.getStatus().getDescription());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    protected void assertUnsupportedMethod(CompletableFuture<?> future) {
+        try {
+            future.get();
+            Assertions.fail("Expected INTERNAL error for unsupported method");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+            Assertions.assertTrue(cause.getStatus().getDescription().contains("Key not found or type is not correct"),
+                                  "Expected 'Key not found or type is not correct' but got: " + cause.getStatus().getDescription());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    protected void assertNotFound(CompletableFuture<?> future) {
+        try {
+            future.get();
+            Assertions.fail("Expected NOT_FOUND after TTL expiry");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
         }
     }
 }

@@ -5,7 +5,6 @@ import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
-import com.hurricache.grpc.ContainerType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -135,7 +134,7 @@ public class MapAndSetCollectionsTest extends TestBaseCluster {
 
         // 2. Add elements (sadd) on Backup
         Integer added = client.setMode(Mode.BACKUP)
-                .addElement(setKey, keyHint, List.of(p("item3")))
+                .addElementUnordered(setKey, keyHint, List.of(p("item3")))
                 .get();
         Assertions.assertTrue(added == 1);
         Thread.sleep(500);
@@ -168,7 +167,7 @@ public class MapAndSetCollectionsTest extends TestBaseCluster {
 
         // Add on Master
         client.setMode(Mode.MASTER)
-                .addElement(setKey, keyHint, List.of(p("elem2")))
+                .addElementUnordered(setKey, keyHint, List.of(p("elem2")))
                 .get();
 
         Integer size = client.setMode(Mode.MASTER).getSize(setKey, keyHint).get();

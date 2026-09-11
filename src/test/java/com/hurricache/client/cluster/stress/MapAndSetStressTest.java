@@ -53,7 +53,7 @@ public class MapAndSetStressTest extends TestBaseCluster {
                     }
                     Mode targetMode = (threadId % 2 == 0) ? Mode.MASTER : Mode.BACKUP;
                     return client.setMode(targetMode)
-                            .addElement(setKey, keyHint, batch)
+                            .addElementUnordered(setKey, keyHint, batch)
                             .get();
                 } catch (Exception e) {
                     throw new RuntimeException(e);

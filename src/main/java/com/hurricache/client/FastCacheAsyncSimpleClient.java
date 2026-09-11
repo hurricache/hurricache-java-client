@@ -41,6 +41,7 @@ import com.hurricache.grpc.Value;
 import com.hurricache.utils.CompletableFutureObserver;
 import com.hurricache.utils.CompressionUtils;
 import com.hurricache.utils.DecompressingObserver;
+import com.hurricache.utils.DecompressingOrderedObserver;
 import com.hurricache.utils.StreamBatchMapObserver;
 import com.hurricache.utils.StreamBatchOrderedMapObserver;
 import com.hurricache.utils.StreamBatchOrderedObserver;
@@ -437,6 +438,40 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         return createFuture;
     }
 
+    @Override
+    public CompletableFuture<Payload> getElementWithWeight(byte[] key,
+                                                           KeyHintData hint,
+                                                           int pos,
+                                                           int clientId,
+                                                           Duration timeout) {
+        CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
+        KeyPositionRequest request = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setPos(pos)
+                .build();
+        getStub(timeout).getElementAtPosition(request, new DecompressingOrderedObserver(rawFuture));
+        return rawFuture.thenApply(bytes -> bytes != null
+                                            ? Payload.of(bytes)
+                                            : null);
+    }
+
+    @Override
+    public CompletableFuture<Payload> getAndRemoveElementWithWeight(byte[] key,
+                                                                    KeyHintData hint,
+                                                                    int pos,
+                                                                    int clientId,
+                                                                    Duration timeout) {
+        CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
+        KeyPositionRequest request = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setPos(pos)
+                .build();
+        getStub(timeout).getAndRemoveElementAtPosition(request, new DecompressingOrderedObserver(rawFuture));
+        return rawFuture.thenApply(bytes -> bytes != null
+                                            ? Payload.of(bytes)
+                                            : null);
+    }
+
 
     @Override
     public CompletableFuture<Integer> getSize(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
@@ -450,15 +485,6 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     public CompletableFuture<Payload> getAndRemoveFront(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
         getStub(timeout).getAndRemoveFront(buildGetReq(key, hint, clientId), new DecompressingObserver(rawFuture));
-        return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
-                                            : null);
-    }
-
-    @Override
-    public CompletableFuture<Payload> getFront(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
-        getStub(timeout).getHead(buildGetReq(key, hint, clientId), new DecompressingObserver(rawFuture));
         return rawFuture.thenApply(bytes -> bytes != null
                                             ? Payload.of(bytes)
                                             : null);
@@ -536,6 +562,16 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     @Override
+    public CompletableFuture<List<OrderedPayload>> streamOrderedSet(byte[] key,
+                                                             KeyHintData hint,
+                                                             int clientId,
+                                                             Duration timeout) {
+        CompletableFuture<List<OrderedPayload>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchOrderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
     public CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key,
                                                                             KeyHintData hint,
                                                                             int clientId,
@@ -595,11 +631,11 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // =========================================================================
 
     @Override
-    public CompletableFuture<Integer> addElement(byte[] key,
-                                                 KeyHintData hint,
-                                                 List<Payload> data,
-                                                 int clientId,
-                                                 Duration timeout) {
+    public CompletableFuture<Integer> addElementUnordered(byte[] key,
+                                                          KeyHintData hint,
+                                                          List<Payload> data,
+                                                          int clientId,
+                                                          Duration timeout) {
         if (data == null || data.isEmpty()) {
             return CompletableFuture.completedFuture(0);
         }
@@ -619,11 +655,11 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<Integer> addElementOrdered(byte[] key,
-                                                        KeyHintData hint,
-                                                        List<OrderedPayload> data,
-                                                        int clientId,
-                                                        Duration timeout) {
+    public CompletableFuture<Integer> addElementWithWeight(byte[] key,
+                                                           KeyHintData hint,
+                                                           List<OrderedPayload> data,
+                                                           int clientId,
+                                                           Duration timeout) {
         if (data == null || data.isEmpty()) {
             return CompletableFuture.completedFuture(0);
         }
@@ -709,38 +745,6 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         CompletableFuture<Integer> future = new CompletableFuture<>();
         getStub(timeout).addElement(builder.build(),
                                     new CompletableFutureObserver<>(future, IntResponse::getSize));
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Integer> addElementWithWeight(byte[] key,
-                                                           KeyHintData hint,
-                                                           List<OrderedPayload> data,
-                                                           int clientId,
-                                                           Duration timeout) {
-        if (data == null || data.isEmpty()) {
-            return CompletableFuture.completedFuture(0);
-        }
-
-        Key protoKey = buildKey(key, hint, clientId);
-        AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
-
-        for (OrderedPayload payload : data) {
-            long order = payload.getOrder() != null
-                         ? payload.getOrder()
-                         : 0L;
-            OrderedValue orderedValue = OrderedValue.newBuilder()
-                    .setOrder(order)
-                    .setValue(BinaryPayload.newBuilder()
-                                      .setSize(payload.getValue().length)
-                                      .setPayload(ByteString.copyFrom(payload.getValue()))
-                                      .build())
-                    .build();
-            builder.addValueOrdered(orderedValue);
-        }
-
-        CompletableFuture<Integer> future = new CompletableFuture<>();
-        getStub(timeout).addElement(builder.build(), new CompletableFutureObserver<>(future, IntResponse::getSize));
         return future;
     }
 

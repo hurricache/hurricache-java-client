@@ -3,7 +3,6 @@ package com.hurricache.client.standalone.simple;
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
-import com.hurricache.grpc.ContainerType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -83,7 +82,7 @@ public class MissingCoverageTest extends TestBase {
         OrderedPayload op1 = OrderedPayload.of(100L, bytes("first"));
         OrderedPayload op2 = OrderedPayload.of(200L, bytes("second"));
 
-        Integer added = client.addElementOrdered(keyBytes, null, List.of(op1, op2), 0, null).get();
+        Integer added = client.addElementWithWeight(keyBytes, null, List.of(op1, op2), 0, null).get();
 
         Assertions.assertTrue(added > 0);
         System.out.println("added: " + added);

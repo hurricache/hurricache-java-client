@@ -90,7 +90,7 @@ public class MapAndSetCollectionsTest extends TestBase {
 
         Thread.sleep(500);
 
-        Integer added = client.addElement(setKey, List.of(p("item3"))).get();
+        Integer added = client.addElementUnordered(setKey, List.of(p("item3"))).get();
         Assertions.assertTrue(added == 1);
         Thread.sleep(500);
 
@@ -114,7 +114,7 @@ public class MapAndSetCollectionsTest extends TestBase {
 
         Thread.sleep(500);
 
-        client.addElement(setKey, List.of(p("elem2"))).get();
+        client.addElementUnordered(setKey, List.of(p("elem2"))).get();
 
         Integer size = client.getSize(setKey).get();
         Assertions.assertEquals(2, size);

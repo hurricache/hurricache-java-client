@@ -1,7 +1,5 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.grpc.ContainerType;
-
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -32,22 +30,22 @@ public interface HurriCacheClientSet extends HurriCacheClientInterfaceCommon{
     /**
      * Adds elements to an unordered container (e.g., Set,HashSet).
      */
-    CompletableFuture<Integer> addElement(byte[] key,
-                                          KeyHintData hint,
-                                          List<Payload> data,
-                                          int clientId,
-                                          Duration timeout);
+    CompletableFuture<Integer> addElementUnordered(byte[] key,
+                                                   KeyHintData hint,
+                                                   List<Payload> data,
+                                                   int clientId,
+                                                   Duration timeout);
 
-    default CompletableFuture<Integer> addElement(String key, List<Payload> data) {
-        return addElement(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementUnordered(String key, List<Payload> data) {
+        return addElementUnordered(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElement(String key, KeyHintData hint, List<Payload> data) {
-        return addElement(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementUnordered(String key, KeyHintData hint, List<Payload> data) {
+        return addElementUnordered(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElement(byte[] key, KeyHintData hint, List<Payload> data) {
-        return addElement(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementUnordered(byte[] key, KeyHintData hint, List<Payload> data) {
+        return addElementUnordered(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
     /**
      * Fetches a slice (range) of elements from an unordered container based on position indexes.

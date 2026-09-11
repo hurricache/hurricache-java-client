@@ -66,7 +66,7 @@ public class LockMethodProtectionTest extends TestBase {
 
         client.lockObject(listKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
-        assertPermissionDenied(() -> client.getFront(listKey, intruderId).get());
+        assertPermissionDenied(() -> client.getHead(listKey, intruderId).get());
         assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Payload.of("item2".getBytes())), intruderId).get());
     }
 
@@ -80,7 +80,7 @@ public class LockMethodProtectionTest extends TestBase {
 
         client.lockObject(listKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
-        assertPermissionDenied(() -> client.getFront(listKey, intruderId).get());
+        assertPermissionDenied(() -> client.getHead(listKey, intruderId).get());
         assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Payload.of("item2".getBytes())), intruderId).get());
     }
 

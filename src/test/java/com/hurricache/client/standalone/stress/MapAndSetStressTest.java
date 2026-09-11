@@ -1,6 +1,5 @@
 package com.hurricache.client.standalone.stress;
 
-import com.hurricache.TestBaseCluster;
 import com.hurricache.TestStandAlone;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
@@ -54,7 +53,7 @@ public class MapAndSetStressTest extends TestStandAlone {
                     }
                     Mode targetMode = (threadId % 2 == 0) ? Mode.MASTER : Mode.BACKUP;
                     return client
-                            .addElement(setKey, keyHint, batch)
+                            .addElementUnordered(setKey, keyHint, batch)
                             .get();
                 } catch (Exception e) {
                     throw new RuntimeException(e);

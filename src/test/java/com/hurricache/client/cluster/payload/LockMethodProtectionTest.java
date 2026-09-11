@@ -96,8 +96,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Lock on backup
         client.setMode(Mode.BACKUP).lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
-        // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).getFront(listKey, keyHint, intruderId, Duration.ofSeconds(30)).get());
+        // 1. Intruder tries getHead
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).getHead(listKey, keyHint, intruderId, Duration.ofSeconds(30)).get());
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint,
@@ -121,8 +121,8 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Lock on master
         client.setMode(Mode.MASTER).lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
-        // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).getFront(listKey, keyHint, intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
+        // 1. Intruder tries getHead
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).getHead(listKey, keyHint, intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint,

@@ -6,7 +6,6 @@ import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.ContainerType;
-import com.hurricache.grpc.HurriCacheGrpcServiceGrpc;
 import com.hurricache.grpc.Key;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -14,7 +13,6 @@ import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.Value;
 import com.hurricache.utils.CompressionUtils;
-import io.grpc.ManagedChannelBuilder;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -221,7 +219,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
 
         CompletableFuture<?> sendFuture;
         if (type == ContainerType.SET) {
-            sendFuture = delegate.addElement(key, hint, currentChunk, clientId, timeout);
+            sendFuture = delegate.addElementUnordered(key, hint, currentChunk, clientId, timeout);
         } else {
             sendFuture = delegate.addElementToTail(key, hint, currentChunk, clientId, timeout);
         }
@@ -489,11 +487,6 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     }
 
     @Override
-    public CompletableFuture<Payload> getFront(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
-        return delegate.getFront(key, hint, clientId, timeout);
-    }
-
-    @Override
     public CompletableFuture<Payload> getHead(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return delegate.getHead(key, hint, clientId, timeout);
     }
@@ -508,6 +501,24 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         return delegate.getElementAtPosition(key, hint, pos, clientId, timeout);
     }
 
+    @Override
+    public CompletableFuture<Payload> getElementWithWeight(byte[] key,
+                                                           KeyHintData hint,
+                                                           int pos,
+                                                           int clientId,
+                                                           Duration timeout) {
+        return delegate.getElementWithWeight(key, hint, pos, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Payload> getAndRemoveElementWithWeight(byte[] key,
+                                                                    KeyHintData hint,
+                                                                    int pos,
+                                                                    int clientId,
+                                                                    Duration timeout) {
+        return delegate.getAndRemoveElementWithWeight(key, hint, pos, clientId, timeout);
+    }
+
     // =========================================================================
     // STREAMING READ OPERATIONS
     // =========================================================================
@@ -520,6 +531,11 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<List<Payload>> streamVector(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return delegate.streamVector(key, hint, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<List<OrderedPayload>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
+        return delegate.streamOrderedSet(key, hint, clientId, timeout);
     }
 
     @Override
@@ -551,13 +567,13 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     // =========================================================================
 
     @Override
-    public CompletableFuture<Integer> addElement(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
+    public CompletableFuture<Integer> addElementUnordered(byte[] key, KeyHintData hint, List<Payload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
             return CompletableFuture.completedFuture(0);
         }
 
         return sendUnorderedChunksInSequence(key, hint, data, clientId, timeout,
-                                             (k, h, chunk) -> delegate.addElement(k, h, chunk, clientId, timeout)
+                                             (k, h, chunk) -> delegate.addElementUnordered(k, h, chunk, clientId, timeout)
         );
     }
 
@@ -593,34 +609,17 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     }
 
     @Override
-    public CompletableFuture<Integer> addElementOrdered(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
-        if (data == null || data.isEmpty()) {
-            return CompletableFuture.completedFuture(0);
-        }
-
-        return sendOrderedChunksInSequence(key, hint, data, clientId, timeout,
-                                           (k, h, chunk) -> delegate.addElementOrdered(k, h, chunk, clientId, timeout)
-        );
-    }
-
-    @Override
     public CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
             return CompletableFuture.completedFuture(0);
         }
 
-        List<List<OrderedPayload>> chunks = splitOrderedPayloads(key, hint, data, clientId);
-        CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
-
-        for (List<OrderedPayload> chunk : chunks) {
-            future = future.thenCompose(addedCount ->
-                                                delegate.addElementWithWeight(key, hint, chunk, clientId, timeout)
-                                                        .thenApply(res -> addedCount + res)
-            );
-        }
-
-        return future;
+        return sendOrderedChunksInSequence(key, hint, data, clientId, timeout,
+                                           (k, h, chunk) -> delegate.addElementWithWeight(k, h, chunk, clientId, timeout)
+        );
     }
+
+
 
     @Override
     public CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Payload> data, int pos, int clientId, Duration timeout) {

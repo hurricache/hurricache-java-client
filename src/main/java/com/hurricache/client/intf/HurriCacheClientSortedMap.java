@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceCommon,HurriCacheClientMapBased{
+public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceCommon,HurriCacheClientMapBased,HurriCacheClientWeightBasedContainers{
     /**
      * Creates an OrderedMap container where keys are instance of {@link OrderedPayload}.
      */
@@ -46,22 +46,22 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
     /**
      * Adds elements to an unordered container (e.g., Set,HashSet).
      */
-    CompletableFuture<Integer> addElementOrdered(byte[] key,
-                                                 KeyHintData hint,
-                                                 List<OrderedPayload> data,
-                                                 int clientId,
-                                                 Duration timeout);
+    CompletableFuture<Integer> addElementWithWeight(byte[] key,
+                                                    KeyHintData hint,
+                                                    List<OrderedPayload> data,
+                                                    int clientId,
+                                                    Duration timeout);
 
-    default CompletableFuture<Integer> addElementOrderedSet(String key, List<OrderedPayload> data) {
-        return addElementOrdered(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementWithWeight(String key, List<OrderedPayload> data) {
+        return addElementWithWeight(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementOrderedSet(String key, KeyHintData hint, List<OrderedPayload> data) {
-        return addElementOrdered(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint, List<OrderedPayload> data) {
+        return addElementWithWeight(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementOrderedSet(byte[] key, KeyHintData hint, List<OrderedPayload> data) {
-        return addElementOrdered(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data) {
+        return addElementWithWeight(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
 }
