@@ -52,53 +52,24 @@ public interface HurriCacheClientSet extends HurriCacheClientInterfaceCommon{
     /**
      * Fetches a slice (range) of elements from an unordered container based on position indexes.
      */
-    CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
-                                                                   KeyHintData hint,
-                                                                   ContainerType containerType,
-                                                                   int start,
-                                                                   int end,
-                                                                   int clientId,
-                                                                   Duration timeout);
+    CompletableFuture<List<Payload>> streamSet(byte[] key, KeyHintData hint,int clientId,
+                                               Duration timeout);
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key,
-                                                                           KeyHintData hint,
-                                                                           ContainerType containerType,
-                                                                           int start,
-                                                                           int end) {
-        return streamElementInRangeUnordered(serializeKey(key),
+    default CompletableFuture<List<Payload>> streamSet(String key,
+                                                                           KeyHintData hint) {
+        return streamSet(serializeKey(key),
                                              hint,
-                                             containerType,
-                                             start,
-                                             end,
                                              getDefaultClientId(),
                                              getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key,
-                                                                           ContainerType containerType,
-                                                                           int start,
-                                                                           int end,
+    default CompletableFuture<List<Payload>> streamSet(String key,KeyHintData hint,
                                                                            int clientId) {
-        return streamElementInRangeUnordered(serializeKey(key),
-                                             null,
-                                             containerType,
-                                             start,
-                                             end,
+        return streamSet(serializeKey(key),
+                                             hint,
                                              clientId,
                                              getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
-                                                                           KeyHintData hint,
-                                                                           ContainerType containerType,
-                                                                           int start,
-                                                                           int end) {
-        return streamElementInRangeUnordered(key,
-                                             hint,
-                                             containerType,
-                                             start,
-                                             end,
-                                             getDefaultClientId(),
-                                             getDefaultTimeout());
-    }
+
 }

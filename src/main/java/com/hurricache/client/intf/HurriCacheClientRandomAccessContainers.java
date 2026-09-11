@@ -1,5 +1,7 @@
 package com.hurricache.client.intf;
 
+import com.hurricache.grpc.ContainerType;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -201,5 +203,57 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
                                                                  List<Payload> data,
                                                                  Payload pivot) {
         return addElementToPositionAfter(key, hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
+    }
+    /**
+     * Fetches a slice (range) of elements from an unordered container based on position indexes.
+     */
+    CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
+                                                                   KeyHintData hint,
+                                                                   ContainerType containerType,
+                                                                   int start,
+                                                                   int end,
+                                                                   int clientId,
+                                                                   Duration timeout);
+
+    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key,
+                                                                           KeyHintData hint,
+                                                                           ContainerType containerType,
+                                                                           int start,
+                                                                           int end) {
+        return streamElementInRangeUnordered(serializeKey(key),
+                                             hint,
+                                             containerType,
+                                             start,
+                                             end,
+                                             getDefaultClientId(),
+                                             getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key,
+                                                                           ContainerType containerType,
+                                                                           int start,
+                                                                           int end,
+                                                                           int clientId) {
+        return streamElementInRangeUnordered(serializeKey(key),
+                                             null,
+                                             containerType,
+                                             start,
+                                             end,
+                                             clientId,
+                                             getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
+                                                                           KeyHintData hint,
+                                                                           ContainerType containerType,
+                                                                           int start,
+                                                                           int end) {
+        return streamElementInRangeUnordered(key,
+                                             hint,
+                                             containerType,
+                                             start,
+                                             end,
+                                             getDefaultClientId(),
+                                             getDefaultTimeout());
     }
 }

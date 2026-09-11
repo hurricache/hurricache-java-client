@@ -518,6 +518,14 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     @Override
+    public CompletableFuture<List<Payload>> streamSet(byte[] key, KeyHintData hint,int clientId,
+                                               Duration timeout){
+        CompletableFuture<List<Payload>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchUnorderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
     public CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key,
                                                               KeyHintData hint,
                                                               int clientId,
