@@ -814,7 +814,7 @@ public class OrderedSetOperationsTest extends TestBase {
         }
     }
 
-    //@Test
+    @Test
     @DisplayName("getAndRemoveElementAtPosition возвращает и удаляет элемент с указанным весом")
     void testGetAndRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_get_remove_pos";
@@ -830,7 +830,7 @@ public class OrderedSetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         // Получаем и удаляем элемент с весом 20
-        Payload result = client.getAndRemoveElementAtPosition(setKey, hint, 20).get();
+        Payload result = client.getAndRemoveElementWithWeight(setKey, hint, 20).get();
         System.out.println("getElementAtPosition: " + str(result));
         assertNotNull(result);
         assertEquals("item2", str(result));
@@ -870,7 +870,7 @@ public class OrderedSetOperationsTest extends TestBase {
     // 15. ADD ELEMENT TO POSITION OPERATIONS (для ordered set)
     // =========================================================================
 
-    //@Test
+    @Test
     @DisplayName("addElementToPosition добавляет элемент с весом pos")
     void testAddElementToPosition() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_add_pos";
@@ -885,7 +885,7 @@ public class OrderedSetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         // Добавляем элемент с весом 20
-        Integer added = client.addElementToPosition(setKey, hint, List.of(Payload.of(bytes("item2"))), 20).get();
+        Integer added = client.addElementWithWeight(setKey, hint, List.of(OrderedPayload.of(20,bytes("item2")))).get();
         assertEquals(1, added, "Должен быть добавлен 1 элемент");
         
         Thread.sleep(500);
@@ -897,7 +897,7 @@ public class OrderedSetOperationsTest extends TestBase {
         assertEquals(30L, result.get(2).getOrder());
     }
 
-    //@Test
+    @Test
     @DisplayName("addElementToPosition добавляет элемент с весом pos в пустой ordered set")
     void testAddElementToPositionEmptySet() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_add_pos_empty";
@@ -908,7 +908,7 @@ public class OrderedSetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         // Добавляем элемент с весом 10
-        Integer added = client.addElementToPosition(setKey, hint, List.of(Payload.of(bytes("item1"))), 10).get();
+        Integer added = client.addElementWithWeight(setKey, hint, List.of(OrderedPayload.of(10,bytes("item1")))).get();
         assertEquals(1, added, "Должен быть добавлен 1 элемент");
         
         Thread.sleep(500);
