@@ -1,6 +1,7 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncStandaloneClient;
+import com.hurricache.grpc.LockStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.AfterEach;
@@ -50,8 +51,16 @@ public abstract class TestBase {
 
     protected void assertDenied(java.util.concurrent.CompletableFuture<?> future) {
         try {
-            future.get();
-            Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock");
+            Object result = future.get();
+            if (result instanceof LockStatus lockStatus) {
+                Assertions.assertNotEquals(LockStatus.OK.name(), lockStatus.name(), "Expected Not OK: " + lockStatus);
+                if (lockStatus == LockStatus.OK) {
+                    Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock details: " + lockStatus.name());
+                }
+            } else {
+                Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock details: " + result );
+            }
+
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
