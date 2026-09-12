@@ -547,6 +547,18 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     public CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return delegate.streamOrderedMap(key, hint, clientId, timeout);
     }
+
+    @Override
+    public CompletableFuture<Map<OrderedPayload, Payload>> streamElementInRangeOrderedMap(byte[] key,
+                                                                                          KeyHintData hint,
+                                                                                          long startWeight,
+                                                                                          long endWeight,
+                                                                                          boolean reverse,
+                                                                                          int clientId,
+                                                                                          Duration timeout) {
+        return delegate.streamElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse, clientId, timeout);
+    }
+
     @Override
     public CompletableFuture<List<Payload>> streamSet(byte[] key, KeyHintData hint,int clientId,
                                                       Duration timeout){

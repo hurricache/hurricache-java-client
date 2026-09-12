@@ -64,4 +64,11 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
         return addElementWithWeight(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
+    CompletableFuture<Map<OrderedPayload,Payload>>  streamElementInRangeOrderedMap(byte[] key,
+                                                                           KeyHintData hint,
+                                                                           long startWeight,
+                                                                           long endWeight,
+                                                                           boolean reverse,
+                                                                           int clientId,
+                                                                           Duration timeout);
 }

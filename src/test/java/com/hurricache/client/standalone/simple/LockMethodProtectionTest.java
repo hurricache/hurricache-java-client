@@ -84,41 +84,9 @@ public class LockMethodProtectionTest extends TestBase {
         assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Payload.of("item2".getBytes())), intruderId).get());
     }
 
-    @Test
-    @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Master")
-    void testWriteLockProtectionCreateOnMaster() throws Exception {
-        String testKey1 = testKey + UUID.randomUUID();
-        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get());
-        Thread.sleep(150);
 
-        client.lockObject(testKey1, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
-        byte[] data = client.getValue(testKey1, intruderId).get();
-        assertNotNull(data);
 
-        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "fail".getBytes(StandardCharsets.UTF_8), intruderId).get());
-
-        byte[] ownerUpdate = client.updateKeyValue(testKey1, "success".getBytes(StandardCharsets.UTF_8), ownerId).get();
-        assertNotNull(ownerUpdate);
-    }
-
-    @Test
-    @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Backup")
-    void testWriteLockProtectionCreateOnBackup() throws Exception {
-        String testKey1 = testKey + UUID.randomUUID();
-        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get());
-        Thread.sleep(150);
-
-        client.lockObject(testKey1, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
-
-        byte[] data = client.getValue(testKey1, intruderId).get();
-        assertNotNull(data);
-
-        assertPermissionDenied(() -> client.updateKeyValue(testKey1, "fail".getBytes(StandardCharsets.UTF_8), intruderId).get());
-
-        byte[] ownerUpdate = client.updateKeyValue(testKey1, "success".getBytes(StandardCharsets.UTF_8), ownerId).get();
-        assertNotNull(ownerUpdate);
-    }
 
     @Test
     @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Master")

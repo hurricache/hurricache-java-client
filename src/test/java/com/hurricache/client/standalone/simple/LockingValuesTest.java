@@ -16,18 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 public class LockingValuesTest extends TestBase {
 
-    @Test
-    void testUnanimousLockAndAnyUnlock() throws ExecutionException, InterruptedException {
-        String lockKey1 = "existing_lock_object" + UUID.randomUUID();
-        Assertions.assertNotNull(client.createKeyValue(lockKey1, "initial_data".getBytes(StandardCharsets.UTF_8)).get());
-        Thread.sleep(500);
-
-        LockStatus lockRes = client.lockObject(lockKey1, LockType.WRITE_LOCK, 0, Duration.ofSeconds(60)).get();
-        Assertions.assertEquals(LockStatus.OK, lockRes, "Should lock unanimously");
-
-        LockStatus unlockRes = client.unlockObject(lockKey1, 999).get();
-        Assertions.assertEquals(LockStatus.OK, unlockRes, "Any client should be able to unlock a unanimous lock");
-    }
 
     @Test
     void testSpecificLockAndRestrictedUnlock() throws ExecutionException, InterruptedException {

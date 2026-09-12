@@ -626,6 +626,27 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         return rawFuture;
     }
 
+    @Override
+    public CompletableFuture<Map<OrderedPayload,Payload>> streamElementInRangeOrderedMap(byte[] key,
+                                                                                  KeyHintData hint,
+                                                                                  long startWeight,
+                                                                                  long endWeight,
+                                                                                  boolean reverse,
+                                                                                  int clientId,
+                                                                                  Duration timeout) {
+        KeyPositionRequest request = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.ORDERED_MAP)
+                .setPos(startWeight)
+                .setEnd(endWeight)
+                .setReverse(reverse)
+                .build();
+
+        CompletableFuture<Map<OrderedPayload,Payload>>rawFuture = new CompletableFuture<>();
+        getStub(timeout).getElementInRange(request, new StreamBatchOrderedMapObserver(rawFuture));
+        return rawFuture;
+    }
+
     // =========================================================================
     // INSERTION OPERATIONS
     // =========================================================================
@@ -1266,19 +1287,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             long order = payload.getOrder() != null
                          ? payload.getOrder()
                          : 0L;
-            OrderedKey.Builder orderedValue = OrderedKey.newBuilder()
-                    .setOrder(order)
-                    .setPayload(KeyBinaryPayload.newBuilder()
-                                        .setSize(payload.getValue().length)
-                                        .setPayload(ByteString.copyFrom(payload.getValue()))
-                                        .build());
+            OrderedKey.Builder orderedValue = CompressionUtils.compressKeyIfNeeded(payload.getValue(),payload.getOrder(),clientId,getDefaultCompressionThreshold());
 
-            Value.Builder unorderedValueBuilder = Value.newBuilder()
-                    .setValue(BinaryPayload.newBuilder()
-                                      .setSize(payload.getValue().length)
-                                      .setPayload(ByteString.copyFrom(upayload.getValue()))
-                                      .build());
-
+            Value.Builder unorderedValueBuilder = CompressionUtils.compressIfNeeded(upayload.getValue(),getDefaultCompressionThreshold());
             builder.addKeyOrdered(orderedValue).addValueUnordered(unorderedValueBuilder);
         }
         builder.setType(ContainerType.ORDERED_MAP);
