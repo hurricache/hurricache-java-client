@@ -2,6 +2,7 @@ package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
@@ -1290,5 +1291,65 @@ public class VectorOperationsTest extends TestBase {
             Thread.currentThread().interrupt();
             Assertions.fail(e.getMessage());
         }
+    }
+
+    // =========================================================================
+    // REMOVE FROM CONTAINER OPERATIONS
+    // =========================================================================
+
+    @Test
+    @DisplayName("removeFromContainer removes element by value and returns removed count")
+    void testRemoveFromContainer() throws ExecutionException, InterruptedException {
+        String vecKey = "vector_remove"+UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of( "item1".getBytes(StandardCharsets.UTF_8)), Payload.of( "item2".getBytes(StandardCharsets.UTF_8)), Payload.of( "item3".getBytes(StandardCharsets.UTF_8)));
+
+        KeyHintData hint = client.createVector(vecKey, initialData).get();
+        assertNotNull(hint);
+
+        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, "item1".getBytes(StandardCharsets.UTF_8)).get();
+        assertEquals(1, removed, "1 element should be removed");
+
+        List<Payload> result = client.streamVector(vecKey, hint).get();
+        assertEquals(2, result.size(), "Ordered set must contain 2 elements");
+    }
+
+    @Test
+    @DisplayName("removeFromContainer can remove multiple duplicates with same key but different weights")
+    void testRemoveFromContainerMultipleDuplicates() throws ExecutionException, InterruptedException {
+        String vecKey = "vector_remove_multi"+UUID.randomUUID();
+
+
+        List<Payload> initialData = List.of(
+                Payload.of( "item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of( "item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of( "item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of( "item3".getBytes(StandardCharsets.UTF_8))
+        );
+        KeyHintData hint = client.createVector(vecKey, initialData).get();
+        assertNotNull(hint);
+
+        // Remove all elements matching key "item1" (3 items)
+        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, "item1".getBytes(StandardCharsets.UTF_8)).get();
+        assertEquals(3, removed, "3 elements with the same key must be removed");
+
+        List<Payload> result = client.streamVector(vecKey, hint).get();
+        assertEquals(1, result.size(), "Ordered set must contain 1 element");
+        assertEquals("item3", new String(result.get(0).getValue()));
+    }
+
+    @Test
+    @DisplayName("removeFromContainer returns 0 if element does not exist")
+    void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
+        String vecKey = "vector_remove_nonexistent"+UUID.randomUUID();
+        List<Payload> initialData = List.of(
+                Payload.of( "item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of( "item2".getBytes(StandardCharsets.UTF_8))
+        );
+
+        KeyHintData hint = client.createVector(vecKey, initialData).get();
+        assertNotNull(hint);
+
+        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, "item123".getBytes(StandardCharsets.UTF_8)).get();
+        assertEquals(0, removed, "0 elements should be removed (element not found)");
     }
 }

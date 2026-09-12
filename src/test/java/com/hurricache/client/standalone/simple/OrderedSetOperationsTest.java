@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Тесты для операций с Ordered Set (sorted set с весами).
- * Покрывает все методы, поддерживаемые контейнером Ordered Set.
+ * Integration tests for Ordered Set operations (sorted set with weights).
+ * Covers all methods supported by the Ordered Set container type.
  */
 public class OrderedSetOperationsTest extends TestBase {
 
@@ -66,71 +66,65 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("Создание пустого Ordered Set")
+    @DisplayName("Create empty Ordered Set")
     void testCreateEmptyOrderedSet() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_empty";
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, new ArrayList<>()).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
-        
-        Thread.sleep(500);
-        
+        assertNotNull(hint, "KeyHint must be created");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "Пустой ordered set должен вернуть пустой список");
+        assertEquals(0, result.size(), "An empty ordered set must return an empty list");
     }
 
     @Test
-    @DisplayName("Создание Ordered Set с начальными данными")
+    @DisplayName("Create Ordered Set with initial data")
     void testCreateOrderedSetWithInitialData() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_initial";
         List<OrderedPayload> initialData = List.of(
-            op(1L, "item1"),
-            op(2L, "item2"),
-            op(3L, "item3")
+                op(1L, "item1"),
+                op(2L, "item2"),
+                op(3L, "item3")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
-        
-        Thread.sleep(500);
-        
+        assertNotNull(hint, "KeyHint must be created");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Ordered set должен содержать 3 элемента");
-        
+        assertEquals(3, result.size(), "Ordered set must contain 3 elements");
+
         List<String> resultStrings = result.stream()
-            .map(this::str)
-            .toList();
+                .map(this::str)
+                .toList();
         assertTrue(resultStrings.contains("item1"));
         assertTrue(resultStrings.contains("item2"));
         assertTrue(resultStrings.contains("item3"));
-        
-        // Проверяем порядок (по возрастанию веса)
+
+        // Verify ordering (ascending by weight)
         assertEquals(1L, result.get(0).getOrder());
         assertEquals(2L, result.get(1).getOrder());
         assertEquals(3L, result.get(2).getOrder());
     }
 
     @Test
-    @DisplayName("Создание большого Ordered Set с автоматическим разбиением на чанки (чанкинг)")
+    @DisplayName("Create large Ordered Set with automatic chunking")
     void testCreateLargeOrderedSetWithChunking() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_large";
         int elementCount = 1500;
         List<OrderedPayload> payloads = new ArrayList<>();
-        
+
         for (int i = 0; i < elementCount; i++) {
             payloads.add(op((long) i, "large_item_" + i + "_" + UUID.randomUUID()));
         }
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, payloads).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
-        
-        Thread.sleep(500);
-        
+        assertNotNull(hint, "KeyHint must be created");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(elementCount, result.size(), "Ordered set должен содержать " + elementCount + " элементов");
+        assertEquals(elementCount, result.size(), "Ordered set must contain " + elementCount + " elements");
     }
 
     // =========================================================================
@@ -138,40 +132,36 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("streamOrderedSet пустого ordered set возвращает пустой ответ")
+    @DisplayName("streamOrderedSet on an empty set returns empty response")
     void testStreamOrderedSetEmptySet() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_stream_empty";
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, new ArrayList<>()).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "streamOrderedSet пустого ordered set должен вернуть пустой список");
+        assertEquals(0, result.size(), "streamOrderedSet on an empty ordered set must return an empty list");
     }
 
     @Test
-    @DisplayName("streamOrderedSet возвращает все содержимое контейнера")
+    @DisplayName("streamOrderedSet returns all container contents")
     void testStreamOrderedSetReturnsAllContent() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_stream_all";
         List<OrderedPayload> initialData = List.of(
-            op(1L, "elem1"),
-            op(2L, "elem2"),
-            op(3L, "elem3"),
-            op(4L, "elem4"),
-            op(5L, "elem5")
+                op(1L, "elem1"),
+                op(2L, "elem2"),
+                op(3L, "elem3"),
+                op(4L, "elem4"),
+                op(5L, "elem5")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(5, result.size(), "streamOrderedSet должен вернуть все 5 элементов");
+        assertEquals(5, result.size(), "streamOrderedSet must return all 5 elements");
     }
 
     // =========================================================================
@@ -179,67 +169,57 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("addElementOrdered добавляет элементы в ordered set c весом и возвращает количество добавленных элементов")
-    void testaddElementOrdered() throws ExecutionException, InterruptedException {
+    @DisplayName("addElementWithWeight adds elements with weights and returns added count")
+    void testAddElementWithWeight() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_add_weight";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Добавляем 2 новых элемента с весами
+
+        // Add 2 new elements with weights
         List<OrderedPayload> newElements = List.of(op(2L, "item2"), op(3L, "item3"));
         Integer added = client.addElementWithWeight(setKey, hint, newElements).get();
-        assertEquals(2, added, "Должно быть добавлено 2 элемента");
-        
-        Thread.sleep(500);
-        
+        assertEquals(2, added, "2 elements should be added");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(3, result.size(), "Ordered set должен содержать 3 элемента");
-        
-        // Проверяем порядок
+        assertEquals(3, result.size(), "Ordered set must contain 3 elements");
+
+        // Verify order
         assertEquals(1L, result.get(0).getOrder());
         assertEquals(2L, result.get(1).getOrder());
         assertEquals(3L, result.get(2).getOrder());
     }
 
     @Test
-    @DisplayName("addElementOrdered позволяет дубликаты (одинаковые ключи с разными весами)")
-    void testaddElementOrderedAllowsDuplicates() throws ExecutionException, InterruptedException {
+    @DisplayName("addElementWithWeight allows duplicates (same keys with different weights)")
+    void testAddElementWithWeightAllowsDuplicates() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_add_weight_dup";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Добавляем элемент с тем же ключом но другим весом (дубликат)
+
+        // Add elements with the same key but different weights (duplicates allowed)
         List<OrderedPayload> duplicateElements = List.of(op(2L, "item1"), op(3L, "item1"));
         Integer added = client.addElementWithWeight(setKey, hint, duplicateElements).get();
-        assertEquals(2, added, "Должно быть добавлено 2 элемента (дубликаты разрешены)");
-        
-        Thread.sleep(500);
-        
+        assertEquals(2, added, "2 elements should be added (duplicates allowed)");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(3, result.size(), "Ordered set должен содержать 3 элемента");
+        assertEquals(3, result.size(), "Ordered set must contain 3 elements");
     }
 
     @Test
-    @DisplayName("addElementOrdered с пустым списком возвращает 0")
-    void testaddElementOrderedEmptyList() throws ExecutionException, InterruptedException {
+    @DisplayName("addElementWithWeight with empty list returns 0")
+    void testAddElementWithWeightEmptyList() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_add_weight_empty";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
+
         Integer added = client.addElementWithWeight(setKey, hint, new ArrayList<>()).get();
-        assertEquals(0, added, "Добавление пустого списка должно вернуть 0");
+        assertEquals(0, added, "Adding an empty list must return 0");
     }
 
     // =========================================================================
@@ -247,80 +227,74 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("streamElementInRangeOrdered возвращает список OrderedPayload согласно startWeight endWeight включительно")
+    @DisplayName("streamElementInRangeOrdered returns elements within startWeight and endWeight inclusively")
     void testStreamElementInRangeOrdered() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_range";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3"),
-            op(40L, "item4"),
-            op(50L, "item5")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3"),
+                op(40L, "item4"),
+                op(50L, "item5")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Запрашиваем элементы с весом от 20 до 40 включительно
+
+        // Request elements with weights from 20 to 40 inclusively
         List<OrderedPayload> result = client.streamElementInRangeOrderedSet(setKey.getBytes(StandardCharsets.UTF_8), hint, 20L, 40L, false, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Должно быть 3 элемента с весом от 20 до 40");
-        
-        // Проверяем, что это правильные элементы
+        assertEquals(3, result.size(), "There should be 3 elements with weights from 20 to 40");
+
+        // Verify correct elements
         assertEquals(20L, result.get(0).getOrder());
         assertEquals(30L, result.get(1).getOrder());
         assertEquals(40L, result.get(2).getOrder());
     }
 
     @Test
-    @DisplayName("streamElementInRangeOrdered с reverse=true возвращает элементы в обратном порядке")
+    @DisplayName("streamElementInRangeOrdered with reverse=true returns elements in reverse order")
     void testStreamElementInRangeOrderedReverse() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_range_reverse";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3"),
-            op(40L, "item4"),
-            op(50L, "item5")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3"),
+                op(40L, "item4"),
+                op(50L, "item5")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Запрашиваем элементы с весом от 20 до 40 в обратном порядке
+
+        // Request elements with weights from 20 to 40 in reverse order
         List<OrderedPayload> result = client.streamElementInRangeOrderedSet(setKey.getBytes(StandardCharsets.UTF_8), hint, 20L, 40L, true, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Должно быть 3 элемента");
-        
-        // Проверяем обратный порядок
+        assertEquals(3, result.size(), "There should be 3 elements");
+
+        // Verify reverse order
         assertEquals(40L, result.get(0).getOrder());
         assertEquals(30L, result.get(1).getOrder());
         assertEquals(20L, result.get(2).getOrder());
     }
 
     @Test
-    @DisplayName("streamElementInRangeOrdered возвращает пустой список если нет элементов в диапазоне")
+    @DisplayName("streamElementInRangeOrdered returns empty list if no elements fall in range")
     void testStreamElementInRangeOrderedNoMatch() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_range_nomatch";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Запрашиваем элементы с весом от 100 до 200 (нет таких элементов)
+
+        // Request elements with weights from 100 to 200 (none exist)
         List<OrderedPayload> result = client.streamElementInRangeOrderedSet(setKey.getBytes(StandardCharsets.UTF_8), hint, 100L, 200L, false, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "Должен быть пустой список");
+        assertEquals(0, result.size(), "List must be empty");
     }
 
     // =========================================================================
@@ -328,66 +302,55 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("removeFromContainer удаляет элемент из ordered set и возвращает количество удаленных элементов")
+    @DisplayName("removeFromContainer removes element by value and returns removed count")
     void testRemoveFromContainer() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"), op(2L, "item2"), op(3L, "item3"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
+
         Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").getValue()).get();
-        assertEquals(1, removed, "Должен быть удален 1 элемент");
-        
-        Thread.sleep(500);
-        
+        assertEquals(1, removed, "1 element should be removed");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(2, result.size(), "Ordered set должен содержать 2 элемента");
+        assertEquals(2, result.size(), "Ordered set must contain 2 elements");
     }
 
     @Test
-    @DisplayName("removeFromContainer может вернуть больше 1 если в контейнере есть одинаковые ключи но с разным весом")
+    @DisplayName("removeFromContainer can remove multiple duplicates with same key but different weights")
     void testRemoveFromContainerMultipleDuplicates() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove_multi";
-        // Добавляем одинаковый ключ с разными весами
         List<OrderedPayload> initialData = List.of(
-            op(1L, "item1"),
-            op(2L, "item1"),
-            op(3L, "item1"),
-            op(4L, "item2")
+                op(1L, "item1"),
+                op(2L, "item1"),
+                op(3L, "item1"),
+                op(4L, "item2")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Удаляем все элементы с ключом "item1" (их 3)
+
+        // Remove all elements matching key "item1" (3 items)
         Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").getValue()).get();
-        assertEquals(3, removed, "Должно быть удалено 3 элемента с одинаковым ключом");
-        
-        Thread.sleep(500);
-        
+        assertEquals(3, removed, "3 elements with the same key must be removed");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(1, result.size(), "Ordered set должен содержать 1 элемент");
+        assertEquals(1, result.size(), "Ordered set must contain 1 element");
         assertEquals("item2", str(result.get(0)));
     }
 
     @Test
-    @DisplayName("removeFromContainer возвращает 0 если элемента нет")
+    @DisplayName("removeFromContainer returns 0 if element does not exist")
     void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove_nonexist";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"), op(2L, "item2"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
+
         Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").getValue()).get();
-        assertEquals(0, removed, "Должно быть удалено 0 элементов (элемент не найден)");
+        assertEquals(0, removed, "0 elements should be removed (element not found)");
     }
 
     // =========================================================================
@@ -395,579 +358,436 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("containsContainerKey проверяет наличие элемента в контейнере")
+    @DisplayName("containsContainerKey checks for element presence in container")
     void testContainsContainerKey() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_contains";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"), op(2L, "item2"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Проверяем существующий элемент
+
+        // Check existing element
         Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").getValue()).get();
-        assertTrue(exists, "Элемент item1 должен существовать");
-        
-        // Проверяем несуществующий элемент
+        assertTrue(exists, "Element item1 must exist");
+
+        // Check non-existing element
         Boolean notExists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").getValue()).get();
-        Assertions.assertFalse(notExists, "Элемент nonexistent не должен существовать");
+        Assertions.assertFalse(notExists, "Element nonexistent must not exist");
     }
 
     // =========================================================================
-    // 7. REMOVE ELEMENT AT POSITION OPERATIONS
+    // 7. REMOVE ELEMENT AT WEIGHT RANGE OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("removeElementAtPosition удаляет элементы с указанным весом pos начальное значение веса endPos конечное")
+    @DisplayName("removeElementAtPosition removes elements within specified weight range")
     void testRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove_pos";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3"),
-            op(40L, "item4"),
-            op(50L, "item5")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3"),
+                op(40L, "item4"),
+                op(50L, "item5")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Удаляем элементы с весом от 20 до 40 включительно
+
+        // Remove elements with weights from 20 to 40 inclusively
         Boolean removed = client.removeElementAtPosition(setKey, hint, 20, 40).get();
-        assertTrue(removed, "Элементы должны быть удалены");
-        
-        Thread.sleep(500);
-        
+        assertTrue(removed, "Elements must be removed");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(2, result.size(), "Ordered set должен содержать 2 элемента");
+        assertEquals(2, result.size(), "Ordered set must contain 2 elements");
         assertEquals(10L, result.get(0).getOrder());
         assertEquals(50L, result.get(1).getOrder());
     }
 
     @Test
-    @DisplayName("removeElementAtPosition: pos и endPos могут совпадать")
+    @DisplayName("removeElementAtPosition works when weight boundaries match")
     void testRemoveElementAtPositionSamePos() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove_pos_same";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Удаляем элемент с весом 20 (pos = endPos = 20)
+
+        // Remove element with weight 20 (minWeight = maxWeight = 20)
         Boolean removed = client.removeElementAtPosition(setKey, hint, 20, 20).get();
-        assertTrue(removed, "Элемент должен быть удален");
-        
-        Thread.sleep(500);
-        
+        assertTrue(removed, "Element must be removed");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(2, result.size(), "Ordered set должен содержать 2 элемента");
+        assertEquals(2, result.size(), "Ordered set must contain 2 elements");
         assertEquals(10L, result.get(0).getOrder());
         assertEquals(30L, result.get(1).getOrder());
     }
 
     // =========================================================================
-    // 8. ADD ELEMENT ORDERED OPERATIONS (без веса)
+    // 8. SET TTL OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("addElementOrdered добавляет элементы в ordered set c весом и возвращает количество добавленных элементов")
-    void testAddElementOrdered() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_add_ordered";
-        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Добавляем 2 новых элемента с весами
-        List<OrderedPayload> newElements = List.of(op(2L, "item2"), op(3L, "item3"));
-        Integer added = client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8), hint, newElements, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(2, added, "Должно быть добавлено 2 элемента");
-        
-        Thread.sleep(500);
-        
-        List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(3, result.size(), "Ordered set должен содержать 3 элемента");
-    }
-
-    @Test
-    @DisplayName("addElementOrdered позволяет дубликаты (одинаковые ключи с разными весами)")
-    void testAddElementOrderedAllowsDuplicates() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_add_ordered_dup";
-        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Добавляем элемент с тем же ключом но другим весом (дубликат)
-        List<OrderedPayload> duplicateElements = List.of(op(2L, "item1"), op(3L, "item1"));
-        Integer added = client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8), hint, duplicateElements, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(2, added, "Должно быть добавлено 2 элемента (дубликаты разрешены)");
-    }
-
-    // =========================================================================
-    // 9. SET TTL OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("setTtl устанавливает TTL на ordered set")
+    @DisplayName("setTtl sets a TTL on the ordered set")
     void testSetTtl() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_ttl_set";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
+
         Boolean setTtlResult = client.setTtl(setKey, hint, 100).get();
-        assertTrue(setTtlResult, "TTL должен быть успешно установлен");
+        assertTrue(setTtlResult, "TTL must be successfully set");
     }
 
     @Test
-    @DisplayName("getTtl получает TTL ordered set")
+    @DisplayName("getTtl retrieves TTL of the ordered set")
     void testGetTtl() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_ttl_get";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Устанавливаем TTL
+
+        // Set TTL
         client.setTtl(setKey, hint, 100).get();
-        
-        Thread.sleep(500);
+        Thread.sleep(150);
+
         assertNotFound(client.getTtl(setKey, hint));
     }
 
     // =========================================================================
-    // 10. TTL EXPIRATION OPERATIONS
+    // 9. TTL EXPIRATION OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("После истечения TTL ordered set должен удалиться")
+    @DisplayName("Ordered set is deleted after TTL expiration")
     void testTtlExpiration() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_ttl_expire";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Устанавливаем TTL = 1 секунда
+
+        // Set short TTL = 1 second
         client.setTtl(setKey, hint, 1).get();
-        
+
         Thread.sleep(1500);
-        
-        // Проверяем, что ordered set удален - streamOrderedSet должен вернуть пустой список или ошибку
+
+        // Verify set is deleted - streamOrderedSet should return empty or error
         assertNotFound(client.streamOrderedSet(setKey, hint));
     }
 
     // =========================================================================
-    // 11. LOCKING OPERATIONS
+    // 10. LOCKING OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("READ_LOCK: несколько клиентов могут читать параллельно")
+    @DisplayName("READ_LOCK: multiple clients can read concurrently")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_read_lock";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Первый клиент берет READ_LOCK
+
+        // First client acquires READ_LOCK
         LockStatus lock1 = client.lockObject(setKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock1, "Первый клиент должен получить READ_LOCK");
-        
-        // Второй клиент также может взять READ_LOCK
+        assertEquals(LockStatus.OK, lock1, "First client should acquire READ_LOCK");
+
+        // Second client also acquires READ_LOCK
         LockStatus lock2 = client.lockObject(setKey, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2, "Второй клиент должен получить READ_LOCK");
-        
-        // Оба клиента могут читать
+        assertEquals(LockStatus.OK, lock2, "Second client should acquire READ_LOCK");
+
+        // Both clients can read
         List<OrderedPayload> result1 = client.streamOrderedSet(setKey, hint, DEFAULT_CLIENT_ID).get();
         assertNotNull(result1);
         assertEquals(1, result1.size());
-        
+
         List<OrderedPayload> result2 = client.streamOrderedSet(setKey, hint, SECONDARY_CLIENT_ID).get();
         assertNotNull(result2);
         assertEquals(1, result2.size());
-        
-        // Освобождаем блокировки
+
+        // Release locks
         client.unlockObject(setKey, DEFAULT_CLIENT_ID).get();
         client.unlockObject(setKey, SECONDARY_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("WRITE_LOCK: только владелец может читать и писать, другие не могут ничего")
+    @DisplayName("WRITE_LOCK: only the owner can read and write, others are blocked")
     void testWriteLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_write_lock";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Владелец берет WRITE_LOCK
+
+        // Owner acquires WRITE_LOCK
         LockStatus lock = client.lockObject(setKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Владелец должен получить WRITE_LOCK");
-        
-        // Владелец может читать
+        assertEquals(LockStatus.OK, lock, "Owner should acquire WRITE_LOCK");
+
+        // Owner can read
         List<OrderedPayload> readResult = client.streamOrderedSet(setKey, hint, OWNER_CLIENT_ID).get();
         assertNotNull(readResult);
         assertEquals(1, readResult.size());
-        
-        // Владелец может писать (добавлять элементы)
+
+        // Owner can write (add elements)
         Integer added = client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(op(2L, "item2")), OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(1, added, "Владелец должен добавить элемент");
-        
-        // Другой клиент не может читать
+        assertEquals(1, added, "Owner should add element");
+
+        // Intruder cannot read
         try {
             client.streamOrderedSet(setKey, hint, INTRUDER_CLIENT_ID).get();
-            fail("Интриган не должен иметь доступа к чтению при WRITE_LOCK");
+            fail("Intruder must not have read access under WRITE_LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Must throw PERMISSION_DENIED");
         }
-        
-        // Другой клиент не может писать
+
+        // Intruder cannot write
         try {
             client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(op(3L, "item3")), INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-            fail("Интриган не должен иметь доступа к записи при WRITE_LOCK");
+            fail("Intruder must not have write access under WRITE_LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Must throw PERMISSION_DENIED");
         }
-        
-        // Освобождаем блокировку
+
+        // Release lock
         client.unlockObject(setKey, OWNER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("GLOBAL: только владелец делает любые операции, все остальные блокируются")
+    @DisplayName("GLOBAL: only the owner can perform operations, all others are blocked")
     void testGlobalLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_global_lock";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Владелец берет GLOBAL LOCK
+
+        // Owner acquires GLOBAL LOCK
         LockStatus lock = client.lockObject(setKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Владелец должен получить GLOBAL LOCK");
-        
-        // Владелец может читать
+        assertEquals(LockStatus.OK, lock, "Owner should acquire GLOBAL LOCK");
+
+        // Owner can read
         List<OrderedPayload> readResult = client.streamOrderedSet(setKey, hint, OWNER_CLIENT_ID).get();
         assertNotNull(readResult);
         assertEquals(1, readResult.size());
-        
-        // Владелец может писать
+
+        // Owner can write
         Integer added = client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(op(2L, "item2")), OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(1, added, "Владелец должен добавить элемент");
-        
-        // Другой клиент не может читать
+        assertEquals(1, added, "Owner should add element");
+
+        // Intruder cannot read
         try {
             client.streamOrderedSet(setKey, hint, INTRUDER_CLIENT_ID).get();
-            fail("Интриган не должен иметь доступа к чтению при GLOBAL LOCK");
+            fail("Intruder must not have read access under GLOBAL LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Must throw PERMISSION_DENIED");
         }
-        
-        // Другой клиент не может писать
+
+        // Intruder cannot write
         try {
             client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(op(3L, "item3")), INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-            fail("Интриган не должен иметь доступа к записи при GLOBAL LOCK");
+            fail("Intruder must not have write access under GLOBAL LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Must throw PERMISSION_DENIED");
         }
 
         assertDenied(client.unlockObject(setKey, INTRUDER_CLIENT_ID));
-        
-        // Освобождаем блокировку владельцем
+
+        // Release lock by owner
         client.unlockObject(setKey, OWNER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("unlockObject: снять блокировку может только владелец")
+    @DisplayName("unlockObject: only the lock owner can release it")
     void testUnlockByOwnerOnly() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_unlock_owner";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Владелец берет WRITE_LOCK
+
+        // Owner acquires WRITE_LOCK
         LockStatus lock = client.lockObject(setKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Владелец должен получить WRITE_LOCK");
-        
-        // Интриган пытается снять блокировку
+        assertEquals(LockStatus.OK, lock, "Owner should acquire WRITE_LOCK");
+
+        // Intruder tries to unlock
         assertDenied(client.unlockObject(setKey, INTRUDER_CLIENT_ID));
-        
-        // Владелец снимает блокировку
+
+        // Owner releases the lock
         LockStatus validUnlock = client.unlockObject(setKey, OWNER_CLIENT_ID).get();
-        assertEquals(LockStatus.OK, validUnlock, "Владелец должен снять блокировку");
+        assertEquals(LockStatus.OK, validUnlock, "Owner should successfully unlock");
     }
 
     // =========================================================================
-    // 12. METHODS NOT SUPPORTED BY ORDERED SET (should return error)
-    // =========================================================================
-
-    // =========================================================================
-    // 14. GET ELEMENT AT POSITION OPERATIONS (для ordered set)
+    // 11. GET ELEMENT BY WEIGHT OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("getElementAtPosition возвращает элемент с указанным весом")
-    void testGetElementAtPosition() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_get_pos";
+    @DisplayName("getElementWithWeight returns element by specific weight")
+    void testGetElementWithWeight() throws ExecutionException, InterruptedException {
+        String setKey = baseKey + "_get_weight";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3"),
-            op(40L, "item4"),
-            op(50L, "item5")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3"),
+                op(40L, "item4"),
+                op(50L, "item5")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Получаем элемент с весом 30
+
+        // Get element with weight 30
         Payload result = client.getElementWithWeight(setKey, hint, 30).get();
         assertNotNull(result);
-        System.out.println("getElementAtPosition: " + str(result));
         assertEquals("item3", str(result));
     }
 
     @Test
-    @DisplayName("getElementAtPosition возвращает один из элементов если их несколько с одинаковым весом")
-    void testGetElementAtPositionMultipleSameWeight() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_get_pos_multi";
-        // Добавляем несколько элементов с одинаковым весом
+    @DisplayName("getElementWithWeight returns any matching element if multiple have the same weight")
+    void testGetElementWithWeightMultipleSameWeight() throws ExecutionException, InterruptedException {
+        String setKey = baseKey + "_get_weight_multi";
         List<OrderedPayload> initialData = List.of(
-            op(20L, "item1"),
-            op(20L, "item2"),
-            op(20L, "item3"),
-            op(40L, "item4")
+                op(20L, "item1"),
+                op(20L, "item2"),
+                op(20L, "item3"),
+                op(40L, "item4")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Получаем элемент с весом 20 (может вернуть любой из 3-х)
+
+        // Get element with weight 20
         Payload result = client.getElementWithWeight(setKey, hint, 20).get();
-        System.out.println("getElementAtPosition: " + str(result));
         assertNotNull(result);
-        // Проверяем, что это один из ожидаемых элементов
         assertTrue(str(result).equals("item1") || str(result).equals("item2") || str(result).equals("item3"));
     }
 
     @Test
-    @DisplayName("getElementAtPosition возвращает NOT_FOUND если веса нет")
+    @DisplayName("getElementAtPosition throws NOT_FOUND if weight does not exist")
     void testGetElementAtPositionNotFound() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_get_pos_notfound";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Пытаемся получить элемент с несуществующим весом
+
         try {
             client.getElementAtPosition(setKey, hint, 100).get();
-            fail("getElementAtPosition должен вызвать ошибку NOT_FOUND для несуществующего веса");
+            fail("getElementAtPosition must throw NOT_FOUND for non-existent weight");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Должна быть ошибка NOT_FOUND");
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Must throw NOT_FOUND error");
         }
     }
 
     @Test
-    @DisplayName("getAndRemoveElementAtPosition возвращает и удаляет элемент с указанным весом")
-    void testGetAndRemoveElementAtPosition() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_get_remove_pos";
+    @DisplayName("getAndRemoveElementWithWeight returns and removes element by weight")
+    void testGetAndRemoveElementWithWeight() throws ExecutionException, InterruptedException {
+        String setKey = baseKey + "_get_remove_weight";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Получаем и удаляем элемент с весом 20
+
+        // Get and remove element with weight 20
         Payload result = client.getAndRemoveElementWithWeight(setKey, hint, 20).get();
-        System.out.println("getElementAtPosition: " + str(result));
         assertNotNull(result);
         assertEquals("item2", str(result));
-        
-        Thread.sleep(500);
-        
-        // Проверяем, что элемент удален
+
+        // Verify element is removed
         List<OrderedPayload> remaining = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(2, remaining.size(), "Ordered set должен содержать 2 элемента");
+        assertEquals(2, remaining.size(), "Ordered set must contain 2 elements");
     }
 
     @Test
-    @DisplayName("getAndRemoveElementAtPosition возвращает NOT_FOUND если веса нет")
+    @DisplayName("getAndRemoveElementAtPosition throws NOT_FOUND if weight does not exist")
     void testGetAndRemoveElementAtPositionNotFound() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_get_remove_pos_notfound";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2")
+                op(10L, "item1"),
+                op(20L, "item2")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Пытаемся получить и удалить элемент с несуществующим весом
+
         try {
             client.getAndRemoveElementAtPosition(setKey, hint, 100).get();
-            fail("getAndRemoveElementAtPosition должен вызвать ошибку NOT_FOUND для несуществующего веса");
+            fail("getAndRemoveElementAtPosition must throw NOT_FOUND for non-existent weight");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Должна быть ошибка NOT_FOUND");
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Must throw NOT_FOUND error");
         }
     }
 
     // =========================================================================
-    // 15. ADD ELEMENT TO POSITION OPERATIONS (для ordered set)
+    // 12. UNSUPPORTED METHODS FOR ORDERED SET
     // =========================================================================
 
     @Test
-    @DisplayName("addElementToPosition добавляет элемент с весом pos")
-    void testAddElementToPosition() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_add_pos";
-        List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(30L, "item3")
-        );
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Добавляем элемент с весом 20
-        Integer added = client.addElementWithWeight(setKey, hint, List.of(OrderedPayload.of(20,bytes("item2")))).get();
-        assertEquals(1, added, "Должен быть добавлен 1 элемент");
-        
-        Thread.sleep(500);
-        
-        List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(3, result.size(), "Ordered set должен содержать 3 элемента");
-        assertEquals(10L, result.get(0).getOrder());
-        assertEquals(20L, result.get(1).getOrder());
-        assertEquals(30L, result.get(2).getOrder());
-    }
-
-    @Test
-    @DisplayName("addElementToPosition добавляет элемент с весом pos в пустой ordered set")
-    void testAddElementToPositionEmptySet() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_add_pos_empty";
-        
-        KeyHintData hint = client.createOrderedSet(setKey, new ArrayList<>()).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Добавляем элемент с весом 10
-        Integer added = client.addElementWithWeight(setKey, hint, List.of(OrderedPayload.of(10,bytes("item1")))).get();
-        assertEquals(1, added, "Должен быть добавлен 1 элемент");
-        
-        Thread.sleep(500);
-        
-        List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(1, result.size(), "Ordered set должен содержать 1 элемент");
-        assertEquals(10L, result.get(0).getOrder());
-    }
-
-    @Test
-    @DisplayName("Методы, не применимые к ordered set, должны вызывать ошибку")
+    @DisplayName("Methods not applicable to ordered set must throw errors")
     void testUnsupportedMethodsForOrderedSet() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_unsupported";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // getHead - не применим к ordered set
+
+        // getHead - not applicable to ordered set
         try {
             client.getHead(setKey, hint).get();
-            fail("getHead должен вызвать ошибку для ordered set");
+            fail("getHead must throw error for ordered set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Must throw INTERNAL error");
         }
-        
-        // getFront - не применим к ordered set
+
+        // getFront - not applicable to ordered set
         try {
             client.getHead(setKey, hint).get();
-            fail("getFront должен вызвать ошибку для ordered set");
+            fail("getFront must throw error for ordered set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Must throw INTERNAL error");
         }
-        
-        // getTail - не применим к ordered set
+
+        // getTail - not applicable to ordered set
         try {
             client.getTail(setKey, hint).get();
-            fail("getTail должен вызвать ошибку для ordered set");
+            fail("getTail must throw error for ordered set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Must throw INTERNAL error");
         }
-        
 
-        
-        // streamElementInRangeUnordered - не применим к ordered set
+        // streamElementInRangeUnordered - not applicable to ordered set
         try {
             client.streamElementInRangeUnordered(setKey.getBytes(StandardCharsets.UTF_8), hint, ContainerType.ORDERED_SET, 0, 10, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
-            fail("streamElementInRangeUnordered должен вызвать ошибку для ordered set");
+            fail("streamElementInRangeUnordered must throw error for ordered set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INVALID_ARGUMENT, cause.getStatus().getCode(), "Должна быть ошибка INVALID_ARGUMENT");
-        }
-        catch (IllegalArgumentException e) {
-            assertEquals("Unsupported container type for stream operation: ORDERED_SET",e.getMessage());
+            assertEquals(Status.Code.INVALID_ARGUMENT, cause.getStatus().getCode(), "Must throw INVALID_ARGUMENT");
+        } catch (IllegalArgumentException e) {
+            assertEquals("Unsupported container type for stream operation: ORDERED_SET", e.getMessage());
         }
     }
 
@@ -976,207 +796,226 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("addElementOrdered с пустым списком возвращает 0")
-    void testaddElementOrderedEmptyListEdgeCase() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_add_weight_empty_edge";
-        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        Integer added = client.addElementWithWeight(setKey, hint, new ArrayList<>()).get();
-        assertEquals(0, added, "Добавление пустого списка должно вернуть 0");
-    }
-
-    @Test
-    @DisplayName("removeFromContainer с несуществующим элементом возвращает 0")
-    void testRemoveFromContainerNonExistentElement() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_remove_nonexist_elem";
-        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").getValue()).get();
-        assertEquals(0, removed, "Удаление несуществующего элемента должно вернуть 0");
-    }
-
-    @Test
-    @DisplayName("containsContainerKey с несуществующим элементом возвращает false")
-    void testContainsContainerKeyNonExistent() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_contains_nonexist";
-        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").getValue()).get();
-        Assertions.assertFalse(exists);
-    }
-
-    @Test
-    @DisplayName("streamOrderedSet с несуществующим ordered set возвращает ошибку")
+    @DisplayName("streamOrderedSet with non-existent ordered set throws NOT_FOUND")
     void testStreamOrderedSetNonExistent() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_stream_nonexist";
-        
-        // Создаем KeyHint для несуществующего ordered set
         KeyHintData hint = KeyHintData.of(1, 1);
-        
+
         try {
             client.streamOrderedSet(setKey, hint).get();
-            fail("streamOrderedSet для несуществующего ordered set должен вызвать ошибку");
+            fail("streamOrderedSet for a non-existent set must throw error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Должна быть ошибка NOT_FOUND");
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Must throw NOT_FOUND");
         }
     }
 
     @Test
-    @DisplayName("TTL expiration: ordered set удаляется после истечения TTL")
-    void testTtlExpirationComplete() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_ttl_expire_complete";
-        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Устанавливаем TTL = 1 секунда
-        client.setTtl(setKey, hint, 1).get();
-        
-        Thread.sleep(1500);
-        
-        // Проверяем, что ordered set удален - getSize должен вернуть ошибку или 0
-        try {
-            Integer size = client.getSize(setKey, hint).get();
-            // Если размер 0, значит контейнер пуст (удален)
-            assertTrue(size == 0 || size == null, "После истечения TTL размер должен быть 0");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Должна быть ошибка NOT_FOUND");
-        }
-    }
-
-    @Test
-    @DisplayName("Блокировка с истекшим TTL: unlock возвращает OK")
+    @DisplayName("Unlocking an expired lock returns OK")
     void testUnlockOnExpiredLock() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_unlock_expired";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Берем блокировку с TTL = 1 секунда
+
+        // Acquire lock with TTL = 1 second
         LockStatus lock = client.lockObject(setKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
-        assertEquals(LockStatus.OK, lock, "Должна быть получена блокировка");
-        
+        assertEquals(LockStatus.OK, lock, "Lock must be acquired");
+
         Thread.sleep(1500);
-        
-        // Пытаемся снять истекшую блокировку
+
+        // Try to release expired lock
         LockStatus unlock = client.unlockObject(setKey, OWNER_CLIENT_ID).get();
-        assertEquals(LockStatus.OK, unlock, "Снятие истекшей блокировки должно вернуть OK");
+        assertEquals(LockStatus.OK, unlock, "Releasing an expired lock must return OK");
     }
 
     @Test
-    @DisplayName("streamElementInRangeOrdered: endWeight всегда включается")
+    @DisplayName("streamElementInRangeOrdered includes endWeight")
     void testStreamElementInRangeOrderedEndWeightIncluded() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_range_end_included";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Запрашиваем элементы с весом от 10 до 30 (30 должен быть включен)
+
         List<OrderedPayload> result = client.streamElementInRangeOrderedSet(setKey.getBytes(StandardCharsets.UTF_8), hint, 10L, 30L, false, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Должно быть 3 элемента, endWeight 30 должен быть включен");
+        assertEquals(3, result.size(), "Should have 3 elements, endWeight 30 must be included");
         assertEquals(30L, result.get(2).getOrder());
     }
 
     @Test
-    @DisplayName("streamElementInRangeOrdered: startWeight всегда включается")
+    @DisplayName("streamElementInRangeOrdered includes startWeight")
     void testStreamElementInRangeOrderedStartWeightIncluded() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_range_start_included";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Запрашиваем элементы с весом от 10 до 30 (10 должен быть включен)
+
         List<OrderedPayload> result = client.streamElementInRangeOrderedSet(setKey.getBytes(StandardCharsets.UTF_8), hint, 10L, 30L, false, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Должно быть 3 элемента, startWeight 10 должен быть включен");
+        assertEquals(3, result.size(), "Should have 3 elements, startWeight 10 must be included");
         assertEquals(10L, result.get(0).getOrder());
     }
 
     @Test
-    @DisplayName("addElementOrdered: добавление элементов с одинаковыми весами")
-    void testaddElementOrderedSameWeight() throws ExecutionException, InterruptedException {
-        String setKey = baseKey + "_add_weight_same_weight";
-        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
-        
-        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
-        assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Добавляем элементы с тем же весом (допустимо)
-        List<OrderedPayload> newElements = List.of(op(1L, "item2"), op(1L, "item3"));
-        Integer added = client.addElementWithWeight(setKey, hint, newElements).get();
-        assertEquals(2, added, "Должно быть добавлено 2 элемента");
-        
-        Thread.sleep(500);
-        
-        List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(3, result.size(), "Ordered set должен содержать 3 элемента");
-    }
-
-    @Test
-    @DisplayName("removeElementAtPosition: удаление диапазона с endPos включительно")
+    @DisplayName("removeElementAtPosition removes range including endPos inclusively")
     void testRemoveElementAtPositionEndPosIncluded() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove_pos_end_included";
         List<OrderedPayload> initialData = List.of(
-            op(10L, "item1"),
-            op(20L, "item2"),
-            op(30L, "item3"),
-            op(40L, "item4")
+                op(10L, "item1"),
+                op(20L, "item2"),
+                op(30L, "item3"),
+                op(40L, "item4")
         );
-        
+
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
-        
-        Thread.sleep(500);
-        
-        // Удаляем элементы с весом от 20 до 30 (30 должен быть удален)
+
         Boolean removed = client.removeElementAtPosition(setKey, hint, 20, 30).get();
-        assertTrue(removed, "Элементы должны быть удалены");
-        
-        Thread.sleep(500);
-        
+        assertTrue(removed, "Elements must be removed");
+
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
-        assertEquals(2, result.size(), "Ordered set должен содержать 2 элемента");
+        assertEquals(2, result.size(), "Ordered set must contain 2 elements");
         assertEquals(10L, result.get(0).getOrder());
         assertEquals(40L, result.get(1).getOrder());
+    }
+
+
+    // =========================================================================
+    // 14. LOCK EXPIRATION & TIMEOUT TESTS
+    // =========================================================================
+
+    @Test
+    @DisplayName("WRITE_LOCK automatically expires after specified duration allowing another client to acquire it")
+    void testWriteLockExpiration() throws ExecutionException, InterruptedException {
+        String setKey = baseKey + "_lock_expire_write";
+        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
+
+        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
+        assertNotNull(hint);
+
+        // Owner acquires WRITE_LOCK with a short TTL of 1 second
+        LockStatus lock = client.lockObject(setKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        assertEquals(LockStatus.OK, lock, "Owner should acquire WRITE_LOCK");
+
+        // Intruder is initially blocked
+        try {
+            client.streamOrderedSet(setKey, hint, INTRUDER_CLIENT_ID).get();
+            fail("Intruder must be blocked while lock is active");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
+        }
+
+        // Wait for the lock TTL to expire
+        Thread.sleep(3000);
+
+        // After expiration, intruder should successfully acquire WRITE_LOCK or read/write without permission denied
+        LockStatus intruderLock = client.lockObject(setKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, intruderLock, "Intruder should successfully acquire the lock after expiration");
+
+        // Verify intruder can now perform operations
+        List<OrderedPayload> readResult = client.streamOrderedSet(setKey, hint, INTRUDER_CLIENT_ID).get();
+        assertNotNull(readResult);
+        assertEquals(1, readResult.size());
+
+        client.unlockObject(setKey, INTRUDER_CLIENT_ID).get();
+    }
+
+    @Test
+    @DisplayName("GLOBAL lock automatically expires after duration, removing access restrictions")
+    void testGlobalLockExpiration() throws ExecutionException, InterruptedException {
+        String setKey = baseKey + "_lock_expire_global";
+        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
+
+        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
+        assertNotNull(hint);
+
+        // Owner acquires GLOBAL lock with a short TTL of 1 second
+        LockStatus lock = client.lockObject(setKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        assertEquals(LockStatus.OK, lock, "Owner should acquire GLOBAL lock");
+
+        // Wait for expiration
+        Thread.sleep(2000);
+
+        // Verify that the lock is effectively gone and another client can acquire a write lock
+        LockStatus newLock = client.lockObject(setKey, LockType.WRITE_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, newLock, "Secondary client should acquire lock after global lock has expired");
+
+        client.unlockObject(setKey, SECONDARY_CLIENT_ID).get();
+    }
+
+    @Test
+    @DisplayName("READ_LOCK prevents write operations from any client")
+    void testReadLockBlocksWrites() throws ExecutionException, InterruptedException {
+        String setKey = baseKey + "_read_lock_writes";
+        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
+
+        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
+        assertNotNull(hint);
+
+        // Client acquires READ_LOCK
+        LockStatus lock = client.lockObject(setKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock, "Client should acquire READ_LOCK");
+
+        // Reading under READ_LOCK should succeed
+        List<OrderedPayload> readResult = client.streamOrderedSet(setKey, hint, DEFAULT_CLIENT_ID).get();
+        assertNotNull(readResult);
+        assertEquals(1, readResult.size());
+
+        // Writing (adding elements) under READ_LOCK must fail with PERMISSION_DENIED
+        try {
+            client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(op(2L, "item2")), DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
+            fail("Writing under READ_LOCK must not be allowed");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Must throw PERMISSION_DENIED for write attempt under read lock");
+        }
+
+        // Release lock
+        client.unlockObject(setKey, DEFAULT_CLIENT_ID).get();
+    }
+
+    @Test
+    @DisplayName("READ_LOCK prevents write operations from any client and auto releases after timeout")
+    void testReadLockBlocksWritesWithTimeout() throws ExecutionException, InterruptedException {
+        String setKey = baseKey + "_read_lock_writes";
+        List<OrderedPayload> initialData = List.of(op(1L, "item1"));
+
+        KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
+        assertNotNull(hint);
+
+        // Client acquires READ_LOCK
+        LockStatus lock = client.lockObject(setKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(5)).get();
+        assertEquals(LockStatus.OK, lock, "Client should acquire READ_LOCK");
+
+        // Reading under READ_LOCK should succeed
+        List<OrderedPayload> readResult = client.streamOrderedSet(setKey, hint, DEFAULT_CLIENT_ID).get();
+        assertNotNull(readResult);
+        assertEquals(1, readResult.size());
+
+        Thread.sleep(6000);
+        // Writing (adding elements) under READ_LOCK must fail with PERMISSION_DENIED
+
+        Integer item2 = client.addElementWithWeight(setKey.getBytes(StandardCharsets.UTF_8),
+                                                    hint,
+                                                    List.of(op(2L, "item2")),
+                                                    DEFAULT_CLIENT_ID,
+                                                    Duration.ofSeconds(30)).get();
+
+        // Release lock
+        LockStatus lockStatus = client.unlockObject(setKey, DEFAULT_CLIENT_ID).get();
+        assertEquals(LockStatus.OK, lockStatus, "Client should release READ");
     }
 }

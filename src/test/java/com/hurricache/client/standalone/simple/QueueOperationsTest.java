@@ -598,9 +598,7 @@ public class QueueOperationsTest extends TestBase {
         Payload head = client.getHead(key,clientId).get();
         assertNotNull(head);
 
-        // Owner can write (READ_LOCK only blocks other clients)
-        Integer added = client.addElementToTail(key, null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))),clientId).get();
-        assertEquals(1, added);
+        assertDenied(client.addElementToTail(key, null, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))),clientId));
 
         Payload payload = client.getHead(key.getBytes(StandardCharsets.UTF_8), null, 1, TIMEOUT).get();
         assertNotNull(payload);
