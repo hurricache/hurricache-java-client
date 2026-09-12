@@ -1,5 +1,7 @@
 package com.hurricache.client.intf;
 
+import java.util.Objects;
+
 public class OrderedPayload extends Payload {
     private final Long order;
 
@@ -34,4 +36,25 @@ public class OrderedPayload extends Payload {
         return order != null;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        OrderedPayload payload = (OrderedPayload) o;
+        return Objects.equals(order, payload.order);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), order);
+    }
+
+    @Override
+    public String toString() {
+        return "OrderedPayload{" + "order=" + order + "} " + super.toString();
+    }
 }

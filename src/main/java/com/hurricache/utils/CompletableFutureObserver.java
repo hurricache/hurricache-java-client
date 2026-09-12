@@ -1,6 +1,8 @@
 package com.hurricache.utils;
 
 import io.grpc.stub.StreamObserver;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -34,4 +36,5 @@ public class CompletableFutureObserver<T, VAL> implements StreamObserver<T> {
     public void onCompleted() {
         future.complete(value);
     }
+
 }

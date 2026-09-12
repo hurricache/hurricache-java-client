@@ -1,7 +1,5 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.grpc.ContainerType;
-
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -32,73 +30,44 @@ public interface HurriCacheClientSet extends HurriCacheClientInterfaceCommon{
     /**
      * Adds elements to an unordered container (e.g., Set,HashSet).
      */
-    CompletableFuture<Boolean> addElement(byte[] key,
-                                          KeyHintData hint,
-                                          List<Payload> data,
-                                          int clientId,
-                                          Duration timeout);
+    CompletableFuture<Integer> addElementUnordered(byte[] key,
+                                                   KeyHintData hint,
+                                                   List<Payload> data,
+                                                   int clientId,
+                                                   Duration timeout);
 
-    default CompletableFuture<Boolean> addElement(String key, List<Payload> data) {
-        return addElement(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementUnordered(String key, List<Payload> data) {
+        return addElementUnordered(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElement(String key, KeyHintData hint, List<Payload> data) {
-        return addElement(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementUnordered(String key, KeyHintData hint, List<Payload> data) {
+        return addElementUnordered(serializeKey(key), hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> addElement(byte[] key, KeyHintData hint, List<Payload> data) {
-        return addElement(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementUnordered(byte[] key, KeyHintData hint, List<Payload> data) {
+        return addElementUnordered(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
     /**
      * Fetches a slice (range) of elements from an unordered container based on position indexes.
      */
-    CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
-                                                                   KeyHintData hint,
-                                                                   ContainerType containerType,
-                                                                   int start,
-                                                                   int end,
-                                                                   int clientId,
-                                                                   Duration timeout);
+    CompletableFuture<List<Payload>> streamSet(byte[] key, KeyHintData hint,int clientId,
+                                               Duration timeout);
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key,
-                                                                           KeyHintData hint,
-                                                                           ContainerType containerType,
-                                                                           int start,
-                                                                           int end) {
-        return streamElementInRangeUnordered(serializeKey(key),
+    default CompletableFuture<List<Payload>> streamSet(String key,
+                                                                           KeyHintData hint) {
+        return streamSet(serializeKey(key),
                                              hint,
-                                             containerType,
-                                             start,
-                                             end,
                                              getDefaultClientId(),
                                              getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key,
-                                                                           ContainerType containerType,
-                                                                           int start,
-                                                                           int end,
+    default CompletableFuture<List<Payload>> streamSet(String key,KeyHintData hint,
                                                                            int clientId) {
-        return streamElementInRangeUnordered(serializeKey(key),
-                                             null,
-                                             containerType,
-                                             start,
-                                             end,
+        return streamSet(serializeKey(key),
+                                             hint,
                                              clientId,
                                              getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
-                                                                           KeyHintData hint,
-                                                                           ContainerType containerType,
-                                                                           int start,
-                                                                           int end) {
-        return streamElementInRangeUnordered(key,
-                                             hint,
-                                             containerType,
-                                             start,
-                                             end,
-                                             getDefaultClientId(),
-                                             getDefaultTimeout());
-    }
+
 }

@@ -159,7 +159,7 @@ public class ListPerfTest {
                 byte[] payload = generate100ByteString(writerId + "-" + i++);
                 client.setMode(Mode.LB_SMART).addElementToTail(LIST_NAME, queueKeyHint, List.of(Payload.of(payload))).whenComplete((success, ex) -> {
                     inFlightWindow.release(); // Освобождаем слот сразу по завершению сетевой операции
-                    if (ex == null && success) {
+                    if (ex == null && success == 1) {
                         metrics.produced.increment();
                     } else {
                         metrics.failedWrites.increment();

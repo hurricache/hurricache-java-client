@@ -215,7 +215,7 @@ public class FastCacheContainerSegregatedStressTest {
         for (int i = 0; i < THREAD_COUNT; i++) {
             final int threadId = i;
             executor.submit(() -> {
-                List<CompletableFuture<Boolean>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
+                List<CompletableFuture<Integer>> pipeline = new ArrayList<>(PIPELINE_BATCH_SIZE);
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         String key = keyStorage[threadId][j];
@@ -319,15 +319,15 @@ public class FastCacheContainerSegregatedStressTest {
         }
     }
 
-    private void processBooleanBatch(List<CompletableFuture<Boolean>> pipeline,
+    private void processBooleanBatch(List<CompletableFuture<Integer>> pipeline,
                                      AtomicInteger successCounter,
                                      AtomicInteger errorCounter) {
         try {
             CompletableFuture<Void> allOf = CompletableFuture.allOf(pipeline.toArray(new CompletableFuture[0]));
             allOf.get(BATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-            for (CompletableFuture<Boolean> future : pipeline) {
-                if (Boolean.TRUE.equals(future.getNow(false))) {
+            for (CompletableFuture<Integer> future : pipeline) {
+                if (Integer.valueOf(1).equals(future.getNow(0))) {
                     successCounter.incrementAndGet();
                 } else {
                     errorCounter.incrementAndGet();

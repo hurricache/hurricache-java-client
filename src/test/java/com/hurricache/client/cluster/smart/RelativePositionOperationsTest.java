@@ -38,11 +38,11 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Insert items before pivot via Backup
-        Boolean success = client.setMode(Mode.BACKUP)
+        Integer success = client.setMode(Mode.BACKUP)
                 .addElementToPositionBefore(key, keyHint, List.of(item1, item2), pivot)
                 .get();
 
-        Assertions.assertTrue(success, "Insertion before pivot should return true");
+        Assertions.assertTrue(success == 2, "Insertion before pivot should return true");
 
         // Validate the resulting order on Backup: [item1, item2, pivot]
         List<String> results = client.setMode(Mode.BACKUP)
@@ -75,11 +75,11 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Insert item before pivot via Master
-        Boolean success = client.setMode(Mode.MASTER)
+        Integer success = client.setMode(Mode.MASTER)
                 .addElementToPositionBefore(key, keyHint, List.of(inserted), pivot)
                 .get();
 
-        Assertions.assertTrue(success);
+        Assertions.assertTrue(success == 1);
 
         // Validate on Master: [head, inserted, pivot]
         List<String> results = client.setMode(Mode.MASTER)
@@ -117,11 +117,11 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Insert items after pivot via Backup
-        Boolean success = client.setMode(Mode.BACKUP)
+        Integer success = client.setMode(Mode.BACKUP)
                 .addElementToPositionAfter(key, keyHint, List.of(item1, item2), pivot)
                 .get();
 
-        Assertions.assertTrue(success, "Insertion after pivot should return true");
+        Assertions.assertTrue(success == 2, "Insertion after pivot should return true");
 
         // Validate the resulting order on Backup: [pivot, item1, item2, tail]
         List<String> results = client.setMode(Mode.BACKUP)
@@ -154,11 +154,11 @@ public class RelativePositionOperationsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Insert item after pivot via Master
-        Boolean success = client.setMode(Mode.MASTER)
+        Integer success = client.setMode(Mode.MASTER)
                 .addElementToPositionAfter(key, keyHint, List.of(inserted), pivot)
                 .get();
 
-        Assertions.assertTrue(success);
+        Assertions.assertTrue(success == 1);
 
         // Validate on Master: [pivot, inserted]
         List<String> results = client.setMode(Mode.MASTER)

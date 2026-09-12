@@ -1,11 +1,5 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.grpc.ContainerType;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
 /**
  * Asynchronous client interface for interacting with the HurriCache distributed caching system.
  * <p>
@@ -28,4 +22,6 @@ public interface HurriCacheClientInterface extends HurriCacheClientRaw,
      * Gracefully shuts down client connections and releases network resources.
      */
     void shutdown();
+    long MAX_RPC_SIZE = 4 * 1024 * 1024 - 1024 * 1024 / 2;
+    enum AddType { TAIL, HEAD, POSITION,NON_POSITION }
 }

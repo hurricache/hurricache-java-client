@@ -1,6 +1,5 @@
 package com.hurricache.client.standalone.stress;
 
-import com.hurricache.TestBaseCluster;
 import com.hurricache.TestStandAlone;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
@@ -38,7 +37,7 @@ public class MapAndSetStressTest extends TestStandAlone {
         int threadsCount = 20;
         int itemsPerThread = 50000;
         int totalOperations = threadsCount * itemsPerThread;
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        List<CompletableFuture<Integer>> futures = new ArrayList<>();
 
         // --- Замер времени начала ---
         long startTimeNs = System.nanoTime();
@@ -46,7 +45,7 @@ public class MapAndSetStressTest extends TestStandAlone {
         // Штурмуем сет параллельно из разных потоков вперемешку через Master и Backup
         for (int i = 0; i < threadsCount; i++) {
             final int threadId = i;
-            CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<Integer> future = CompletableFuture.supplyAsync(() -> {
                 try {
                     List<Payload> batch = new ArrayList<>();
                     for (int j = 0; j < itemsPerThread; j++) {
@@ -54,7 +53,7 @@ public class MapAndSetStressTest extends TestStandAlone {
                     }
                     Mode targetMode = (threadId % 2 == 0) ? Mode.MASTER : Mode.BACKUP;
                     return client
-                            .addElement(setKey, keyHint, batch)
+                            .addElementUnordered(setKey, keyHint, batch)
                             .get();
                 } catch (Exception e) {
                     throw new RuntimeException(e);

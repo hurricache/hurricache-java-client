@@ -74,16 +74,30 @@ public interface HurriCacheClientInterfaceCommon {
         return remove(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> remove(byte[] key, KeyHintData hint, int clientid) {
-        return remove(key, hint, clientid, getDefaultTimeout());
+    default CompletableFuture<Boolean> remove(byte[] key, KeyHintData hint, int clientId) {
+        return remove(key, hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> remove(String key, KeyHintData hint, int clientid) {
-        return remove(serializeKey(key), hint, clientid, getDefaultTimeout());
+    default CompletableFuture<Boolean> remove(String key, KeyHintData hint, int clientId) {
+        return remove(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> remove(byte[] key) {
+        return remove(key, null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> remove(byte[] key, int clientId) {
+        return remove(key, null, clientId, getDefaultTimeout());
     }
 
     /**
      * Queries current element count / size of a container data structure.
+     *
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} with the current size/count.
      */
     CompletableFuture<Integer> getSize(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
@@ -102,6 +116,15 @@ public interface HurriCacheClientInterfaceCommon {
     default CompletableFuture<Integer> getSize(byte[] key, KeyHintData hint) {
         return getSize(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
+
+    default CompletableFuture<Integer> getSize(byte[] key) {
+        return getSize(key, null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> getSize(byte[] key, int clientId) {
+        return getSize(key, null, clientId, getDefaultTimeout());
+    }
+
     /**
      * Acquires a distributed lock on an object key.
      *
@@ -148,8 +171,26 @@ public interface HurriCacheClientInterfaceCommon {
         return lockObject(serializeKey(key), null, type, getDefaultClientId(), duration, getDefaultTimeout());
     }
 
+    default CompletableFuture<LockStatus> lockObject(String key, KeyHintData hint, LockType type, Duration duration) {
+        return lockObject(serializeKey(key), hint, type, getDefaultClientId(), duration, getDefaultTimeout());
+    }
+
+    default CompletableFuture<LockStatus> lockObject(byte[] key, LockType type, Duration duration) {
+        return lockObject(key, null, type, getDefaultClientId(), duration, getDefaultTimeout());
+    }
+
+    default CompletableFuture<LockStatus> lockObject(byte[] key, LockType type, int clientId, Duration duration) {
+        return lockObject(key, null, type, clientId, duration, getDefaultTimeout());
+    }
+
     /**
      * Releases a held lock on a specified key.
+     *
+     * @param key      target lock key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the releasing client.
+     * @param timeout  execution timeout duration.
+     * @return resulting {@link LockStatus}.
      */
     CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
@@ -161,8 +202,8 @@ public interface HurriCacheClientInterfaceCommon {
         return unlockObject(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientid) {
-        return unlockObject(key, hint, clientid, getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientId) {
+        return unlockObject(key, hint, clientId, getDefaultTimeout());
     }
 
     default CompletableFuture<LockStatus> unlockObject(String key, int clientId) {
@@ -171,6 +212,18 @@ public interface HurriCacheClientInterfaceCommon {
 
     default CompletableFuture<LockStatus> unlockObject(String key) {
         return unlockObject(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<LockStatus> unlockObject(String key, KeyHintData hint) {
+        return unlockObject(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<LockStatus> unlockObject(byte[] key) {
+        return unlockObject(key, null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<LockStatus> unlockObject(byte[] key, int clientId) {
+        return unlockObject(key, null, clientId, getDefaultTimeout());
     }
 
     /**
@@ -201,6 +254,22 @@ public interface HurriCacheClientInterfaceCommon {
         return setTtl(key, hint, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<Boolean> setTtl(String key, long ttl) {
+        return setTtl(serializeKey(key), null, ttl, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> setTtl(String key, long ttl, int clientId) {
+        return setTtl(serializeKey(key), null, ttl, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> setTtl(byte[] key, long ttl) {
+        return setTtl(key, null, ttl, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> setTtl(byte[] key, long ttl, int clientId) {
+        return setTtl(key, null, ttl, clientId, getDefaultTimeout());
+    }
+
     /**
      * Retrieves the remaining TTL duration for the specified key.
      *
@@ -226,6 +295,22 @@ public interface HurriCacheClientInterfaceCommon {
 
     default CompletableFuture<Long> getTtl(String key, int clientId) {
         return getTtl(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> getTtl(byte[] key) {
+        return getTtl(key, null, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> getTtl(byte[] key, int clientId) {
+        return getTtl(key, null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> getTtl(byte[] key, KeyHintData hint, int clientId) {
+        return getTtl(key, hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Long> getTtl(String key, KeyHintData hint, int clientId) {
+        return getTtl(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
     /**

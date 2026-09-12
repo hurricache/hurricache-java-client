@@ -9,30 +9,21 @@ public interface HurriCacheClientHashMap extends HurriCacheClientInterfaceCommon
     /**
      * Creates an Unordered Map container using standard {@link Payload} entries.
      */
-    CompletableFuture<KeyHintData> createMap(byte[] key,
-                                             Map<Payload, Payload> initialValue,
+    CompletableFuture<KeyHintData> createMap(byte[] key, KeyHintData keyHint, Map<Payload, Payload> initialValue,
                                              Duration ttl,
                                              int clientId,
                                              Duration timeout);
 
     default CompletableFuture<KeyHintData> createMap(String key, Map<Payload, Payload> initialValue) {
-        return createMap(serializeKey(key),
-                         initialValue == null
-                         ? Collections.emptyMap()
-                         : initialValue,
-                         getDefaultTtl(),
-                         getDefaultClientId(),
-                         getDefaultTimeout());
+        return createMap(serializeKey(key), null, initialValue == null
+        ? Collections.emptyMap()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createMap(byte[] key, Map<Payload, Payload> initialValue) {
-        return createMap(key,
-                         initialValue == null
-                         ? Collections.emptyMap()
-                         : initialValue,
-                         getDefaultTtl(),
-                         getDefaultClientId(),
-                         getDefaultTimeout());
+        return createMap(key, null, initialValue == null
+        ? Collections.emptyMap()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
