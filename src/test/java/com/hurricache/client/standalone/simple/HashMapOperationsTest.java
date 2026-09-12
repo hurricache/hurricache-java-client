@@ -44,9 +44,6 @@ public class HashMapOperationsTest extends TestBase {
         baseKey = "hashmap_test_" + UUID.randomUUID();
     }
 
-    private byte[] bytes(String val) {
-        return val.getBytes(StandardCharsets.UTF_8);
-    }
 
     private Payload p(String val) {
         return Payload.of(val.getBytes(StandardCharsets.UTF_8));

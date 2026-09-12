@@ -45,9 +45,7 @@ public class OrderedMapOperationsTest extends TestBase {
         baseKey = "orderedmap_test_" + UUID.randomUUID();
     }
 
-    private byte[] bytes(String val) {
-        return val.getBytes(StandardCharsets.UTF_8);
-    }
+
 
     private Payload p(String val) {
         return Payload.of(val.getBytes(StandardCharsets.UTF_8));

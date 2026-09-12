@@ -104,4 +104,7 @@ public abstract class TestBase {
             Assertions.fail(e.getMessage());
         }
     }
+    protected byte[] bytes(String val) {
+        return val.getBytes(StandardCharsets.UTF_8);
+    }
 }

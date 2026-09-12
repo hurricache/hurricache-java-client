@@ -45,9 +45,7 @@ public class OrderedSetOperationsTest extends TestBase {
         baseKey = "orderedset_test_" + UUID.randomUUID();
     }
 
-    private byte[] bytes(String val) {
-        return val.getBytes(StandardCharsets.UTF_8);
-    }
+
 
     private OrderedPayload op(Long order, String val) {
         return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));

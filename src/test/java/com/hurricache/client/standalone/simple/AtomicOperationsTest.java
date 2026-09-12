@@ -30,9 +30,6 @@ public class AtomicOperationsTest extends TestBase {
     private static final int INTRUDER_CLIENT_ID = 200;
     private static final Duration TEST_TIMEOUT = Duration.ofSeconds(2);
 
-    private byte[] bytes(String val) {
-        return val.getBytes(StandardCharsets.UTF_8);
-    }
 
     @Test
     void atomicCreateAndStoreTest() throws ExecutionException, InterruptedException {
