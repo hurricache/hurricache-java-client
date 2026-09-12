@@ -154,7 +154,7 @@ public class AtomicOperationsTest extends TestBase {
     }
 
     // =========================================================================
-    // 1. EXIST KEY OPERATIONS (полностью непокрыто)
+    // 1. EXIST KEY OPERATIONS (fully uncovered)
     // =========================================================================
 
     @Test
@@ -165,7 +165,7 @@ public class AtomicOperationsTest extends TestBase {
         client.atomicCreate(keyBytes, 42L).get();
 
         Boolean exists = client.existKey(keyBytes).get();
-        assertTrue(exists, "Atomic key должен существовать");
+        assertTrue(exists, "Atomic key should exist");
     }
 
     @Test
@@ -174,7 +174,7 @@ public class AtomicOperationsTest extends TestBase {
         byte[] keyBytes = testKey.getBytes(StandardCharsets.UTF_8);
 
         Boolean exists = client.existKey(keyBytes).get();
-        assertFalse(exists, "Несуществующий atomic key не должен существовать");
+        assertFalse(exists, "Non-existent atomic key should not exist");
     }
 
     @Test
@@ -185,7 +185,7 @@ public class AtomicOperationsTest extends TestBase {
         client.atomicCreate(keyBytes, 100L).get();
 
         Boolean exists = client.existKey(keyBytes, null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertTrue(exists, "Atomic key должен существовать с clientId");
+        assertTrue(exists, "Atomic key should exist with clientId");
     }
 
     // =========================================================================
@@ -199,11 +199,11 @@ public class AtomicOperationsTest extends TestBase {
         client.atomicCreate(testKey, 42L).get();
 
         Boolean removed = client.remove(testKey).get();
-        assertTrue(removed, "Atomic key должен быть удалён");
+        assertTrue(removed, "Atomic key should be removed");
 
-        // Проверяем что ключ действительно удалён
+        // Verify the key is actually removed
         Boolean exists = client.existKey(testKey).get();
-        assertFalse(exists, "Удалённый key не должен существовать");
+        assertFalse(exists, "Removed key should not exist");
     }
 
     @Test
@@ -231,11 +231,11 @@ public class AtomicOperationsTest extends TestBase {
         client.atomicCreate(keyBytes, 42L).get();
 
         Boolean setResult = client.setTtl(testKey, null, 100).get();
-        assertTrue(setResult, "TTL должен быть установлен на atomic key");
+        assertTrue(setResult, "TTL should be set on atomic key");
 
         Long ttl = client.getTtl(testKey).get();
         assertNotNull(ttl);
-        assertTrue(ttl > 0, "TTL должен быть больше 0");
+        assertTrue(ttl > 0, "TTL should be greater than 0");
     }
 
     @Test
@@ -245,13 +245,13 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(keyBytes, 42L).get();
 
-        // Устанавливаем TTL = 1 секунда
+        // Set TTL = 1 second
         client.setTtl(keyBytes, null, 1, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
 
-        // Ждём истечения TTL
+        // Wait for TTL expiration
         Thread.sleep(1500);
 
-        // atomicLoad должен вернуть NOT_FOUND
+        // atomicLoad should return NOT_FOUND
         try {
             client.atomicLoad(testKey).get();
             Assertions.fail("Expected ExecutionException caused by NOT_FOUND status");
@@ -272,12 +272,12 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(keyBytes, 100L).get();
 
-        // atomicAdd с отрицательным delta → декремент
+        // atomicAdd with negative delta → decrement
         long afterAdd = client.atomicAdd(keyBytes, -25L).get();
-        assertEquals(100L, afterAdd, "Возвращает старое значение");
+        assertEquals(100L, afterAdd, "Returns old value");
 
         long current = client.atomicOr(keyBytes, null, 0L).get();
-        assertEquals(75L, current, "Значение уменьшено на 25");
+        assertEquals(75L, current, "Value decreased by 25");
     }
 
     @Test
@@ -287,13 +287,13 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(keyBytes, Long.MAX_VALUE).get();
 
-        // atomicAdd на Long.MAX_VALUE → переполнение
+        // atomicAdd on Long.MAX_VALUE → overflow
         long afterAdd = client.atomicAdd(keyBytes, 1L).get();
-        assertEquals(Long.MAX_VALUE, afterAdd, "Возвращает старое значение");
+        assertEquals(Long.MAX_VALUE, afterAdd, "Returns old value");
 
-        // После переполнения значение станет Long.MIN_VALUE
+        // After overflow value becomes Long.MIN_VALUE
         long current = client.atomicOr(keyBytes, null, 0L).get();
-        assertEquals(Long.MIN_VALUE, current, "Переполнение привело к Long.MIN_VALUE");
+        assertEquals(Long.MIN_VALUE, current, "Overflow resulted in Long.MIN_VALUE");
     }
 
     @Test
@@ -315,7 +315,7 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(testKey, 100L).get();
 
-        // atomicOr с маской 0L = чтение текущего значения
+        // atomicOr with mask 0L = read current value
         long current = client.atomicOr(bytes(testKey), null, 0L).get();
         assertEquals(100L, current);
     }
@@ -330,12 +330,12 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(testKey, 10L).get();
 
-        // atomicSub > текущего значения → отрицательный результат
+        // atomicSub > current value → negative result
         long afterSub = client.atomicSub(bytes(testKey), 50L).get();
-        assertEquals(10L, afterSub, "Возвращает старое значение");
+        assertEquals(10L, afterSub, "Returns old value");
 
         long current = client.atomicOr(bytes(testKey), null, 0L).get();
-        assertEquals(-40L, current, "Значение отрицательное");
+        assertEquals(-40L, current, "Value is negative");
     }
 
     @Test
@@ -358,7 +358,7 @@ public class AtomicOperationsTest extends TestBase {
         client.atomicCreate(testKey, 8L).get();
 
         long afterOr = client.atomicOr(bytes(testKey), null, 3L).get();
-        assertEquals(8L, afterOr, "Возвращает старое значение");
+        assertEquals(8L, afterOr, "Returns old value");
 
         long current = client.atomicOr(bytes(testKey), null, 0L).get();
         assertEquals(11L, current, "8 OR 3 = 11");
@@ -390,10 +390,10 @@ public class AtomicOperationsTest extends TestBase {
 
         AtomicCasRes res = client.atomicCompareAndSet(keyBytes, null, 999L, 600L).get();
         assertFalse(res.getResult());
-        assertEquals(500L, res.getExpected().getVal(), "Возвращает фактическое значение");
+        assertEquals(500L, res.getExpected().getVal(), "Returns actual value");
 
         long current = client.atomicOr(keyBytes, null, 0L).get();
-        assertEquals(500L, current, "Значение не изменилось");
+        assertEquals(500L, current, "Value did not change");
     }
 
     // =========================================================================
@@ -413,7 +413,7 @@ public class AtomicOperationsTest extends TestBase {
         LockStatus lock2 = client.lockObject(testKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock2);
 
-        // Оба могут читать
+        // Both can read
         long val1 = client.atomicLoad(testKey, DEFAULT_CLIENT_ID).get();
         assertEquals(42L, val1);
 
@@ -434,11 +434,11 @@ public class AtomicOperationsTest extends TestBase {
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Владелец может читать
+        // Owner can read
         long val = client.atomicLoad(testKey, OWNER_CLIENT_ID).get();
         assertEquals(42L, val);
 
-        // Владелец может писать
+        // Owner can write
         long afterAdd = client.atomicAdd(bytes(testKey),null, 10L,null,OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(42L, afterAdd);
 
@@ -457,11 +457,11 @@ public class AtomicOperationsTest extends TestBase {
         LockStatus lock = client.lockObject(testKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Владелец может читать
+        // Owner can read
         long val = client.atomicLoad(testKey, OWNER_CLIENT_ID).get();
         assertEquals(42L, val);
 
-        // Интриган не может читать
+        // Intruder cannot read
         try {
             client.atomicLoad(testKey, INTRUDER_CLIENT_ID).get();
             Assertions.fail("Intruder should be denied");
@@ -470,7 +470,7 @@ public class AtomicOperationsTest extends TestBase {
             assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
         }
 
-        // Интриган не может разблокировать
+        // Intruder cannot unlock
         LockStatus unlockStatus = client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlockStatus);
 
@@ -487,11 +487,11 @@ public class AtomicOperationsTest extends TestBase {
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Интриган пытается разблокировать
+        // Intruder tries to unlock
         LockStatus status = client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, status);
 
-        // Владелец разблокирует
+        // Owner unlocks
         LockStatus validUnlock = client.unlockObject(testKey, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, validUnlock);
     }
@@ -506,11 +506,11 @@ public class AtomicOperationsTest extends TestBase {
         LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Чтение OK
+        // Read OK
         long val = client.atomicLoad(testKey, DEFAULT_CLIENT_ID).get();
         assertEquals(42L, val);
 
-        // Запись запрещена
+        // Write is denied
         try {
             client.atomicAdd(bytes(testKey), 10L).get();
             Assertions.fail("Write should be denied under READ_LOCK");
@@ -538,7 +538,7 @@ public class AtomicOperationsTest extends TestBase {
 
         Thread.sleep(3000);
 
-        // Теперь интриган может читать
+        // Now intruder can read
         long val = client.atomicLoad(testKey, INTRUDER_CLIENT_ID).get();
         assertEquals(42L, val);
     }
@@ -555,7 +555,7 @@ public class AtomicOperationsTest extends TestBase {
 
         Thread.sleep(3000);
 
-        // Теперь интриган может получить WRITE_LOCK
+        // Now intruder can get WRITE_LOCK
         LockStatus newLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, newLock);
 
@@ -574,7 +574,7 @@ public class AtomicOperationsTest extends TestBase {
 
         Thread.sleep(3000);
 
-        // Теперь интриган может получить WRITE_LOCK
+        // Now intruder can get WRITE_LOCK
         LockStatus newLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, newLock);
 

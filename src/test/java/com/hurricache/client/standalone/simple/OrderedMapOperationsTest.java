@@ -68,7 +68,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("getContainerValue возвращает значение по ключу")
+    @DisplayName("getContainerValue returns value by key")
     void testGetContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_cv";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -83,7 +83,7 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("getContainerValue для несуществующего ключа возвращает NOT_FOUND")
+    @DisplayName("getContainerValue for non-existent key returns NOT_FOUND")
     void testGetContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_cv_nf";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -100,7 +100,7 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("updateContainerValue обновляет существующий ключ")
+    @DisplayName("updateContainerValue updates existing key")
     void testUpdateContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_update_cv";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -111,14 +111,14 @@ public class OrderedMapOperationsTest extends TestBase {
 
         byte[] oldValue = client.updateContainerValue(bytes(mapKey), null, bytes("k1"), bytes("new_v1")).get();
         assertNotNull(oldValue);
-        assertEquals("v1", new String(oldValue, StandardCharsets.UTF_8), "Возвращено старое значение");
+        assertEquals("v1", new String(oldValue, StandardCharsets.UTF_8), "Old value returned");
 
         byte[] newValue = client.getContainerValue(bytes(mapKey), null, bytes("k1")).get();
-        assertEquals("new_v1", new String(newValue, StandardCharsets.UTF_8), "Новое значение сохранено");
+        assertEquals("new_v1", new String(newValue, StandardCharsets.UTF_8), "New value saved");
     }
 
     @Test
-    @DisplayName("updateContainerValue для несуществующего ключа возвращает NOT_FOUND")
+    @DisplayName("updateContainerValue for non-existent key returns NOT_FOUND")
     void testUpdateContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_update_cv_nf";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -139,17 +139,17 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("getSize для пустого ordered map возвращает 0")
+    @DisplayName("getSize on empty ordered map returns 0")
     void testGetSizeEmptyMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_size_empty";
         client.createOrderedMap(mapKey, Map.of()).get();
 
         Integer size = client.getSize(mapKey, null).get();
-        assertEquals(0, size, "Пустой ordered map должен иметь размер 0");
+        assertEquals(0, size, "Empty ordered map should have size 0");
     }
 
     @Test
-    @DisplayName("getSize для ordered map с элементами возвращает корректное количество")
+    @DisplayName("getSize for ordered map with elements returns correct count")
     void testGetSizeWithElements() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_size_with";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -160,7 +160,7 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         Integer size = client.getSize(mapKey, null).get();
-        assertEquals(3, size, "OrderedMap должен содержать 3 элемента");
+        assertEquals(3, size, "OrderedMap should contain 3 elements");
     }
 
     // =========================================================================
@@ -168,7 +168,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("setTtl устанавливает TTL на ordered map")
+    @DisplayName("setTtl sets TTL on ordered map")
     void testSetTtl() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_set";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -177,15 +177,15 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         Boolean setResult = client.setTtl(bytes(mapKey), null, 100, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertTrue(setResult, "TTL должен быть установлен");
+        assertTrue(setResult, "TTL should be set");
 
         Long ttl = client.getTtl(bytes(mapKey), null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(ttl);
-        assertTrue(ttl > 0, "TTL должен быть положительным");
+        assertTrue(ttl > 0, "TTL should be positive");
     }
 
     @Test
-    @DisplayName("getTtl возвращает актуальное TTL значение")
+    @DisplayName("getTtl returns actual TTL value")
     void testGetTtl() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_get";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -193,16 +193,16 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Устанавливаем TTL 5000 мс
+        // Set TTL to 5000ms
         client.setTtl(bytes(mapKey), null, 5000, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
 
         Long ttl = client.getTtl(bytes(mapKey), null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(ttl);
-        assertTrue(ttl > 0 && ttl <= 5000, "TTL должно быть в диапазоне");
+        assertTrue(ttl > 0 && ttl <= 5000, "TTL should be in range");;
     }
 
     @Test
-    @DisplayName("TTL истечение: после истечения контейнер недоступен")
+    @DisplayName("TTL expiration: container unavailable after expiration")
     void testTtlExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_expire";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -210,16 +210,16 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Устанавливаем TTL 100 мс
+        // Set TTL to 100 ms
         client.setTtl(bytes(mapKey), null, 100, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
 
-        // Ждём истечения
+        // Wait for expiration
         Thread.sleep(200);
 
-        // Контейнер должен быть недоступен
+        // Container should be unavailable
         try {
             client.streamOrderedMap(mapKey).get();
-            fail("streamOrderedMap истёкшего контейнера должен вызвать ошибку");
+            fail("streamOrderedMap of expired container should throw an error");;
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -231,7 +231,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("lockObject получает WRITE_LOCK для ordered map")
+    @DisplayName("lockObject gets WRITE_LOCK for ordered map")
     void testWriteLockOrderedMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_write_lock";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -240,19 +240,19 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         LockStatus lock = client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "WRITE_LOCK должен быть получен");
+        assertEquals(LockStatus.OK, lock, "WRITE_LOCK should be obtained");;
 
-        // Владелец может выполнять операции
+        // Owner can perform operations
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(bytes(mapKey), null, OWNER_CLIENT_ID, TEST_TIMEOUT).get();
         assertEquals(1, result.size());
 
-        // Разблокировка
+        // Unlock
         LockStatus unlock = client.unlockObject(bytes(mapKey), null, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
     @Test
-    @DisplayName("lockObject получает READ_LOCK для ordered map")
+    @DisplayName("lockObject gets READ_LOCK for ordered map")
     void testReadLockOrderedMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -261,19 +261,19 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         LockStatus lock = client.lockObject(mapKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "READ_LOCK должен быть получен");
+        assertEquals(LockStatus.OK, lock, "READ_LOCK should be obtained");;
 
-        // Владелец может читать
+        // Owner can read
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(bytes(mapKey), null, OWNER_CLIENT_ID, TEST_TIMEOUT).get();
         assertEquals(1, result.size());
 
-        // Разблокировка
+        // Unlock
         LockStatus unlock = client.unlockObject(bytes(mapKey), null, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
     @Test
-    @DisplayName("INTRUDER не может получить WRITE_LOCK когда есть WRITE_LOCK")
+    @DisplayName("INTRUDER cannot acquire WRITE_LOCK when WRITE_LOCK exists")
     void testWriteLockIntruderDenied() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_write_lock_denied";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -281,17 +281,17 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Владелец получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Интриган не может получить WRITE_LOCK — получает CANT_UNLOCK
+        // Intruder cannot get WRITE_LOCK - gets CANT_UNLOCK
         LockStatus intruderLock = client.lockObject(mapKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertNotEquals(LockStatus.OK, intruderLock, "Интриган не должен получить блокировку");
+        assertNotEquals(LockStatus.OK, intruderLock, "Intruder should not acquire lock");
     }
 
     @Test
-    @DisplayName("INTRUDER не может разблокировать когда есть WRITE_LOCK")
+    @DisplayName("INTRUDER cannot unlock when WRITE_LOCK is held")
     void testIntruderCannotUnlock() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_intruder_unlock";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -299,20 +299,20 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Владелец получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
 
-        // Интриган не может разблокировать
+        // Intruder cannot unlock
         LockStatus unlock = client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
-        assertEquals(LockStatus.CANT_UNLOCK, unlock, "Интриган не может разблокировать");
+        assertEquals(LockStatus.CANT_UNLOCK, unlock, "Intruder cannot unlock");;
 
-        // Владелец разблокирует
+        // Owner unlocks
         LockStatus unlockOwner = client.unlockObject(bytes(mapKey), null, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlockOwner);
     }
 
     @Test
-    @DisplayName("Два READ_LOCK одновременно на один контейнер")
+    @DisplayName("Two READ_LOCK simultaneously on one container")
     void testMultipleReadLocks() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_multi_read";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -320,15 +320,15 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Первый клиент получает READ_LOCK
+        // First client gets READ_LOCK
         LockStatus lock1 = client.lockObject(mapKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock1);
 
-        // Второй клиент также может получить READ_LOCK
+        // Second client can also get READ_LOCK
         LockStatus lock2 = client.lockObject(mapKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock2);
 
-        // Оба разблокируют
+        // Both unlock
         client.unlockObject(mapKey, DEFAULT_CLIENT_ID).get();
         client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
     }
@@ -338,7 +338,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("После истечения WRITE_LOCK интриган может получить блокировку")
+    @DisplayName("After WRITE_LOCK expiration intruder can get lock")
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_write_lock_exp";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -346,23 +346,23 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Владелец получает WRITE_LOCK на 2 секунды
+        // Owner gets WRITE_LOCK for 2 seconds
         LockStatus lock = client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Ждём истечения
+        // Wait for expiration
         Thread.sleep(3000);
 
-        // Теперь интриган может получить WRITE_LOCK
+        // Now intruder can get WRITE_LOCK
         LockStatus intruderLock = client.lockObject(mapKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, intruderLock);
 
-        // Разблокирует
+        // Unlock
         client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("После истечения READ_LOCK интриган может получить WRITE_LOCK")
+    @DisplayName("After READ_LOCK expiration intruder can get WRITE_LOCK")
     void testReadLockExpirationToWrite() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock_exp";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -370,23 +370,23 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Владелец получает READ_LOCK на 2 секунды
+        // Owner gets READ_LOCK for 2 seconds
         LockStatus lock = client.lockObject(mapKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Ждём истечения
+        // Wait for expiration
         Thread.sleep(3000);
 
-        // Теперь интриган может получить WRITE_LOCK
+        // Now intruder can get WRITE_LOCK
         LockStatus intruderLock = client.lockObject(mapKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, intruderLock);
 
-        // Разблокирует
+        // Unlock
         client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("После истечения блокировки контейнер доступен")
+    @DisplayName("After lock expiration container is accessible")
     void testLockExpirationAccess() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_lock_exp_access";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -394,13 +394,13 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Владелец получает WRITE_LOCK на 1 секунду
+        // Owner gets WRITE_LOCK for 1 second
         client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
 
-        // Ждём истечения
+        // Wait for expiration
         Thread.sleep(2000);
 
-        // Интриган может читать
+        // Intruder can read
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(bytes(mapKey), null, INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
         assertEquals(1, result.size());
     }
@@ -410,7 +410,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("Методы не применимые к ORDERED MAP должны вызывать ошибку")
+    @DisplayName("Methods not applicable to ORDERED MAP should throw an error")
     void testUnsupportedMethodsForOrderedMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_unsupported";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -418,37 +418,37 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // getElementAtPosition — не применим к ORDERED MAP
+        // getElementAtPosition - not applicable to ORDERED MAP
         try {
             client.getElementAtPosition(mapKey, null, 0).get();
-            fail("getElementAtPosition должен вызвать ошибку для ORDERED MAP");
+            fail("getElementAtPosition should throw an error for ORDERED MAP");;
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
         }
 
-        // getAndRemoveElementAtPosition — не применим к ORDERED MAP
+        // getAndRemoveElementAtPosition - not applicable to ORDERED MAP
         try {
             client.getAndRemoveElementAtPosition(mapKey, null, 0).get();
-            fail("getAndRemoveElementAtPosition должен вызвать ошибку для ORDERED MAP");
+            fail("getAndRemoveElementAtPosition should throw an error for ORDERED MAP");;
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
 
-        // getHead — не применим к ORDERED MAP
+        // getHead - not applicable to ORDERED MAP
         try {
             client.getHead(mapKey, null).get();
-            fail("getHead должен вызвать ошибку для ORDERED MAP");
+            fail("getHead should throw an error for ORDERED MAP");;
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
         }
 
-        // getTail — не применим к ORDERED MAP
+        // getTail - not applicable to ORDERED MAP
         try {
             client.getTail(mapKey, null).get();
-            fail("getTail должен вызвать ошибку для ORDERED MAP");
+            fail("getTail should throw an error for ORDERED MAP");;
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
@@ -460,7 +460,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("remove удаляет существующий контейнер")
+    @DisplayName("remove deletes existing container")
     void testRemoveExistingContainer() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_cont";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -469,12 +469,12 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         Boolean removed = client.remove(bytes(mapKey), null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertTrue(removed, "Контейнер должен быть удалён");
+        assertTrue(removed, "Container should be removed");;
 
-        // Проверяем что контейнер действительно удалён
+        // Verify container is actually removed
         try {
             client.streamOrderedMap(mapKey).get();
-            fail("streamOrderedMap удалённого контейнера должен вызвать ошибку");
+            fail("streamOrderedMap of removed container should throw an error");;
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -482,7 +482,7 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("remove несуществующего контейнера возвращает NOT_FOUND")
+    @DisplayName("remove of non-existent container returns NOT_FOUND")
     void testRemoveNonExistentContainer() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_nonexist";
 
@@ -499,7 +499,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("getAndRemoveContainerValue извлекает и удаляет элемент")
+    @DisplayName("getAndRemoveContainerValue extracts and removes element")
     void testGetAndRemoveContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_remove";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -513,12 +513,12 @@ public class OrderedMapOperationsTest extends TestBase {
         assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(1, result.size(), "Остался 1 элемент");
+        assertEquals(1, result.size(), "1 element remains");
         assertFalse(result.entrySet().stream().anyMatch(e -> "k1".equals(new String(e.getKey().getValue(), StandardCharsets.UTF_8))));
     }
 
     @Test
-    @DisplayName("getAndRemoveContainerValue для несуществующего ключа возвращает null")
+    @DisplayName("getAndRemoveContainerValue for non-existent key returns null")
     void testGetAndRemoveContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_remove_nf";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -527,8 +527,8 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         byte[] removedValue = client.getAndRemoveContainerValue(bytes(mapKey), null, bytes("nonexistent")).get();
-        assertNotNull(removedValue, "Для несуществующего ключа должен вернуться пустой массив");
-        assertEquals(0, removedValue.length, "Пустой массив байтов");
+        assertNotNull(removedValue, "Should return empty array for non-existent key");
+        assertEquals(0, removedValue.length, "Empty byte array");
     }
 
     // =========================================================================
@@ -536,7 +536,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("streamElementInRangeOrderedMap возвращает элементы в диапазоне весов")
+    @DisplayName("streamElementInRangeOrderedMap returns elements in weight range")
     void testStreamElementInRangeOrderedMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_range";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -548,17 +548,17 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Запрашиваем элементы с весами от 20 до 40 включительно
+        // Request elements with weights from 20 to 40 inclusive
         Map<OrderedPayload, Payload> result = client.streamElementInRangeOrderedMap(bytes(mapKey), null, 20L, 40L, false, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Должно быть 3 элемента с весами от 20 до 40");
+        assertEquals(3, result.size(), "Should have 3 elements with weights from 20 to 40");
         assertTrue(result.entrySet().stream().anyMatch(e -> 20L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 30L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 40L == e.getKey().getOrder()));
     }
 
     @Test
-    @DisplayName("streamElementInRangeOrderedMap reverse=true возвращает в обратном порядке")
+    @DisplayName("streamElementInRangeOrderedMap reverse=true returns in reverse order")
     void testStreamElementInRangeOrderedMapReverse() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_range_rev";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -570,17 +570,17 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Запрашиваем элементы с весами от 20 до 40 в обратном порядке
+        // Request elements with weights from 20 to 40 in reverse order
         Map<OrderedPayload, Payload> result = client.streamElementInRangeOrderedMap(bytes(mapKey), null, 20L, 40L, true, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Должно быть 3 элемента");
+        assertEquals(3, result.size(), "Should have 3 elements");
         assertTrue(result.entrySet().stream().anyMatch(e -> 40L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 30L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 20L == e.getKey().getOrder()));
     }
 
     @Test
-    @DisplayName("streamElementInRangeOrderedMap вне диапазона возвращает пустой ответ")
+    @DisplayName("streamElementInRangeOrderedMap outside range returns empty response")
     void testStreamElementInRangeOrderedMapNoMatch() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_range_nomatch";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -590,10 +590,10 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Запрашиваем элементы с весами от 100 до 200 (не существует)
+        // Request elements with weights from 100 to 200 (does not exist)
         Map<OrderedPayload, Payload> result = client.streamElementInRangeOrderedMap(bytes(mapKey), null, 100L, 200L, false, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "Список должен быть пустым");
+        assertEquals(0, result.size(), "List should be empty");
     }
 
     // =========================================================================
@@ -601,7 +601,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("removeElementAtPosition удаляет элементы в диапазоне весов")
+    @DisplayName("removeElementAtPosition removes elements in weight range")
     void testRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_pos";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -613,12 +613,12 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Удаление элементов с весами от 20 до 29 (только k2 с весом 20)
+        // Remove elements with weights from 20 to 29 (only k2 with weight 20)
         Boolean removed = client.removeElementAtPosition(bytes(mapKey), null, 20, 29).get();
-        assertTrue(removed, "Элементы должны быть удалены");
+        assertTrue(removed, "Elements should be removed");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(4, result.size(), "Осталось 4 элемента");
+        assertEquals(4, result.size(), "4 elements remain");
         assertTrue(result.entrySet().stream().anyMatch(e -> 10L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 30L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 40L == e.getKey().getOrder()));
@@ -626,7 +626,7 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("removeElementAtPosition включает endPos в диапазон (хвост включён)")
+    @DisplayName("removeElementAtPosition includes endPos in range (tail included)")
     void testRemoveElementAtPositionEndIncluded() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_pos_end";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -637,18 +637,18 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Удаление элементов с весами от 20 до 29 (только k2 с весом 20)
+        // Remove elements with weights from 20 to 29 (only k2 with weight 20)
         Boolean removed = client.removeElementAtPosition(bytes(mapKey), null, 20, 30).get();
-        assertTrue(removed, "Элементы должны быть удалены");
+        assertTrue(removed, "Elements should be removed");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(2, result.size(), "Осталось 3 элемента");
+        assertEquals(2, result.size(), "3 elements remain");
         assertTrue(result.entrySet().stream().anyMatch(e -> 10L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 40L == e.getKey().getOrder()));
     }
 
     @Test
-    @DisplayName("removeElementAtPosition работает когда границы совпадают")
+    @DisplayName("removeElementAtPosition works when boundaries match")
     void testRemoveElementAtPositionSamePos() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_pos_same";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -658,12 +658,12 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Удаление элемента с весом 20 (minWeight = maxWeight = 20)
+        // Remove element with weight 20 (minWeight = maxWeight = 20)
         Boolean removed = client.removeElementAtPosition(bytes(mapKey), null, 20, 20).get();
-        assertTrue(removed, "Элемент должен быть удалён");
+        assertTrue(removed, "Element should be removed");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(2, result.size(), "Осталось 2 элемента");
+        assertEquals(2, result.size(), "2 elements remain");
         assertTrue(result.entrySet().stream().anyMatch(e -> 10L == e.getKey().getOrder()));
         assertTrue(result.entrySet().stream().anyMatch(e -> 30L == e.getKey().getOrder()));
     }
@@ -673,7 +673,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("containsContainerKey проверяет существующий ключ")
+    @DisplayName("containsContainerKey checks existing key")
     void testContainsContainerKeyExists() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_contains_exist";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -683,11 +683,11 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         Boolean exists = client.containsContainerKey(bytes(mapKey), null, bytes("k1")).get();
-        assertTrue(exists, "Ключ k1 должен существовать");
+        assertTrue(exists, "Key k1 should exist");
     }
 
     @Test
-    @DisplayName("containsContainerKey проверяет несуществующий ключ")
+    @DisplayName("containsContainerKey checks non-existent key")
     void testContainsContainerKeyNotExists() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_contains_notexist";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -696,7 +696,7 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         Boolean notExists = client.containsContainerKey(bytes(mapKey), null, bytes("nonexistent")).get();
-        assertFalse(notExists, "Ключ nonexistent не должен существовать");
+        assertFalse(notExists, "Key nonexistent should not exist");
     }
 
     // =========================================================================
@@ -704,7 +704,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("removeFromContainer с ContainerType.ORDERED_MAP удаляет по ключу и значению")
+    @DisplayName("removeFromContainer with ContainerType.ORDERED_MAP removes by key and value")
     void testRemoveFromContainerWithType() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_type";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -717,7 +717,7 @@ public class OrderedMapOperationsTest extends TestBase {
         List<Payload> values = List.of(p("v1"));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.ORDERED_MAP, keys, values).get();
-        assertEquals(1, removed, "Должен быть удалён 1 элемент");
+        assertEquals(1, removed, "1 element should be removed");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
         assertEquals(1, result.size());
@@ -725,7 +725,7 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("removeFromContainer с ContainerType.ORDERED_MAP удаляет по ключу игнорируя значение")
+    @DisplayName("removeFromContainer with ContainerType.ORDERED_MAP removes by key ignoring value")
     void testRemoveFromContainerWithTypeIgnoreValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_type_ignore";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -733,15 +733,15 @@ public class OrderedMapOperationsTest extends TestBase {
         );
         client.createOrderedMap(mapKey, initialData).get();
 
-        // Даже с неверным значением, удаление по ключу работает
+        // Even with wrong value, removal by key works
         List<Payload> keys = List.of(p("k1"));
         List<Payload> values = List.of(p("wrong_value"));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.ORDERED_MAP, keys, values).get();
-        assertEquals(1, removed, "Элемент удалён по ключу (значение игнорируется)");
+        assertEquals(1, removed, "Element removed by key (value ignored)");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(0, result.size(), "OrderedMap пуст после удаления");
+        assertEquals(0, result.size(), "OrderedMap empty after removal");
     }
 
     // =========================================================================
@@ -749,7 +749,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("removeFromContainer удаляет элемент по ключу и возвращает количество")
+    @DisplayName("removeFromContainer removes element by key and returns count")
     void testRemoveFromContainerByKey() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_key";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -760,15 +760,15 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, bytes("k2")).get();
-        assertEquals(1, removed, "Должен быть удалён 1 элемент");
+        assertEquals(1, removed, "1 element should be removed");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(2, result.size(), "Осталось 2 элемента");
+        assertEquals(2, result.size(), "2 elements remain");
         assertFalse(result.entrySet().stream().anyMatch(e -> "k2".equals(new String(e.getKey().getValue(), StandardCharsets.UTF_8))));
     }
 
     @Test
-    @DisplayName("removeFromContainer возвращает 0 для несуществующего ключа")
+    @DisplayName("removeFromContainer returns 0 for non-existent key")
     void testRemoveFromContainerByKeyNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_key_nf";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -777,17 +777,17 @@ public class OrderedMapOperationsTest extends TestBase {
         client.createOrderedMap(mapKey, initialData).get();
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, bytes("nonexistent")).get();
-        assertEquals(0, removed, "Ничего не удалено (элемент не найден)");
+        assertEquals(0, removed, "Nothing removed (element not found)");
     }
 
     @Test
-    @DisplayName("removeFromContainer из пустого контейнера возвращает 0")
+    @DisplayName("removeFromContainer from empty container returns 0")
     void testRemoveFromContainerFromEmptyMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_empty";
         client.createOrderedMap(mapKey, Map.of()).get();
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, bytes("k1")).get();
-        assertEquals(0, removed, "Ничего не удалено из пустого контейнера");
+        assertEquals(0, removed, "Nothing removed from empty container");
     }
 
     // =========================================================================
@@ -795,7 +795,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("addElementOrderedMap добавляет элементы в OrderedMap и возвращает количество")
+    @DisplayName("addElementOrderedMap adds elements to OrderedMap and returns count")
     void testAddElementOrderedMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_add";
         client.createOrderedMap(mapKey, Map.of()).get();
@@ -804,7 +804,7 @@ public class OrderedMapOperationsTest extends TestBase {
         List<Payload> values = List.of(p("v1"), p("v2"), p("v3"));
 
         Integer added = client.addElementOrderedMap(bytes(mapKey), null, keys, values, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(3, added, "Должно быть добавлено 3 элемента");
+        assertEquals(3, added, "3 elements should be added");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
         assertEquals(3, result.size());
@@ -814,30 +814,30 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("addElementOrderedMap допускает дубликаты (одинаковый key с разными весами)")
+    @DisplayName("addElementOrderedMap allows duplicates (same key with different weights)")
     void testAddElementOrderedMapDuplicates() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_add_dup";
         client.createOrderedMap(mapKey, Map.of()).get();
 
-        // Добавляем элементы с одинаковым key но разными весами
+        // Add elements with same key but different weights
         List<OrderedPayload> keys = List.of(op(1L, "same_key"), op(2L, "same_key"), op(3L, "same_key"));
         List<Payload> values = List.of(p("v1"), p("v2"), p("v3"));
 
         Integer added = client.addElementOrderedMap(bytes(mapKey), null, keys, values, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(3, added, "Должно быть добавлено 3 элемента (дубликаты разрешены)");
+        assertEquals(3, added, "3 elements should be added (duplicates allowed)");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(3, result.size(), "Всего 3 элемента с одинаковым key");
+        assertEquals(3, result.size(), "3 elements total with same key");
     }
 
     @Test
-    @DisplayName("addElementOrderedMap с пустым списком возвращает 0")
+    @DisplayName("addElementOrderedMap with empty list returns 0")
     void testAddElementOrderedMapEmptyList() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_add_empty";
         client.createOrderedMap(mapKey, Map.of()).get();
 
         Integer added = client.addElementOrderedMap(bytes(mapKey), null, List.of(), List.of(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(0, added, "Добавление пустого списка должно вернуть 0");
+        assertEquals(0, added, "Adding empty list should return 0");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
         assertEquals(0, result.size());
@@ -848,7 +848,7 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("streamOrderedMap пустого OrderedMap возвращает пустой ответ")
+    @DisplayName("streamOrderedMap of empty OrderedMap returns empty response")
     void testStreamOrderedMapEmpty() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_stream_empty";
 
@@ -857,11 +857,11 @@ public class OrderedMapOperationsTest extends TestBase {
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey, hint).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "streamOrderedMap пустого ordered map должен вернуть пустую карту");
+        assertEquals(0, result.size(), "streamOrderedMap of empty ordered map should return empty map");
     }
 
     @Test
-    @DisplayName("streamOrderedMap возвращает все содержимое контейнера")
+    @DisplayName("streamOrderedMap returns all container content")
     void testStreamOrderedMapWithData() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_stream_data";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -877,11 +877,11 @@ public class OrderedMapOperationsTest extends TestBase {
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey, hint).get();
         assertNotNull(result);
-        assertEquals(5, result.size(), "streamOrderedMap должен вернуть все 5 элементов");
+        assertEquals(5, result.size(), "streamOrderedMap should return all 5 elements");
     }
 
     @Test
-    @DisplayName("streamOrderedMap с явным clientId")
+    @DisplayName("streamOrderedMap with explicit clientId")
     void testStreamOrderedMapWithClientId() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_stream_cid";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -902,20 +902,20 @@ public class OrderedMapOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("Создание пустого OrderedMap")
+    @DisplayName("Creating empty OrderedMap")
     void testCreateEmptyOrderedMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_empty";
 
         KeyHintData hint = client.createOrderedMap(mapKey, Map.of()).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
+        assertNotNull(hint, "KeyHint should be created");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey, hint).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "Пустой ordered map должен вернуть пустую карту");
+        assertEquals(0, result.size(), "Empty ordered map should return empty map");
     }
 
     @Test
-    @DisplayName("Создание OrderedMap с начальными данными")
+    @DisplayName("Creating OrderedMap with initial data")
     void testCreateOrderedMapWithInitialData() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_initial";
 
@@ -926,18 +926,18 @@ public class OrderedMapOperationsTest extends TestBase {
         );
 
         KeyHintData hint = client.createOrderedMap(mapKey, initialData).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
+        assertNotNull(hint, "KeyHint should be created");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey, hint).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "OrderedMap должен содержать 3 элемента");
+        assertEquals(3, result.size(), "OrderedMap should contain 3 elements");
         assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(1L).equals(e.getKey().getOrder()) && "v1".equals(str(e.getValue()))));
         assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(2L).equals(e.getKey().getOrder()) && "v2".equals(str(e.getValue()))));
         assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(3L).equals(e.getKey().getOrder()) && "v3".equals(str(e.getValue()))));
     }
 
     @Test
-    @DisplayName("Создание большого OrderedMap с автоматическим разбиением на чанки (чанкинг)")
+    @DisplayName("Creating large OrderedMap with automatic chunking")
     void testCreateOrderedMapWithLargeDataChunking() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_large";
         int elementCount = 1500;
@@ -948,10 +948,10 @@ public class OrderedMapOperationsTest extends TestBase {
         }
 
         KeyHintData hint = client.createOrderedMap(mapKey, largeData).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
+        assertNotNull(hint, "KeyHint should be created");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey, hint).get();
         assertNotNull(result);
-        assertEquals(elementCount, result.size(), "OrderedMap должен содержать " + elementCount + " элементов");
+        assertEquals(elementCount, result.size(), "OrderedMap should contain " + elementCount + " elements");
     }
 }

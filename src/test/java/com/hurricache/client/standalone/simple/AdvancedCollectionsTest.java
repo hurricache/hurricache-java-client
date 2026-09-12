@@ -43,14 +43,14 @@ public class AdvancedCollectionsTest extends TestBase {
                 Payload.of("1".getBytes(StandardCharsets.UTF_8)),
                 Payload.of("2".getBytes(StandardCharsets.UTF_8)))).get();
 
-        // После createVector + addElementToTail: ["0", "1", "2"]
-        // removeTail удаляет "2": ["0", "1"]
+        // After createVector + addElementToTail: ["0", "1", "2"]
+        // removeTail removes "2": ["0", "1"]
         client.removeTail(vecKey).get();
 
-        // removeElementAtPosition(0, 0) удаляет только позицию 0 ("0")
+        // removeElementAtPosition(0, 0) removes only position 0 ("0")
         client.removeElementAtPosition(vecKey, null, 0, 0).get();
 
-        // Остался только "1"
+        // Only "1" remains
         Payload remaining = client.getElementAtPosition(vecKey, 0).get();
         Assertions.assertNotNull(remaining);
         Assertions.assertEquals("1", new String(remaining.getValue(), StandardCharsets.UTF_8));

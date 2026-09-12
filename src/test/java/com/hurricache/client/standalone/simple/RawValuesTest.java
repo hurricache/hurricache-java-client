@@ -35,14 +35,14 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_ttl_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Устанавливаем TTL 100 мс
+        // Set TTL to 100ms
         Boolean setResult = client.setTtl(testKey, null, 100, OWNER_CLIENT_ID).get();
-        assertTrue(setResult, "TTL должен быть установлен");
+        assertTrue(setResult, "TTL should be set");
 
-        // Получаем TTL
+        // Get TTL
         Long ttl = client.getTtl(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(ttl);
-        assertTrue(ttl > 0, "TTL должен быть положительным");
+        assertTrue(ttl > 0, "TTL should be positive");
     }
 
     @Test
@@ -51,12 +51,12 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_ttl_get_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Устанавливаем TTL 5000 мс
+        // Set TTL to 5000ms
         client.setTtl(testKey, null, 5000, OWNER_CLIENT_ID).get();
 
         Long ttl = client.getTtl(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(ttl);
-        assertTrue(ttl > 0 && ttl <= 5000, "TTL должно быть в диапазоне");
+        assertTrue(ttl > 0 && ttl <= 5000, "TTL should be in range");
     }
 
     @Test
@@ -65,16 +65,16 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_ttl_expire_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Устанавливаем TTL 100 мс
+        // Set TTL to 100ms
         client.setTtl(testKey, null, 100, OWNER_CLIENT_ID).get();
 
-        // Ждём истечения
+        // Wait for expiration
         Thread.sleep(200);
 
-        // Скаляр должен быть недоступен
+        // Scalar should be unavailable
         try {
             client.getValue(testKey).get();
-            Assertions.fail("getValue истёкшего скаляра должен вызвать ошибку");
+            Assertions.fail("getValue on expired scalar should throw error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -225,19 +225,19 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_read_lock_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает READ_LOCK
+        // Owner gets READ_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Owner может читать
+        // Owner can read
         byte[] val = client.getValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        // Intruder тоже может читать параллельно
+        // Intruder can also read in parallel
         byte[] valIntruder = client.getValue(testKey, INTRUDER_CLIENT_ID).get();
         assertNotNull(valIntruder);
 
-        // Разблокировка
+        // Unlock
         LockStatus unlock = client.unlockObject(testKey, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
@@ -248,20 +248,20 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_read_lock_write_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает READ_LOCK
+        // Owner gets READ_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Intruder не может писать (updateKeyValue)
+        // Intruder cannot write (updateKeyValue)
         try {
             client.updateKeyValue(testKey, "new_value".getBytes(StandardCharsets.UTF_8), INTRUDER_CLIENT_ID).get();
-            Assertions.fail("updateKeyValue должен вызвать ошибку");
+            Assertions.fail("updateKeyValue should throw an error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
         }
 
-        // Разблокировка
+        // Unlock
         client.unlockObject(testKey, OWNER_CLIENT_ID).get();
     }
 
@@ -271,27 +271,27 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_write_lock_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Owner может читать
+        // Owner can read
         byte[] val = client.getValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        // Owner может писать
+        // Owner can write
         client.updateKeyValue(testKey, "updated_value".getBytes(StandardCharsets.UTF_8), OWNER_CLIENT_ID).get();
 
-        // Intruder не может писать (mock server может не эмулировать блокировки для getValue)
+        // Intruder cannot write (mock server may not emulate locks for getValue)
         try {
             client.updateKeyValue(testKey, "intruder_value".getBytes(StandardCharsets.UTF_8), INTRUDER_CLIENT_ID).get();
-            Assertions.fail("updateKeyValue должен вызвать ошибку");
+            Assertions.fail("updateKeyValue should throw an error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
         }
 
-        // Разблокировка
+        // Unlock
         LockStatus unlock = client.unlockObject(testKey, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
@@ -302,27 +302,27 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_global_lock_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает GLOBAL_LOCK
+        // Owner gets GLOBAL_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Owner может читать
+        // Owner can read
         byte[] val = client.getValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        // Owner может писать
+        // Owner can write
         client.updateKeyValue(testKey, "global_updated".getBytes(StandardCharsets.UTF_8), OWNER_CLIENT_ID).get();
 
-        // Intruder не может писать (mock server может не эмулировать блокировки для getValue)
+        // Intruder cannot write (mock server may not emulate locks for getValue)
         try {
             client.updateKeyValue(testKey, "intruder_global".getBytes(StandardCharsets.UTF_8), INTRUDER_CLIENT_ID).get();
-            Assertions.fail("updateKeyValue должен вызвать ошибку");
+            Assertions.fail("updateKeyValue should throw an error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
         }
 
-        // Разблокировка
+        // Unlock
         LockStatus unlock = client.unlockObject(testKey, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
@@ -333,15 +333,15 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_write_lock_denied_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Intruder не может получить WRITE_LOCK
+        // Intruder cannot get WRITE_LOCK
         LockStatus intruderLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertTrue(intruderLock != LockStatus.OK, "Intruder не должен получить блокировку");
+        assertTrue(intruderLock != LockStatus.OK, "Intruder should not get lock");;
 
-        // Разблокировка
+        // Unlock
         client.unlockObject(testKey, OWNER_CLIENT_ID).get();
     }
 
@@ -351,14 +351,14 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_unlock_denied_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
 
-        // Intruder не может разблокировать
+        // Intruder cannot unlock
         LockStatus unlock = client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        // Owner разблокирует
+        // Owner unlocks
         LockStatus unlockOwner = client.unlockObject(testKey, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlockOwner);
     }
@@ -369,18 +369,18 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_lock_remove_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Owner может удалить
+        // Owner can delete
         Boolean removed = client.remove(testKey, OWNER_CLIENT_ID).get();
         assertTrue(removed);
 
-        // unlockObject несуществующего ключа возвращает NOT_FOUND
+        // unlockObject of non-existent key returns NOT_FOUND
         try {
             client.unlockObject(testKey, OWNER_CLIENT_ID).get();
-            Assertions.fail("unlockObject удалённого ключа должен вызвать NOT_FOUND");
+            Assertions.fail("unlockObject of deleted key should throw NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -393,19 +393,19 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_lock_getdelete_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Owner может getAndDeleteValue
+        // Owner can getAndDeleteValue
         byte[] deleted = client.getAndDeleteValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(deleted);
         assertEquals(testValue, new String(deleted));
 
-        // unlockObject удалённого ключа возвращает NOT_FOUND
+        // unlockObject of deleted key returns NOT_FOUND
         try {
             client.unlockObject(testKey, OWNER_CLIENT_ID).get();
-            Assertions.fail("unlockObject удалённого ключа должен вызвать NOT_FOUND");
+            Assertions.fail("unlockObject of deleted key should throw NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
@@ -418,15 +418,15 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_lock_exist_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает WRITE_LOCK
+        // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Owner может existKey
+        // Owner can existKey
         Boolean exists = client.existKey(testKey, OWNER_CLIENT_ID).get();
         assertTrue(exists);
 
-        // Разблокировка
+        // Unlock
         LockStatus unlock = client.unlockObject(testKey, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
@@ -437,15 +437,15 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_multi_read_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Первый клиент получает READ_LOCK
+        // First client gets READ_LOCK
         LockStatus lock1 = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock1);
 
-        // Второй клиент также может получить READ_LOCK
+        // Second client can also get READ_LOCK
         LockStatus lock2 = client.lockObject(testKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock2);
 
-        // Оба разблокируют
+        // Both unlock
         client.unlockObject(testKey, OWNER_CLIENT_ID).get();
         client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
     }
@@ -454,7 +454,7 @@ public class RawValuesTest extends TestBase {
     // 3. LOCK + SCALAR OPERATIONS
     // =========================================================================
 
-    // Дополнительные тесты lock+scalar уже добавлены в секцию 2
+    // Additional lock+scalar tests already added in section 2
 
     // =========================================================================
     // 4. LOCK EXPIRATION
@@ -466,18 +466,18 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_write_lock_exp_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает WRITE_LOCK на 2 секунды
+        // Owner gets WRITE_LOCK for 2 seconds
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Ждём истечения
+        // Wait for expiration
         Thread.sleep(3000);
 
-        // Теперь intruder может получить WRITE_LOCK
+        // Now intruder can get WRITE_LOCK
         LockStatus intruderLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, intruderLock);
 
-        // Разблокирует
+        // Unlocks
         client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
     }
 
@@ -487,18 +487,18 @@ public class RawValuesTest extends TestBase {
         String testValue = "scalar_read_lock_exp_value" + UUID.randomUUID();
         client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
 
-        // Owner получает READ_LOCK на 2 секунды
+        // Owner gets READ_LOCK for 2 seconds
         LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
         assertEquals(LockStatus.OK, lock);
 
-        // Ждём истечения
+        // Wait for expiration
         Thread.sleep(3000);
 
-        // Теперь intruder может получить READ_LOCK
+        // Now intruder can get READ_LOCK
         LockStatus intruderLock = client.lockObject(testKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, intruderLock);
 
-        // Разблокирует
+        // Unlocks
         client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
     }
 }

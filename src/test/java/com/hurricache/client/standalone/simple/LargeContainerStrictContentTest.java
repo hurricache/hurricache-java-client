@@ -32,7 +32,7 @@ public class LargeContainerStrictContentTest extends TestBase {
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
     @Test
-    @DisplayName("Queue: строгая проверка побайтового содержимого элементов")
+    @DisplayName("Queue: strict byte-by-byte content verification of elements")
     void testCreateLargeQueueStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
         List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
@@ -50,20 +50,20 @@ public class LargeContainerStrictContentTest extends TestBase {
             actualPayloads.add(popped);
         }
         assertEquals(LARGE_ELEMENT_COUNT, actualPayloads.size(),
-                     String.format("Количество элементов в очереди не совпадает! Ожидалось: %d, Получено: %d",
+                     String.format("Element count in queue does not match! Expected: %d, Received: %d",
                                    LARGE_ELEMENT_COUNT, actualPayloads.size()));
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             assertArrayEquals(
                     expectedPayloads.get(i).getValue(),
                     actualPayloads.get(i).getValue(),
-                    "Ошибка несовпадения данных на индексе: " + i
+                    "Data mismatch error at index: " + i
             );
         }
     }
 
     @Test
-    @DisplayName("List: строгая проверка содержимого через streamList и точечный геттер")
+    @DisplayName("List: strict content verification via streamList and point getter")
     void testCreateLargeListStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
         List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
@@ -80,12 +80,12 @@ public class LargeContainerStrictContentTest extends TestBase {
             Payload actual = client.getElementAtPosition(key, hint, index, 0, TIMEOUT).get();
             assertNotNull(actual);
             assertArrayEquals(expectedPayloads.get(index).getValue(), actual.getValue(),
-                              "Ошибка содержимого при точечном запросе позиции: " + index);
+                              "Content error at point query position: " + index);
         }
     }
 
     @Test
-    @DisplayName("Vector: строгая проверка порядка и значений всех чанков")
+    @DisplayName("Vector: strict order and value verification of all chunks")
     void testCreateLargeVectorStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
         List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
@@ -99,12 +99,12 @@ public class LargeContainerStrictContentTest extends TestBase {
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             assertArrayEquals(expectedPayloads.get(i).getValue(), actualPayloads.get(i).getValue(),
-                              "Ошибка несовпадения вектора на индексе: " + i);
+                              "Vector mismatch error at index: " + i);
         }
     }
 
     @Test
-    @DisplayName("Set: проверка полноты данных и отсутствия битых значений")
+    @DisplayName("Set: data completeness check and absence of corrupted values")
     void testCreateLargeSetStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
         List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
@@ -142,7 +142,7 @@ public class LargeContainerStrictContentTest extends TestBase {
 
         Integer size = client.getSize(key, hint, 0, TIMEOUT).get();
         assertEquals(expectedUniqueCount, size,
-                     String.format("Размер Set не совпадает с количеством уникальных элементов! Ожидалось: %d, Получено: %d",
+                     String.format("Set size does not match number of unique elements! Expected: %d, Received: %d",
                                    expectedUniqueCount, size));
 
         Payload first = expectedPayloads.get(0);
@@ -155,7 +155,7 @@ public class LargeContainerStrictContentTest extends TestBase {
     }
 
     @Test
-    @DisplayName("OrderedSet: проверка сохранения весов и бинарных данных")
+    @DisplayName("OrderedSet: weight and binary data preservation check")
     void testCreateLargeOrderedSetStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
         List<OrderedPayload> expectedPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
@@ -176,13 +176,13 @@ public class LargeContainerStrictContentTest extends TestBase {
             OrderedPayload expected = expectedPayloads.get(i);
             OrderedPayload actual = streamed.get(i);
 
-            assertEquals(expected.getOrder(), actual.getOrder(), "Вес OrderedSet не совпадает на шаге: " + i);
-            assertArrayEquals(expected.getValue(), actual.getValue(), "Бинарный контент OrderedSet не совпадает на шаге: " + i);
+            assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at step: " + i);
+            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at step: " + i);
         }
     }
 
     @Test
-    @DisplayName("Map: строгая проверка всех ключей и соответствующих им значений")
+    @DisplayName("Map: strict verification of all keys and their corresponding values")
     void testCreateLargeMapStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
         Map<Payload, Payload> expectedMap = new LinkedHashMap<>();
@@ -205,13 +205,13 @@ public class LargeContainerStrictContentTest extends TestBase {
             byte[] expectedValue = entry.getValue().getValue();
 
             byte[] actualValue = client.getContainerValue(key, hint, subKey, 0, TIMEOUT).get();
-            assertNotNull(actualValue, "Ключ не найден в Map: " + new String(subKey));
-            assertArrayEquals(expectedValue, actualValue, "Значение по ключу искажено: " + new String(subKey));
+            assertNotNull(actualValue, "Key not found in Map: " + new String(subKey));
+            assertArrayEquals(expectedValue, actualValue, "Value by key is corrupted: " + new String(subKey));
         }
     }
 
     @Test
-    @DisplayName("OrderedMap: строгая проверка весов, ключей и значений")
+    @DisplayName("OrderedMap: strict verification of weights, keys and values")
     void testCreateLargeOrderedMapStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
         Map<OrderedPayload, Payload> expectedMap = new LinkedHashMap<>();
@@ -234,8 +234,8 @@ public class LargeContainerStrictContentTest extends TestBase {
             byte[] expectedValue = entry.getValue().getValue();
 
             byte[] actualValue = client.getContainerValue(key, hint, subKey, 0, TIMEOUT).get();
-            assertNotNull(actualValue, "Ключ не найден в OrderedMap: " + new String(subKey));
-            assertArrayEquals(expectedValue, actualValue, "Значение искажено в OrderedMap по ключу: " + new String(subKey));
+            assertNotNull(actualValue, "Key not found in OrderedMap: " + new String(subKey));
+            assertArrayEquals(expectedValue, actualValue, "Value corrupted in OrderedMap by key: " + new String(subKey));
         }
     }
 

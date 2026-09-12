@@ -42,7 +42,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     private final int SECONDARY_CLIENT_ID = 99;
 
     @Test
-    @DisplayName("TTL: Проверка истечения времени жизни ключа")
+    @DisplayName("TTL: Check key expiration")
     void testTtlExpiration() throws Exception {
         String key = "ttl:test:key" + UUID.randomUUID();
         byte[] payload = "temp_data".getBytes();
@@ -50,12 +50,12 @@ public class HurriCacheClientMissingTests extends TestBase {
         Assertions.assertNotNull(client.createKeyValue(key, payload, DEFAULT_CLIENT_ID).get());
         Thread.sleep(500);
         Boolean ttlSet = client.setTtl(key, null, 100).get();
-        assertTrue(ttlSet, "TTL должен быть успешно установлен");
+        assertTrue(ttlSet, "TTL should be successfully set");
 
         Long remainingTtl = client.getTtl(key, null).get();
         assertNotNull(remainingTtl);
-        System.out.println("Осталось TTL: " + remainingTtl);
-        assertTrue(remainingTtl > 0L, "Остаток TTL должен быть больше 0");
+        System.out.println("Remaining TTL: " + remainingTtl);
+        assertTrue(remainingTtl > 0L, "Remaining TTL should be greater than 0");
 
         Thread.sleep(1500);
         assertThrows(ExecutionException.class, () -> {
@@ -64,7 +64,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Non-existent Key: Чтение и удаление несуществующего ключа")
+    @DisplayName("Non-existent Key: Read and delete non-existent key")
     void testNonExistentKeyOperations() throws Exception {
         String missingKey = "key:does:not:exist:" + UUID.randomUUID();
 
@@ -78,18 +78,18 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Type Mismatch: Запрос операции со списком для обычного KV ключа")
+    @DisplayName("Type Mismatch: Request list operation for regular KV key")
     void testTypeMismatchErrorHandling() throws Exception {
         String key = "kv:for:mismatch" + UUID.randomUUID();
         Assertions.assertNotNull(client.createKeyValue(key, "just_string".getBytes(), DEFAULT_CLIENT_ID).get());
         Thread.sleep(500);
         assertThrows(ExecutionException.class, () -> {
             client.getHead(key, null).get();
-        }, "Запрос операции списка для KV-ключа должен завершаться ошибкой");
+        }, "List operation request for KV key should fail");
     }
 
     @Test
-    @DisplayName("Bounds: Доступ к элементам коллекции по некорректному индексу")
+    @DisplayName("Bounds: Access to collection elements by incorrect index")
     void testOutOfBoundsPosition() throws Exception {
         String key = "list:bounds:test" + UUID.randomUUID();
         List<Payload> initial = List.of(Payload.of("elem1".getBytes()));
@@ -105,7 +105,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Locks: Совместимость нескольких READ_LOCK от разных клиентов")
+    @DisplayName("Locks: Compatibility of multiple READ_LOCK from different clients")
     void testMultipleReadLocksAllowed() throws Exception {
         String key = "lock:shared:read" + UUID.randomUUID();
         Assertions.assertNotNull(client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get());
@@ -121,7 +121,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Locks: Отклонение WRITE_LOCK при активном READ_LOCK")
+    @DisplayName("Locks: WRITE_LOCK rejection when READ_LOCK is active")
     void testWriteLockRejectedWhenReadLocked() throws Exception {
         String key = "lock:exclusive:write" + UUID.randomUUID();
         Assertions.assertNotNull(client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get());
@@ -138,7 +138,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Locks: Запрет анлока чужим clientId")
+    @DisplayName("Locks: Unlock prohibition by another client's clientId")
     void testUnlockByWrongClientFails() throws Exception {
         String key = "lock:wrong:owner" + UUID.randomUUID();
         Assertions.assertNotNull(client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get());
@@ -153,7 +153,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Concurrency: Параллельное увеличение атомика из 10 потоков")
+    @DisplayName("Concurrency: Parallel atomic increment from 10 threads")
     void testConcurrentAtomicIncrements() throws Exception {
         String key = "atomic:concurrent:counter" + UUID.randomUUID();
         KeyHintData hint = client.atomicCreate(key, 0L).get();
@@ -178,7 +178,7 @@ public class HurriCacheClientMissingTests extends TestBase {
         }
 
         boolean finished = latch.await(10, TimeUnit.SECONDS);
-        assertTrue(finished, "Все потоки должны успешно завершиться до таймаута");
+        assertTrue(finished, "All threads should complete successfully before timeout");
 
         long finalValue = client.atomicAdd(key, hint, 0L).get();
         assertEquals((long) threads * incrementsPerThread, finalValue);
@@ -187,7 +187,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Concurrency: Одновременный Push и Pop в очередь")
+    @DisplayName("Concurrency: Simultaneous Push and Pop in queue")
     void testConcurrentQueuePushPop() throws Exception {
         String key = "queue:concurrent:test" + UUID.randomUUID();
         KeyHintData hint = client.createQueue(key, new ArrayList<>()).get();
@@ -219,7 +219,7 @@ public class HurriCacheClientMissingTests extends TestBase {
                         Thread.sleep(10);
                     }
                 } catch (Exception e) {
-                    // Игнорируем промежуточные отсутствия
+                    // Ignore intermediate non-existence
                 }
             }
         }, executor);
@@ -231,7 +231,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Mode: Отклонение операций записи при Mode.BACKUP")
+    @DisplayName("Mode: Reject write operations in Mode.BACKUP")
     void testWriteOperationFailsInBackupMode() throws Exception {
         String key = "mode:backup:write:test" + UUID.randomUUID();
         Assertions.assertNotNull(client.createKeyValue(key, "initial".getBytes(), DEFAULT_CLIENT_ID).get());
@@ -245,7 +245,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Edge Case: Создание и работа с пустым Payload (byte[0])")
+    @DisplayName("Edge Case: Create and work with empty Payload (byte[0])")
     void testEmptyPayloadHandling() throws Exception {
         String key = "edge:empty:payload" + UUID.randomUUID();
         byte[] emptyBuffer = new byte[0];
@@ -259,7 +259,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     }
 
     @Test
-    @DisplayName("Edge Case: Большой размер объекта (1 МБ)")
+    @DisplayName("Edge Case: Large object size (1 MB)")
     void testLargePayloadHandling() throws Exception {
         String key = "edge:large:payload" + UUID.randomUUID();
         byte[] largeBuffer = new byte[1024 * 1024]; // 1MB
@@ -281,7 +281,7 @@ public class HurriCacheClientMissingTests extends TestBase {
             "key\nwith\nnewlines",
             "special_chars_!@#$%^&*()_+"
     })
-    @DisplayName("Edge Case: Специальные символы и UTF-8 в названии ключей")
+    @DisplayName("Edge Case: Special characters and UTF-8 in key names")
     void testSpecialCharacterKeys(String specialKey) throws Exception {
         byte[] value = ("test_data" + UUID.randomUUID()).getBytes();
         Assertions.assertNotNull(client.createKeyValue(specialKey, value, DEFAULT_CLIENT_ID).get());

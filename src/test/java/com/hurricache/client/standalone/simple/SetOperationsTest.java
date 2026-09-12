@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Тесты для операций с Set (unordered set / hashset).
- * Покрывает все методы, поддерживаемые контейнером Set.
+ * Tests for Set operations (unordered set / hashset).
+ * Covers all methods supported by the Set container.
  */
 public class SetOperationsTest extends TestBase {
 
@@ -60,22 +60,22 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("Создание пустого Set")
+    @DisplayName("Create empty Set")
     void testCreateEmptySet() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_empty";
         
         KeyHintData hint = client.createSet(setKey, new ArrayList<>()).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
+        assertNotNull(hint, "KeyHint should be created");
         
         Thread.sleep(500);
         
         List<Payload> result = client.streamSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "Пустой set должен вернуть пустой список");
+        assertEquals(0, result.size(), "Empty set should return empty list");
     }
 
     @Test
-    @DisplayName("Создание Set с начальными данными")
+    @DisplayName("Create Set with initial data")
     void testCreateSetWithInitialData() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_initial";
         List<Payload> initialData = List.of(
@@ -85,13 +85,13 @@ public class SetOperationsTest extends TestBase {
         );
         
         KeyHintData hint = client.createSet(setKey, initialData).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
+        assertNotNull(hint, "KeyHint should be created");
         
         Thread.sleep(500);
         
         List<Payload> result = client.streamSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(3, result.size(), "Set должен содержать 3 элемента");
+        assertEquals(3, result.size(), "Set should contain 3 elements");
         
         List<String> resultStrings = result.stream()
             .map(this::str)
@@ -102,7 +102,7 @@ public class SetOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Создание большого Set с автоматическим разбиением на чанки (чанкинг)")
+    @DisplayName("Create large Set with automatic chunking")
     void testCreateLargeSetWithChunking() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_large";
         int elementCount = 1500;
@@ -113,13 +113,13 @@ public class SetOperationsTest extends TestBase {
         }
         
         KeyHintData hint = client.createSet(setKey, payloads).get();
-        assertNotNull(hint, "KeyHint должен быть создан");
+        assertNotNull(hint, "KeyHint should be created");
         
         Thread.sleep(500);
         
         List<Payload> result = client.streamSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(elementCount, result.size(), "Set должен содержать " + elementCount + " элементов");
+        assertEquals(elementCount, result.size(), "Set should contain " + elementCount + " elements");
     }
 
     // =========================================================================
@@ -127,7 +127,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("streamSet пустого set возвращает пустой ответ")
+    @DisplayName("streamSet on empty set returns empty response")
     void testStreamSetEmptySet() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_stream_empty";
         
@@ -138,11 +138,11 @@ public class SetOperationsTest extends TestBase {
         
         List<Payload> result = client.streamSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(0, result.size(), "streamSet пустого set должен вернуть пустой список");
+        assertEquals(0, result.size(), "streamSet on empty set should return empty list");
     }
 
     @Test
-    @DisplayName("streamSet возвращает все содержимое контейнера")
+    @DisplayName("streamSet returns all container content")
     void testStreamSetReturnsAllContent() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_stream_all";
         List<Payload> initialData = List.of(
@@ -160,7 +160,7 @@ public class SetOperationsTest extends TestBase {
         
         List<Payload> result = client.streamSet(setKey, hint).get();
         assertNotNull(result);
-        assertEquals(5, result.size(), "streamSet должен вернуть все 5 элементов");
+        assertEquals(5, result.size(), "streamSet should return all 5 elements");
     }
 
     // =========================================================================
@@ -168,7 +168,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("addElement добавляет элементы в set и возвращает количество добавленных уникальных элементов")
+    @DisplayName("addElement adds elements to set and returns count of added unique elements")
     void testAddElement() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_add";
         List<Payload> initialData = List.of(p("item1"));
@@ -178,19 +178,19 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Добавляем 2 новых элемента
+        // Add 2 new elements
         List<Payload> newElements = List.of(p("item2"), p("item3"));
         Integer added = client.addElementUnordered(setKey, newElements).get();
-        assertEquals(2, added, "Должно быть добавлено 2 уникальных элемента");
+        assertEquals(2, added, "2 unique elements should be added");
         
         Thread.sleep(500);
         
         Integer size = client.getSize(setKey, hint).get();
-        assertEquals(3, size, "Set должен содержать 3 элемента");
+        assertEquals(3, size, "Set should contain 3 elements");
     }
 
     @Test
-    @DisplayName("addElement не добавляет дубликаты и возвращает 0 для дубликатов")
+    @DisplayName("addElement does not add duplicates and returns 0 for duplicates")
     void testAddElementNoDuplicates() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_no_dup";
         List<Payload> initialData = List.of(p("item1"));
@@ -200,15 +200,15 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Пытаемся добавить дубликат
+        // Try to add duplicate
         List<Payload> duplicateElements = List.of(p("item1"), p("item2"));
         Integer added = client.addElementUnordered(setKey, duplicateElements).get();
-        assertEquals(1, added, "Должен быть добавлен только 1 новый элемент (item2), item1 - дубликат");
+        assertEquals(1, added, "Only 1 new element (item2) should be added, item1 is duplicate");
         
         Thread.sleep(500);
         
         Integer size = client.getSize(setKey, hint).get();
-        assertEquals(2, size, "Set должен содержать 2 элемента");
+        assertEquals(2, size, "Set should contain 2 elements");
     }
 
     // =========================================================================
@@ -216,7 +216,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("removeFromContainer удаляет элемент из set и возвращает 1")
+    @DisplayName("removeFromContainer removes element from set and returns 1")
     void testRemoveFromContainer() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove";
         List<Payload> initialData = List.of(p("item1"), p("item2"), p("item3"));
@@ -227,16 +227,16 @@ public class SetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("item1").getValue()).get();
-        assertEquals(1, removed, "Должен быть удален 1 элемент");
+        assertEquals(1, removed, "1 element should be removed");
         
         Thread.sleep(500);
         
         Integer size = client.getSize(setKey, hint).get();
-        assertEquals(2, size, "Set должен содержать 2 элемента");
+        assertEquals(2, size, "Set should contain 2 elements");
     }
 
     @Test
-    @DisplayName("removeFromContainer возвращает 0 если элемента нет")
+    @DisplayName("removeFromContainer returns 0 if element doesn't exist")
     void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove_nonexist";
         List<Payload> initialData = List.of(p("item1"), p("item2"));
@@ -247,12 +247,12 @@ public class SetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").getValue()).get();
-        assertEquals(0, removed, "Должно быть удалено 0 элементов (элемент не найден)");
+        assertEquals(0, removed, "0 elements should be removed (element not found)");
         
         Thread.sleep(500);
         
         Integer size = client.getSize(setKey, hint).get();
-        assertEquals(2, size, "Set должен содержать 2 элемента");
+        assertEquals(2, size, "Set should contain 2 elements");
     }
 
     // =========================================================================
@@ -260,7 +260,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("containsContainerKey проверяет наличие элемента в контейнере")
+    @DisplayName("containsContainerKey checks for element presence in container")
     void testContainsContainerKey() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_contains";
         List<Payload> initialData = List.of(p("item1"), p("item2"));
@@ -270,13 +270,13 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Проверяем существующий элемент
+        // Check existing element
         Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("item1").getValue()).get();
-        assertTrue(exists, "Элемент item1 должен существовать");
+        assertTrue(exists, "Element item1 should exist");
         
-        // Проверяем несуществующий элемент
+        // Check non-existent element
         Boolean notExists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").getValue()).get();
-        Assertions.assertFalse(notExists, "Элемент nonexistent не должен существовать");
+        Assertions.assertFalse(notExists, "Element nonexistent should not exist");
     }
 
     // =========================================================================
@@ -284,7 +284,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("setTtl устанавливает TTL на set")
+    @DisplayName("setTtl sets TTL on set")
     void testSetTtl() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_ttl_set";
         List<Payload> initialData = List.of(p("item1"));
@@ -295,11 +295,11 @@ public class SetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         Boolean setTtlResult = client.setTtl(setKey, hint, 100).get();
-        assertTrue(setTtlResult, "TTL должен быть успешно установлен");
+        assertTrue(setTtlResult, "TTL should be successfully set");
     }
 
     @Test
-    @DisplayName("getTtl получает TTL set")
+    @DisplayName("getTtl gets TTL of set")
     void testGetTtl() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_ttl_get";
         List<Payload> initialData = List.of(p("item1"));
@@ -309,7 +309,7 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Устанавливаем TTL
+        // Set TTL
         client.setTtl(setKey, hint, 100).get();
         
         Thread.sleep(500);
@@ -322,7 +322,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("После истечения TTL set должен удалиться")
+    @DisplayName("After TTL expiration set should be deleted")
     void testTtlExpiration() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_ttl_expire";
         List<Payload> initialData = List.of(p("item1"));
@@ -332,16 +332,16 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Устанавливаем TTL = 1 секунда
+        // Set TTL = 1 second
         client.setTtl(setKey, hint, 1).get();
         
         Thread.sleep(1500);
         
-        // Проверяем, что set удален - streamSet должен вернуть пустой список или ошибку
+        // Check that set is deleted - streamSet should return empty list or error
         assertNotFound(client.streamSet(setKey, hint));
 
-        // После истечения TTL контейнер удаляется, streamSet может вернуть пустой список
-        // или вызвать ошибку в зависимости от реализации сервера
+        // After TTL expiration container is deleted, streamSet may return empty list
+        // or throw error depending on server implementation
     }
 
     // =========================================================================
@@ -349,7 +349,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("READ_LOCK: несколько клиентов могут читать параллельно")
+    @DisplayName("READ_LOCK: multiple clients can read in parallel")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_read_lock";
         List<Payload> initialData = List.of(p("item1"));
@@ -359,15 +359,15 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Первый клиент берет READ_LOCK
+        // First client acquires READ_LOCK
         LockStatus lock1 = client.lockObject(setKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock1, "Первый клиент должен получить READ_LOCK");
+        assertEquals(LockStatus.OK, lock1, "First client should get READ_LOCK");
         
-        // Второй клиент также может взять READ_LOCK
+        // Second client can also acquire READ_LOCK
         LockStatus lock2 = client.lockObject(setKey, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2, "Второй клиент должен получить READ_LOCK");
+        assertEquals(LockStatus.OK, lock2, "Second client should get READ_LOCK");
         
-        // Оба клиента могут читать
+        // Both clients can read
         List<Payload> result1 = client.streamSet(setKey, hint, DEFAULT_CLIENT_ID).get();
         assertNotNull(result1);
         assertEquals(1, result1.size());
@@ -376,13 +376,13 @@ public class SetOperationsTest extends TestBase {
         assertNotNull(result2);
         assertEquals(1, result2.size());
         
-        // Освобождаем блокировки
+        // Release locks
         client.unlockObject(setKey, DEFAULT_CLIENT_ID).get();
         client.unlockObject(setKey, SECONDARY_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("WRITE_LOCK: только владелец может читать и писать, другие не могут ничего")
+    @DisplayName("WRITE_LOCK: only owner can read and write, others cannot do anything")
     void testWriteLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_write_lock";
         List<Payload> initialData = List.of(p("item1"));
@@ -392,43 +392,43 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Владелец берет WRITE_LOCK
+        // Owner takes WRITE_LOCK
         LockStatus lock = client.lockObject(setKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Владелец должен получить WRITE_LOCK");
+        assertEquals(LockStatus.OK, lock, "Owner should get WRITE_LOCK");
         
-        // Владелец может читать
+        // Owner can read
         List<Payload> readResult = client.streamSet(setKey, hint, OWNER_CLIENT_ID).get();
         assertNotNull(readResult);
         assertEquals(1, readResult.size());
         
-        // Владелец может писать (добавлять элементы)
+        // Owner can write (add elements)
         Integer added = client.addElementUnordered(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(p("item2")), OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(1, added, "Владелец должен добавить элемент");
+        assertEquals(1, added, "Owner should add element");
         
-        // Другой клиент не может читать
+        // Another client cannot read
         try {
             client.streamSet(setKey, hint, INTRUDER_CLIENT_ID).get();
-            fail("Интриган не должен иметь доступа к чтению при WRITE_LOCK");
+            fail("Intruder should not have read access under WRITE_LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Should be PERMISSION_DENIED error");
         }
         
-        // Другой клиент не может писать
+        // Another client cannot write
         try {
             client.addElementUnordered(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(p("item3")), INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-            fail("Интриган не должен иметь доступа к записи при WRITE_LOCK");
+            fail("Intruder should not have write access under WRITE_LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Should be PERMISSION_DENIED error");
         }
         
-        // Освобождаем блокировку
+        // Release lock
         client.unlockObject(setKey, OWNER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("GLOBAL: только владелец делает любые операции, все остальные блокируются")
+    @DisplayName("GLOBAL: only owner performs any operations, all others are blocked")
     void testGlobalLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_global_lock";
         List<Payload> initialData = List.of(p("item1"));
@@ -438,45 +438,45 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Владелец берет GLOBAL LOCK
+        // Owner takes GLOBAL LOCK
         LockStatus lock = client.lockObject(setKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Владелец должен получить GLOBAL LOCK");
+        assertEquals(LockStatus.OK, lock, "Owner should get GLOBAL LOCK");
         
-        // Владелец может читать
+        // Owner can read
         List<Payload> readResult = client.streamSet(setKey, hint, OWNER_CLIENT_ID).get();
         assertNotNull(readResult);
         assertEquals(1, readResult.size());
         
-        // Владелец может писать
+        // Owner can write
         Integer added = client.addElementUnordered(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(p("item2")), OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(1, added, "Владелец должен добавить элемент");
+        assertEquals(1, added, "Owner should add element");
         
-        // Другой клиент не может читать
+        // Another client cannot read
         try {
             client.streamSet(setKey, hint, INTRUDER_CLIENT_ID).get();
-            fail("Интриган не должен иметь доступа к чтению при GLOBAL LOCK");
+            fail("Intruder should not have read access under GLOBAL LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Should be PERMISSION_DENIED error");
         }
         
-        // Другой клиент не может писать
+        // Another client cannot write
         try {
             client.addElementUnordered(setKey.getBytes(StandardCharsets.UTF_8), hint, List.of(p("item3")), INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-            fail("Интриган не должен иметь доступа к записи при GLOBAL LOCK");
+            fail("Intruder should not have write access under GLOBAL LOCK");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Должна быть ошибка PERMISSION_DENIED");
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode(), "Should be PERMISSION_DENIED error");
         }
 
         assertDenied(client.unlockObject(setKey, INTRUDER_CLIENT_ID));
         
-        // Освобождаем блокировку владельцем
+        // Release lock by owner
         client.unlockObject(setKey, OWNER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("unlockObject: снять блокировку может только владелец")
+    @DisplayName("unlockObject: only owner can release lock")
     void testUnlockByOwnerOnly() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_unlock_owner";
         List<Payload> initialData = List.of(p("item1"));
@@ -486,16 +486,16 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Владелец берет WRITE_LOCK
+        // Owner takes WRITE_LOCK
         LockStatus lock = client.lockObject(setKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Владелец должен получить WRITE_LOCK");
+        assertEquals(LockStatus.OK, lock, "Owner should get WRITE_LOCK");
         
-        // Интриган пытается снять блокировку
+        // Intruder tries to release lock
         assertDenied(client.unlockObject(setKey, INTRUDER_CLIENT_ID));
         
-        // Владелец снимает блокировку
+        // Owner releases lock
         LockStatus validUnlock = client.unlockObject(setKey, OWNER_CLIENT_ID).get();
-        assertEquals(LockStatus.OK, validUnlock, "Владелец должен снять блокировку");
+        assertEquals(LockStatus.OK, validUnlock, "Owner should release lock");
     }
 
     // =========================================================================
@@ -503,7 +503,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("Методы, не применимые к set, должны вызывать ошибку")
+    @DisplayName("Methods not applicable to set should throw an error")
     void testUnsupportedMethodsForSet() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_unsupported";
         List<Payload> initialData = List.of(p("item1"));
@@ -513,94 +513,94 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // getElementAtPosition - не применим к set
+        // getElementAtPosition - not applicable to set
         try {
             client.getElementAtPosition(setKey, hint, 0).get();
-            fail("getElementAtPosition должен вызвать ошибку для set");
+            fail("getElementAtPosition should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
         }
         
-        // getAndRemoveElementAtPosition - не применим к set
+        // getAndRemoveElementAtPosition - not applicable to set
         try {
             client.getAndRemoveElementAtPosition(setKey, hint, 0).get();
-            fail("getAndRemoveElementAtPosition должен вызвать ошибку для set");
+            fail("getAndRemoveElementAtPosition should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
         }
         
-        // addElementToPosition - не применим к set
+        // addElementToPosition - not applicable to set
 //        try {
 //            client.addElementToPosition(setKey, hint, List.of(p("item2")), 0).get();
-//            fail("addElementToPosition должен вызвать ошибку для set");
+//            fail("addElementToPosition should throw an error for set");
 //        } catch (ExecutionException e) {
 //            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-//            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+//            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
 //        }
         
-        // removeElementAtPosition - не применим к set
+        // removeElementAtPosition - not applicable to set
         try {
             client.removeElementAtPosition(setKey, hint, 0, 0).get();
-            fail("removeElementAtPosition должен вызвать ошибку для set");
+            fail("removeElementAtPosition should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
         }
         
-        // getHead - не применим к set
+        // getHead - not applicable to set
         try {
             client.getHead(setKey, hint).get();
-            fail("getHead должен вызвать ошибку для set");
+            fail("getHead should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
         }
         
-        // getFront - не применим к set
+        // getFront - not applicable to set
         try {
             client.getHead(setKey, hint).get();
-            fail("getFront должен вызвать ошибку для set");
+            fail("getFront should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
         }
         
-        // getTail - не применим к set
+        // getTail - not applicable to set
         try {
             client.getTail(setKey, hint).get();
-            fail("getTail должен вызвать ошибку для set");
+            fail("getTail should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
         }
         
-        // streamList - не применим к set
+        // streamList - not applicable to set
 //        try {
 //            client.streamList(setKey, hint).get();
-//            fail("streamList должен вызвать ошибку для set");
+//            fail("streamList should throw an error for set");
 //        } catch (ExecutionException e) {
 //            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-//            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+//            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
 //        }
         
-        // streamVector - не применим к set
+        // streamVector - not applicable to set
 //        try {
 //            client.streamVector(setKey, hint).get();
-//            fail("streamVector должен вызвать ошибку для set");
+//            fail("streamVector should throw an error for set");
 //        } catch (ExecutionException e) {
 //            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-//            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+//            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");
 //        }
         
-        // streamElementInRangeOrderedSet - не применим к unordered set
+        // streamElementInRangeOrderedSet - not applicable to unordered set
         try {
             client.streamElementInRangeOrderedSet(setKey.getBytes(StandardCharsets.UTF_8), hint, 0L, 10L, false, 0, Duration.ofSeconds(30)).get();
-            fail("streamElementInRangeOrderedSet должен вызвать ошибку для unordered set");
+            fail("streamElementInRangeOrderedSet should throw an error for unordered set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INVALID_ARGUMENT, cause.getStatus().getCode(), "Должна быть ошибка INTERNAL");
+            assertEquals(Status.Code.INVALID_ARGUMENT, cause.getStatus().getCode(), "Should be INTERNAL error");
         }
     }
 
@@ -609,7 +609,7 @@ public class SetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("addElement с пустым списком возвращает 0")
+    @DisplayName("addElement with empty list returns 0")
     void testAddElementEmptyList() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_add_empty";
         List<Payload> initialData = List.of(p("item1"));
@@ -620,11 +620,11 @@ public class SetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         Integer added = client.addElementUnordered(setKey, new ArrayList<>()).get();
-        assertEquals(0, added, "Добавление пустого списка должно вернуть 0");
+        assertEquals(0, added, "Adding empty list should return 0");
     }
 
     @Test
-    @DisplayName("removeFromContainer с несуществующим элементом возвращает 0")
+    @DisplayName("removeFromContainer with non-existent element returns 0")
     void testRemoveFromContainerNonExistentElement() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_remove_nonexist_elem";
         List<Payload> initialData = List.of(p("item1"));
@@ -635,11 +635,11 @@ public class SetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").getValue()).get();
-        assertEquals(0, removed, "Удаление несуществующего элемента должно вернуть 0");
+        assertEquals(0, removed, "Removing non-existent element should return 0");
     }
 
     @Test
-    @DisplayName("containsContainerKey с несуществующим элементом возвращает false")
+    @DisplayName("containsContainerKey with non-existent element returns false")
     void testContainsContainerKeyNonExistent() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_contains_nonexist";
         List<Payload> initialData = List.of(p("item1"));
@@ -654,24 +654,24 @@ public class SetOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("streamSet с несуществующим set возвращает ошибку")
+    @DisplayName("streamSet on non-existent set returns error")
     void testStreamSetNonExistent() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_stream_nonexist";
         
-        // Создаем KeyHint для несуществующего set
+        // Create KeyHint for non-existent set
         KeyHintData hint = KeyHintData.of(1, 1);
         
         try {
             client.streamSet(setKey, hint).get();
-            fail("streamSet для несуществующего set должен вызвать ошибку");
+            fail("streamSet on non-existent set should throw an error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Должна быть ошибка NOT_FOUND");
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Should be NOT_FOUND error");
         }
     }
 
     @Test
-    @DisplayName("TTL expiration: set удаляется после истечения TTL")
+    @DisplayName("TTL expiration: set is deleted after TTL expiration")
     void testTtlExpirationComplete() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_ttl_expire_complete";
         List<Payload> initialData = List.of(p("item1"));
@@ -681,24 +681,24 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Устанавливаем TTL = 1 секунда
+        // Set TTL = 1 second
         client.setTtl(setKey, hint, 1).get();
         
         Thread.sleep(1500);
         
-        // Проверяем, что set удален - getSize должен вернуть ошибку или 0
+        // Check that set is deleted - getSize should return error or 0
         try {
             Integer size = client.getSize(setKey, hint).get();
-            // Если размер 0, значит контейнер пуст (удален)
-            assertTrue(size == 0 || size == null, "После истечения TTL размер должен быть 0");
+            // If size is 0, container is empty (deleted)
+            assertTrue(size == 0 || size == null, "After TTL expiration size should be 0");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "Должна быть ошибка NOT_FOUND");
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode(), "NOT_FOUND error expected");
         }
     }
 
     @Test
-    @DisplayName("Блокировка с истекшим TTL: unlock возвращает OK")
+    @DisplayName("Lock with expired TTL: unlock returns OK")
     void testUnlockOnExpiredLock() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_unlock_expired";
         List<Payload> initialData = List.of(p("item1"));
@@ -708,14 +708,14 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        // Берем блокировку с TTL = 1 секунда
+        // Acquire lock with TTL = 1 second
         LockStatus lock = client.lockObject(setKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
-        assertEquals(LockStatus.OK, lock, "Должна быть получена блокировка");
+        assertEquals(LockStatus.OK, lock, "Lock should be obtained");
         
         Thread.sleep(1500);
         
-        // Пытаемся снять истекшую блокировку
+        // Try to release expired lock
         LockStatus unlock = client.unlockObject(setKey, OWNER_CLIENT_ID).get();
-        assertEquals(LockStatus.OK, unlock, "Снятие истекшей блокировки должно вернуть OK");
+        assertEquals(LockStatus.OK, unlock, "Releasing expired lock should return OK");
     }
 }
