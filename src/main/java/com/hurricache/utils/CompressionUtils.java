@@ -1,5 +1,6 @@
 package com.hurricache.utils;
 
+import com.hurricache.grpc.BinaryPayload;
 import com.hurricache.grpc.Key;
 import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.OrderedValue;
@@ -80,5 +81,14 @@ public class CompressionUtils {
         } else {
             return LZ4CompressionUtils.decompressIfNeeded(responseValue);
         }
+    }
+
+    public static byte[] decompressIfNeeded(OrderedKey responseKey) {
+        return decompressIfNeeded(Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder()
+                        .setPayload(responseKey.getPayload().getPayload())
+                        .setSize(responseKey.getPayload().getSize()))
+                .setCompressionInfo(responseKey.getCompressionInfo())
+                .build());
     }
 }
