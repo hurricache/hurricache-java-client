@@ -7,7 +7,7 @@ import com.hurricache.grpc.BoolResponse;
 import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.Value;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -18,21 +18,32 @@ public class StreamBatchOrderedMapObserver extends CompletableFutureObserver<Bat
         super(future, res -> {
             int valueUnorderedCount = res.getValueUnorderedCount();
             int keyOrderedCount = res.getKeyOrderedCount();
-            int size = Math.min(valueUnorderedCount, keyOrderedCount);
-            Map resp = new HashMap(size);
+            if (valueUnorderedCount != keyOrderedCount) {
+                throw new IllegalArgumentException("Ordered-map batch contains unpaired keys and values");
+            }
+            int size = keyOrderedCount;
+            Map<OrderedPayload, Payload> resp = new LinkedHashMap<>(size);
             for (int i = 0; i < size; i++){
                 OrderedKey keyOrdered = res.getKeyOrdered(i);
                 Value valueUnordered = res.getValueUnordered(i);
-                resp.put(OrderedPayload.of(keyOrdered.getOrder(),keyOrdered.getPayload().toByteArray()),Payload.of(valueUnordered.getValue().getPayload().toByteArray()));
+                resp.put(OrderedPayload.of(keyOrdered.getOrder(), CompressionUtils.decompressIfNeeded(keyOrdered)),
+                         Payload.of(CompressionUtils.decompressIfNeeded(valueUnordered)));
             }
             return resp;
         });
-        value = new HashMap<>();
+        value = new LinkedHashMap<>();
     }
 
     @Override
     public void onNext(BatchValueResponse value) {
-        this.value.putAll(function.apply(value));
+        if (future.isDone()) {
+            return;
+        }
+        try {
+            this.value.putAll(function.apply(value));
+        } catch (RuntimeException error) {
+            future.completeExceptionally(error);
+        }
     }
 
     public static class BooleanObserver extends CompletableFutureObserver<BoolResponse, List<Boolean>> {
