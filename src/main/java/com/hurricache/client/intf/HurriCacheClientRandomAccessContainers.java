@@ -96,11 +96,11 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
     }
 
     default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, int pos) {
-        return removeElementAtPosition(key, hint, pos, pos + 1, getDefaultClientId());
+        return removeElementAtPosition(key, hint, pos, -1, getDefaultClientId());
     }
 
     default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, int pos) {
-        return removeElementAtPosition(key, hint, pos, pos + 1, getDefaultClientId(), getDefaultTimeout());
+        return removeElementAtPosition(key, hint, pos, -1, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Boolean> removeElementAtPosition(String key,

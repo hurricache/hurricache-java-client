@@ -871,8 +871,10 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setPos(pos)
-                .setEnd(endPos);
+                .setPos(pos);
+        if (endPos > pos) {
+            builder.setEnd(endPos);
+        }
         getStub(timeout).removeElementAtPosition(builder.build(),
                                                  new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
