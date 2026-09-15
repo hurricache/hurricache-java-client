@@ -834,7 +834,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         // Write on MASTER: addElementToPositionBefore before before1
         client.setMode(Mode.MASTER)
                 .addElementToPositionBefore(key, keyHint,
-                        Arrays.asList(Payload.of("before3".getBytes(StandardCharsets.UTF_8))),
+                                            List.of(Payload.of("before3".getBytes(StandardCharsets.UTF_8))),
                         Payload.of("before1".getBytes(StandardCharsets.UTF_8)))
                 .get();
 

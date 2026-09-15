@@ -25,9 +25,6 @@ public class ExtendedHurriCacheStressTest extends TestBaseCluster {
     private static final int OPS_PER_THREAD = 5000;
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
 
-    private byte[] bytes(String str) {
-        return str.getBytes(StandardCharsets.UTF_8);
-    }
 
     // =========================================================================
     // 1. STRESS: ATOMIC BITWISE & CAS OPERATIONS UNDER HIGH CONTENTION

@@ -53,5 +53,4 @@ public interface HurriCacheClientWeightBasedContainers extends HurriCacheClientI
         return getAndRemoveElementWithWeight(key, hint, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-
 }

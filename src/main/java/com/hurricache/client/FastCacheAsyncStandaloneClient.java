@@ -832,7 +832,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     }
 
     @Override
-    public CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, int pos, int endPos, int clientId, Duration timeout) {
+    public CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, long pos, long endPos, int clientId, Duration timeout) {
         return delegate.removeElementAtPosition(key, hint, pos, endPos, clientId, timeout);
     }
 

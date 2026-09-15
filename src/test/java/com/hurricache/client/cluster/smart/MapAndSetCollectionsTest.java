@@ -20,9 +20,6 @@ public class MapAndSetCollectionsTest extends TestBaseCluster {
         return Payload.of(val.getBytes(StandardCharsets.UTF_8));
     }
 
-    private byte[] bytes(String val) {
-        return val.getBytes(StandardCharsets.UTF_8);
-    }
 
     private String str(Payload payload) {
         return new String(payload.getValue(), StandardCharsets.UTF_8);

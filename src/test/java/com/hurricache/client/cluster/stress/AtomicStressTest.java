@@ -16,9 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AtomicStressTest extends TestBaseCluster {
 
-    private byte[] bytes(String key) {
-        return key.getBytes(StandardCharsets.UTF_8);
-    }
 
     @Test
     void highContentionAtomicAddStressTest() throws Exception {
