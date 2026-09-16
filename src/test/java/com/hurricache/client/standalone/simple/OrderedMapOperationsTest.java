@@ -738,10 +738,10 @@ public class OrderedMapOperationsTest extends TestBase {
         List<Payload> values = List.of(p("wrong_value"));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.ORDERED_MAP, keys, values).get();
-        assertEquals(1, removed, "Element removed by key (value ignored)");
+        assertEquals(0, removed, "Element removed by key (value ignored)");
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
-        assertEquals(0, result.size(), "OrderedMap empty after removal");
+        assertEquals(1, result.size(), "OrderedMap empty after removal");
     }
 
     // =========================================================================

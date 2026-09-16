@@ -231,15 +231,15 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
     CompletableFuture<Integer> removeFromContainer(byte[] key,
                                                    KeyHintData hint,
                                                    ContainerType type,
-                                                   List<Payload> values,
                                                    List<Payload> keys,
+                                                   List<Payload> values,
                                                    int clientId,
                                                    Duration timeout);
 
     default CompletableFuture<Integer> removeFromContainer(String key, KeyHintData hint, ContainerType type,
-                                                           List<Payload> values, List<Payload> keys,
+                                                           List<Payload> keys,List<Payload> values,
                                                            int clientId, Duration timeout) {
-        return removeFromContainer(serializeKey(key), hint, type, values, keys, clientId, timeout);
+        return removeFromContainer(serializeKey(key), hint, type, keys,values, clientId, timeout);
     }
 
     default CompletableFuture<Integer> removeFromContainer(String key, KeyHintData hint, ContainerType type,

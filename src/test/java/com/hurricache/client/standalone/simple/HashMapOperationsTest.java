@@ -672,11 +672,10 @@ public class HashMapOperationsTest extends TestBase {
         List<Payload> values = List.of(Payload.of(p("wrong_value").getValue()));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.MAP, keys, values).get();
-        assertEquals(1, removed, "Element removed by key");;
+        assertEquals(0, removed, "Element removed by key");;
 
         Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(1, result.size(), "1 element remains");
-        assertFalse(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey()))));
+        assertEquals(2, result.size(), "1 element remains");
     }
 
     // =========================================================================

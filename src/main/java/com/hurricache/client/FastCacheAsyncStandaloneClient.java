@@ -837,8 +837,8 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     }
 
     @Override
-    public CompletableFuture<Integer> removeFromContainer(byte[] key, KeyHintData hint, ContainerType type, List<Payload> values, List<Payload> keys, int clientId, Duration timeout) {
-        return delegate.removeFromContainer(key, hint, type, values, keys, clientId, timeout);
+    public CompletableFuture<Integer> removeFromContainer(byte[] key, KeyHintData hint, ContainerType type, List<Payload> keys , List<Payload> values, int clientId, Duration timeout) {
+        return delegate.removeFromContainer(key, hint, type, keys,values, clientId, timeout);
     }
 
     // =========================================================================

@@ -47,7 +47,7 @@ import com.hurricache.utils.StreamBatchOrderedMapObserver;
 import com.hurricache.utils.StreamBatchOrderedObserver;
 import com.hurricache.utils.StreamBatchUnorderedObserver;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 
 import java.time.Duration;
 import java.util.List;
@@ -70,7 +70,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                       int defaultClientId,
                                       Duration timeout,
                                       int defaultCompressionThreshold) {
-        this.channel = ManagedChannelBuilder.forAddress(host, port)
+        this.channel = NettyChannelBuilder.forAddress(host, port).flowControlWindow(4*1024*1024)
                 .usePlaintext()
                 .build();
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
@@ -886,8 +886,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     public CompletableFuture<Integer> removeFromContainer(byte[] key,
                                                           KeyHintData hint,
                                                           ContainerType type,
-                                                          List<Payload> values,
                                                           List<Payload> keys,
+                                                          List<Payload> values,
                                                           int clientId,
                                                           Duration timeout) {
         CompletableFuture<Integer> future = new CompletableFuture<>();
