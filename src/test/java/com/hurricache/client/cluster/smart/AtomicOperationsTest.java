@@ -243,7 +243,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
         String testKey = "existKeyWithCidAtomic" + UUID.randomUUID();
 
         client.atomicCreate(bytes(testKey), 100L).get();
-
+        Thread.sleep(150);
         Boolean exists = client.setMode(Mode.MASTER)
                 .existKey(bytes(testKey), null, DEFAULT_CLIENT_ID, TEST_TIMEOUT)
                 .get();
