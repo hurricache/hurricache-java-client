@@ -42,6 +42,8 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
         : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
+
+
     /**
      * Fetches a sub-range of elements from an {@link OrderedSet} filtered by score/weight boundaries.
      *

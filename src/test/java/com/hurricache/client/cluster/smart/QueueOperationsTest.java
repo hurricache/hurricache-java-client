@@ -1190,7 +1190,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)));
 
         // Wait for lock TTL to expire
-        Thread.sleep(2500);
+        Thread.sleep(3500);
 
         // Verify on MASTER: lock expired, intruder can read
         Payload masterValAfter = client.setMode(Mode.MASTER)

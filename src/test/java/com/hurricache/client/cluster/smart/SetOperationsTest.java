@@ -534,9 +534,10 @@ public class SetOperationsTest extends TestBaseCluster {
         KeyHintData keyHint = client.createSet(bytes(key),
                         List.of(Payload.of(bytes("item1"))))
                 .get();
-        client.setTtl(key, keyHint, 2000).get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
+
+        client.setTtl(key, keyHint, 2000).get();
 
         // Verify on MASTER: getTtl > 0
         Long ttlMaster = client.setMode(Mode.MASTER)
