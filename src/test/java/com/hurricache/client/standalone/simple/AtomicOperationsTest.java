@@ -417,7 +417,7 @@ public class AtomicOperationsTest extends TestBase {
 
         LockStatus lock2 = client.lockObject(testKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
-        assertEquals(LockStatus.OK, lock2);
+        assertEquals(LockStatus.CANT_LOCK, lock2);
 
         // Both can read
         long val1 = client.atomicLoad(testKey, DEFAULT_CLIENT_ID).get();

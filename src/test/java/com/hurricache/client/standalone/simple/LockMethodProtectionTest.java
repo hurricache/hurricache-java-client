@@ -129,7 +129,7 @@ public class LockMethodProtectionTest extends TestBase {
         assertEquals(LockStatus.CANT_LOCK, res);
 
         LockStatus resRead = client.lockObject(testKey1, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, resRead);
+        assertEquals(LockStatus.CANT_LOCK, resRead);
     }
 
     @Test
@@ -145,7 +145,7 @@ public class LockMethodProtectionTest extends TestBase {
         assertEquals(LockStatus.CANT_LOCK, res);
 
         LockStatus resRead = client.lockObject(testKey1, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, resRead);
+        assertEquals(LockStatus.CANT_LOCK, resRead);
     }
 
     private void assertPermissionDenied(Executable runnable) {

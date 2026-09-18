@@ -21,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class QueueOperationsTest extends TestBaseCluster {
@@ -1252,6 +1255,383 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(masterValAfter);
+    }
+
+    // =========================================================================
+    // 15. GET AND REMOVE FRONT - MULTI-ELEMENT
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndRemoveFront: dequeue from multi-element queue on master")
+    void testGetAndRemoveFrontOnMultiElement() throws ExecutionException, InterruptedException {
+        String key = "getAndRemoveFrontMulti" + UUID.randomUUID();
+        List<Payload> initialData = List.of(
+                Payload.of(bytes("first")),
+                Payload.of(bytes("second")),
+                Payload.of(bytes("third"))
+        );
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getAndRemoveFront on MASTER
+        Payload removed = client.setMode(Mode.MASTER)
+                .getAndRemoveFront(bytes(key), keyHint)
+                .get();
+        assertNotNull(removed);
+        assertEquals("first", new String(removed.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on MASTER: getHead returns second
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterNext = client.setMode(Mode.MASTER)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals("second", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getHead returns second (replicated)
+        Payload backupNext = client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals("second", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 16. GET AND REMOVE FRONT - SINGLE ELEMENT
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndRemoveFront: dequeue from single-element queue on master")
+    void testGetAndRemoveFrontOnSingleElement() throws ExecutionException, InterruptedException {
+        String key = "getAndRemoveFrontSingle" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("only")));
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getAndRemoveFront on MASTER
+        Payload removed = client.setMode(Mode.MASTER)
+                .getAndRemoveFront(bytes(key), keyHint)
+                .get();
+        assertNotNull(removed);
+        assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on MASTER: queue is empty
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterEmpty = client.setMode(Mode.MASTER)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals(0, masterEmpty.getValue().length);
+
+        // Verify on BACKUP: queue is empty (replicated)
+        Payload backupEmpty = client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals(0, backupEmpty.getValue().length);
+    }
+
+    // =========================================================================
+    // 17. GET AND REMOVE TAIL - MULTI-ELEMENT
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndRemoveTail: pop back from multi-element queue on master")
+    void testGetAndRemoveTailOnMultiElement() throws ExecutionException, InterruptedException {
+        String key = "getAndRemoveTailMulti" + UUID.randomUUID();
+        List<Payload> initialData = List.of(
+                Payload.of(bytes("first")),
+                Payload.of(bytes("second")),
+                Payload.of(bytes("third"))
+        );
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getAndRemoveTail on MASTER
+        Payload removed = client.setMode(Mode.MASTER)
+                .getAndRemoveTail(bytes(key), keyHint)
+                .get();
+        assertNotNull(removed);
+        assertEquals("third", new String(removed.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on MASTER: getTail returns second
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterTail = client.setMode(Mode.MASTER)
+                .getTail(bytes(key), keyHint)
+                .get();
+        assertEquals("second", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getTail returns second (replicated)
+        Payload backupTail = client.setMode(Mode.BACKUP)
+                .getTail(bytes(key), keyHint)
+                .get();
+        assertEquals("second", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 18. GET AND REMOVE TAIL - SINGLE ELEMENT
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndRemoveTail: single element, queue becomes empty on master")
+    void testGetAndRemoveTailOnSingleElement() throws ExecutionException, InterruptedException {
+        String key = "getAndRemoveTailSingle" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("only")));
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getAndRemoveTail on MASTER
+        Payload removed = client.setMode(Mode.MASTER)
+                .getAndRemoveTail(bytes(key), keyHint)
+                .get();
+        assertNotNull(removed);
+        assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on MASTER: queue is empty
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterEmpty = client.setMode(Mode.MASTER)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals(0, masterEmpty.getValue().length);
+
+        // Verify on BACKUP: queue is empty (replicated)
+        Payload backupEmpty = client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals(0, backupEmpty.getValue().length);
+    }
+
+    // =========================================================================
+    // 19. ADD ELEMENT TO HEAD
+    // =========================================================================
+
+    @Test
+    @DisplayName("addElementToHead on master, verify replication to backup")
+    void testAddElementToHeadOnMaster() throws ExecutionException, InterruptedException {
+        String key = "addElementToHeadMaster" + UUID.randomUUID();
+        List<Payload> initialData = List.of(
+                Payload.of(bytes("second")),
+                Payload.of(bytes("third"))
+        );
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // addElementToHead on MASTER
+        client.setMode(Mode.MASTER)
+                .addElementToHead(bytes(key), keyHint, List.of(Payload.of(bytes("first"))))
+                .get();
+
+        // Verify on MASTER: getHead returns first
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterHead = client.setMode(Mode.MASTER)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals("first", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getHead returns first (replicated)
+        Payload backupHead = client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), keyHint)
+                .get();
+        assertEquals("first", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 20. REMOVE TAIL
+    // =========================================================================
+
+    @Test
+    @DisplayName("removeTail on master, verify replication to backup")
+    void testRemoveTailOnMaster() throws ExecutionException, InterruptedException {
+        String key = "removeTailMaster" + UUID.randomUUID();
+        List<Payload> initialData = List.of(
+                Payload.of(bytes("first")),
+                Payload.of(bytes("second")),
+                Payload.of(bytes("third"))
+        );
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify initial state
+        Payload masterTail = client.setMode(Mode.MASTER)
+                .getTail(bytes(key), keyHint)
+                .get();
+        assertEquals("third", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+
+        Payload backupTail = client.setMode(Mode.BACKUP)
+                .getTail(bytes(key), keyHint)
+                .get();
+        assertEquals("third", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+
+        // removeTail on MASTER
+        client.setMode(Mode.MASTER)
+                .removeTail(bytes(key), keyHint)
+                .get();
+
+        // Verify on MASTER: getTail returns second
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterNewTail = client.setMode(Mode.MASTER)
+                .getTail(bytes(key), keyHint)
+                .get();
+        assertEquals("second", new String(masterNewTail.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getTail returns second (replicated)
+        Payload backupNewTail = client.setMode(Mode.BACKUP)
+                .getTail(bytes(key), keyHint)
+                .get();
+        assertEquals("second", new String(backupNewTail.getValue(), StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 21. READ LOCK ON QUEUE
+    // =========================================================================
+
+    @Test
+    @DisplayName("lockObject gets READ_LOCK for queue on master - intruder can read but not write")
+    void testReadLockOnQueue() throws ExecutionException, InterruptedException {
+        String key = "readLockQueue" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("data")));
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // lockObject READ_LOCK on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Verify on MASTER: owner can read
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterHead = client.setMode(Mode.MASTER)
+                .getHead(bytes(key), keyHint, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotNull(masterHead);
+        assertEquals("data", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: intruder CAN read (READ_LOCK allows multiple readers)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload backupHead = client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), keyHint, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotNull(backupHead);
+        assertEquals("data", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+
+        // But intruder CANNOT write - addElementToTail should be denied
+        assertDenied(client.setMode(Mode.BACKUP)
+                .addElementToTail(bytes(key), keyHint, List.of(Payload.of(bytes("intruder_data"))), INTRUDER_CLIENT_ID));
+
+        // Unlock
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
+    }
+
+    // =========================================================================
+    // 22. GLOBAL LOCK ON QUEUE
+    // =========================================================================
+
+    @Test
+    @DisplayName("lockObject gets GLOBAL_LOCK for queue on master")
+    void testGlobalLockOnQueue() throws ExecutionException, InterruptedException {
+        String key = "globalLockQueue" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("data")));
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // lockObject GLOBAL on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Verify on MASTER: owner can read
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterHead = client.setMode(Mode.MASTER)
+                .getHead(bytes(key), keyHint, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotNull(masterHead);
+        assertEquals("data", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: lock is replicated (intruder cannot read)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), keyHint, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)));
+
+        // Unlock
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
+    }
+
+    // =========================================================================
+    // 23. CANNOT LOCK BY OTHER CLIENT
+    // =========================================================================
+
+    @Test
+    @DisplayName("cannot lock by other client when already locked on master")
+    void testCannotLockByOtherClient() throws ExecutionException, InterruptedException {
+        String key = "cannotLockByOther" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("data")));
+
+        // Create queue
+        KeyHintData keyHint = client.createQueue(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Owner gets WRITE_LOCK on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Intruder cannot get WRITE_LOCK on MASTER
+        LockStatus intruderLock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotEquals(LockStatus.OK, intruderLock);
+
+        // Verify on BACKUP: lock is replicated
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus backupLock = client.setMode(Mode.BACKUP)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotEquals(LockStatus.OK, backupLock);
+
+        // Unlock by owner
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
     }
 
 }

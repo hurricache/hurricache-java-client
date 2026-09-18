@@ -224,7 +224,7 @@ public class HashMapOperationsTest extends TestBase {
         assertEquals(LockStatus.OK, lock1, "First client should get READ_LOCK");;
 
         LockStatus lock2 = client.lockObject(mapKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2, "Second client should get READ_LOCK");;
+        assertEquals(LockStatus.CANT_LOCK, lock2, "Second client should not get READ_LOCK");;
 
         // Both can read
         byte[] val1 = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();

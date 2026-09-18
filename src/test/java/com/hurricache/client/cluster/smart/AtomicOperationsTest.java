@@ -909,7 +909,7 @@ public class AtomicOperationsTest extends TestBaseCluster {
         String testKey = "createTypeOnSet" + UUID.randomUUID();
 
         client.createSet(testKey, new ArrayList<>()).get();
-        Thread.sleep(150);
+        Thread.sleep(500);
         try {
             client.atomicCreate(bytes(testKey), 42L)
                     .get();

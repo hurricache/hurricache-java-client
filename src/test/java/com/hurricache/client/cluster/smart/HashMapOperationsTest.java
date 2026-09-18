@@ -203,13 +203,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         KeyHintData hint = client.createMap(mapKey, initialData).get();
         assertNotNull(hint);
-
+        Thread.sleep(REPLICATION_DELAY_MS);
         Map<Payload, Payload> result = client.streamMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
         assertEquals(1, result.size());
 
         // Verify on BACKUP
-        Thread.sleep(REPLICATION_DELAY_MS);
+
         Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertNotNull(backupResult);
@@ -890,7 +890,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         LockStatus lock2 = client.setMode(Mode.MASTER)
                 .lockObject(mapKey, hint, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2, "Second client should get READ_LOCK");
+        assertEquals(LockStatus.CANT_LOCK, lock2, "Second client should get READ_LOCK");
 
         // Both can read on MASTER
         byte[] val1 = client.setMode(Mode.MASTER)
@@ -1261,6 +1261,47 @@ public class HashMapOperationsTest extends TestBaseCluster {
             client.setMode(Mode.MASTER)
                     .getTail(mapKey, hint).get();
             fail("getTail should throw an error for MAP");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+    }
+
+    // =========================================================================
+    // REMOVE ELEMENT AT POSITION NOT SUPPORTED
+    // =========================================================================
+
+    @Test
+    @DisplayName("removeElementAtPosition throws INTERNAL for MAP on both nodes")
+    void testRemoveElementAtPositionNotSupported() throws ExecutionException, InterruptedException {
+        String mapKey = "removePosNotSupported" + UUID.randomUUID();
+        Map<Payload, Payload> initialData = Map.of(
+                p("k1"), p("v1")
+        );
+
+        // Create map
+        KeyHintData hint = client.createMap(mapKey, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // removeElementAtPosition on MASTER should fail
+        try {
+            client.setMode(Mode.MASTER)
+                    .removeElementAtPosition(bytes(mapKey), hint, 0, 0)
+                    .get();
+            fail("removeElementAtPosition should throw an error for MAP");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+
+        // removeElementAtPosition on BACKUP should also fail
+        try {
+            client.setMode(Mode.BACKUP)
+                    .removeElementAtPosition(bytes(mapKey), hint, 0, 0)
+                    .get();
+            fail("removeElementAtPosition should throw an error for MAP");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());

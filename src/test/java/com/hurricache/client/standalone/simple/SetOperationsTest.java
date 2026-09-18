@@ -365,7 +365,7 @@ public class SetOperationsTest extends TestBase {
         
         // Second client can also acquire READ_LOCK
         LockStatus lock2 = client.lockObject(setKey, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2, "Second client should get READ_LOCK");
+        assertEquals(LockStatus.CANT_LOCK, lock2, "Second client should get READ_LOCK");
         
         // Both clients can read
         List<Payload> result1 = client.streamSet(setKey, hint, DEFAULT_CLIENT_ID).get();

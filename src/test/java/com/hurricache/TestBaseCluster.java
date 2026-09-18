@@ -62,6 +62,11 @@ public abstract class TestBaseCluster {
             public Duration getDefaultTtl() {
                 return getTestTtl();
             }
+
+            @Override
+            public int getDefaultClientId() {
+                return 55;
+            }
         };
 
     }

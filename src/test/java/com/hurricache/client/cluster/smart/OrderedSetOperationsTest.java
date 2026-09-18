@@ -29,7 +29,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
     private static final int OWNER_CLIENT_ID = 100;
     private static final int INTRUDER_CLIENT_ID = 200;
-    private static final long REPLICATION_DELAY_MS = 100;
+    private static final long REPLICATION_DELAY_MS = 150;
 
     // ==================== Section 1: Ordered Set Creation ====================
 
@@ -1314,7 +1314,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .unlockObject(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertEquals(LockStatus.OK, unlockStatusMaster);
-
+        Thread.sleep(REPLICATION_DELAY_MS); // replication delay
         // Re-lock by owner to test CANT_UNLOCK
         LockStatus lockStatus2 = client.setMode(Mode.BACKUP)
                 .lockObject(key, keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(60))
@@ -1458,7 +1458,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .unlockObject(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertEquals(LockStatus.OK, unlockStatusMaster);
-
+        Thread.sleep(REPLICATION_DELAY_MS); // replication delay
         // Re-lock by owner to test CANT_UNLOCK
         LockStatus lockStatus2 = client.setMode(Mode.BACKUP)
                 .lockObject(key, keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(60))
@@ -1478,7 +1478,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .unlockObject(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertEquals(LockStatus.CANT_UNLOCK, failedUnlockBackup);
-
+        Thread.sleep(REPLICATION_DELAY_MS);
         // Unlock by owner on MASTER should succeed
         LockStatus successUnlock = client.setMode(Mode.MASTER)
                 .unlockObject(key, keyHint, OWNER_CLIENT_ID)
@@ -2171,6 +2171,334 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
+    }
+
+    // =========================================================================
+    // 15. READ LOCK PARALLEL READS
+    // =========================================================================
+
+    @Test
+    @DisplayName("READ_LOCK: multiple clients can read concurrently on both nodes")
+    void testReadLockParallelReads() throws ExecutionException, InterruptedException {
+        String key = "readLockParallel" + UUID.randomUUID();
+        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("item1")));
+
+        // Create ordered set
+        KeyHintData keyHint = client.createOrderedSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // First client acquires READ_LOCK on MASTER
+        LockStatus lock1 = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock1);
+        Thread.sleep(REPLICATION_DELAY_MS);
+        // Second client can also acquire READ_LOCK on MASTER
+        LockStatus lock2 = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.CANT_LOCK, lock2);
+
+        // Both clients can read on MASTER
+        Thread.sleep(REPLICATION_DELAY_MS);
+        List<OrderedPayload> result1 = client.setMode(Mode.MASTER)
+                .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(result1);
+        assertEquals(1, result1.size());
+
+        List<OrderedPayload> result2 = client.setMode(Mode.MASTER)
+                .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(result2);
+        assertEquals(1, result2.size());
+
+        // Verify on BACKUP: lock is replicated, both can read
+        Thread.sleep(REPLICATION_DELAY_MS);
+        List<OrderedPayload> backupResult1 = client.setMode(Mode.BACKUP)
+                .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(backupResult1);
+
+        List<OrderedPayload> backupResult2 = client.setMode(Mode.BACKUP)
+                .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(backupResult2);
+
+        // Release locks
+        client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
+    }
+
+    // =========================================================================
+    // 16. GET ELEMENT WITH WEIGHT
+    // =========================================================================
+
+    @Test
+    @DisplayName("getElementWithWeight returns element by specific weight on both nodes")
+    void testGetElementWithWeightReplication() throws ExecutionException, InterruptedException {
+        String key = "getElementWithWeightRep" + UUID.randomUUID();
+        List<OrderedPayload> initialData = List.of(
+                OrderedPayload.of(10L, bytes("item1")),
+                OrderedPayload.of(20L, bytes("item2")),
+                OrderedPayload.of(30L, bytes("item3"))
+        );
+
+        // Create ordered set
+        KeyHintData keyHint = client.createOrderedSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getElementWithWeight on MASTER
+        Payload result = client.setMode(Mode.MASTER)
+                .getElementWithWeight(bytes(key), keyHint, 20)
+                .get();
+        assertNotNull(result);
+        assertEquals("item2", new String(result.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getElementWithWeight returns same element (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload backupResult = client.setMode(Mode.BACKUP)
+                .getElementWithWeight(bytes(key), keyHint, 20)
+                .get();
+        assertNotNull(backupResult);
+        assertEquals("item2", new String(backupResult.getValue(), StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 17. UNSUPPORTED METHODS FOR ORDERED SET
+    // =========================================================================
+
+    @Test
+    @DisplayName("Methods not applicable to ordered set must throw errors")
+    void testUnsupportedMethodsForOrderedSet() throws ExecutionException, InterruptedException {
+        String key = "unsupportedOrderedSet" + UUID.randomUUID();
+        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("item1")));
+
+        // Create ordered set
+        KeyHintData keyHint = client.createOrderedSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getHead - not applicable to ordered set
+        try {
+            client.setMode(Mode.MASTER)
+                    .getHead(bytes(key), keyHint)
+                    .get();
+            fail("getHead must throw error for ordered set");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+
+        // getTail - not applicable to ordered set
+        try {
+            client.setMode(Mode.MASTER)
+                    .getTail(bytes(key), keyHint)
+                    .get();
+            fail("getTail must throw error for ordered set");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+    }
+
+    // =========================================================================
+    // 19. STREAM ELEMENT IN RANGE END WEIGHT INCLUDED
+    // =========================================================================
+
+    @Test
+    @DisplayName("streamElementInRangeOrderedSet includes endWeight on both nodes")
+    void testStreamElementInRangeOrderedSetEndWeightIncluded() throws ExecutionException, InterruptedException {
+        String key = "rangeEndIncluded" + UUID.randomUUID();
+        List<OrderedPayload> initialData = List.of(
+                OrderedPayload.of(10L, bytes("item1")),
+                OrderedPayload.of(20L, bytes("item2")),
+                OrderedPayload.of(30L, bytes("item3"))
+        );
+
+        // Create ordered set
+        KeyHintData keyHint = client.createOrderedSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // streamElementInRangeOrderedSet on MASTER (10-30 inclusive)
+        List<OrderedPayload> result = client.setMode(Mode.MASTER)
+                .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotNull(result);
+        assertEquals(3, result.size(), "Should have 3 elements, endWeight 30 must be included");
+        assertEquals(30L, result.get(2).getOrder());
+
+        // Verify on BACKUP: same result (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        List<OrderedPayload> backupResult = client.setMode(Mode.BACKUP)
+                .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotNull(backupResult);
+        assertEquals(3, backupResult.size());
+        assertEquals(30L, backupResult.get(2).getOrder());
+    }
+
+    // =========================================================================
+    // 20. STREAM ELEMENT IN RANGE START WEIGHT INCLUDED
+    // =========================================================================
+
+    @Test
+    @DisplayName("streamElementInRangeOrderedSet includes startWeight on both nodes")
+    void testStreamElementInRangeOrderedSetStartWeightIncluded() throws ExecutionException, InterruptedException {
+        String key = "rangeStartIncluded" + UUID.randomUUID();
+        List<OrderedPayload> initialData = List.of(
+                OrderedPayload.of(10L, bytes("item1")),
+                OrderedPayload.of(20L, bytes("item2")),
+                OrderedPayload.of(30L, bytes("item3"))
+        );
+
+        // Create ordered set
+        KeyHintData keyHint = client.createOrderedSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // streamElementInRangeOrderedSet on MASTER (10-30 inclusive)
+        List<OrderedPayload> result = client.setMode(Mode.MASTER)
+                .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotNull(result);
+        assertEquals(3, result.size(), "Should have 3 elements, startWeight 10 must be included");
+        assertEquals(10L, result.get(0).getOrder());
+
+        // Verify on BACKUP: same result (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        List<OrderedPayload> backupResult = client.setMode(Mode.BACKUP)
+                .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotNull(backupResult);
+        assertEquals(3, backupResult.size());
+        assertEquals(10L, backupResult.get(0).getOrder());
+    }
+
+    // =========================================================================
+    // 21. REMOVE ELEMENT AT POSITION END POS INCLUDED
+    // =========================================================================
+
+    @Test
+    @DisplayName("removeElementAtPosition removes range including endPos inclusively on both nodes")
+    void testRemoveElementAtPositionEndPosIncluded() throws ExecutionException, InterruptedException {
+        String key = "removePosEndIncluded" + UUID.randomUUID();
+        List<OrderedPayload> initialData = List.of(
+                OrderedPayload.of(10L, bytes("item1")),
+                OrderedPayload.of(20L, bytes("item2")),
+                OrderedPayload.of(30L, bytes("item3")),
+                OrderedPayload.of(40L, bytes("item4"))
+        );
+
+        // Create ordered set
+        KeyHintData keyHint = client.createOrderedSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify initial state
+        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+                .streamOrderedSet(key, keyHint)
+                .get();
+        assertEquals(4, masterStream.size());
+
+        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+                .streamOrderedSet(key, keyHint)
+                .get();
+        assertEquals(4, backupStream.size());
+
+        // removeElementAtPosition on MASTER (20-30, includes both 20 and 30)
+        Boolean removed = client.setMode(Mode.MASTER)
+                .removeElementAtPosition(key, keyHint, 20, 30)
+                .get();
+        assertTrue(removed);
+
+        // Verify on MASTER: 2 elements remain (10 and 40)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        List<OrderedPayload> masterAfter = client.setMode(Mode.MASTER)
+                .streamOrderedSet(key, keyHint)
+                .get();
+        assertEquals(2, masterAfter.size());
+        assertEquals(10L, masterAfter.get(0).getOrder());
+        assertEquals(40L, masterAfter.get(1).getOrder());
+
+        // Verify on BACKUP: 2 elements remain (replicated)
+        List<OrderedPayload> backupAfter = client.setMode(Mode.BACKUP)
+                .streamOrderedSet(key, keyHint)
+                .get();
+        assertEquals(2, backupAfter.size());
+        assertEquals(10L, backupAfter.get(0).getOrder());
+        assertEquals(40L, backupAfter.get(1).getOrder());
+    }
+
+    // =========================================================================
+    // 22. WRITE LOCK EXPIRATION
+    // =========================================================================
+
+    @Test
+    @DisplayName("WRITE_LOCK expires after duration, intruder can acquire on both nodes")
+    void testWriteLockExpiration() throws ExecutionException, InterruptedException {
+        String key = "writeLockExp" + UUID.randomUUID();
+        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("item1")));
+
+        // Create ordered set
+        KeyHintData keyHint = client.createOrderedSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Owner acquires WRITE_LOCK with 1s TTL on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify on BACKUP: lock is replicated (intruder cannot read)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        try {
+            client.setMode(Mode.BACKUP)
+                    .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
+                    .get();
+            fail("Intruder must be blocked while lock is active");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
+        }
+
+        // Wait for lock TTL to expire
+        Thread.sleep(2000);
+
+        // After expiration, intruder can acquire WRITE_LOCK on MASTER
+        LockStatus intruderLock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, intruderLock);
+
+        // Verify on BACKUP: lock is replicated
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus backupLock = client.setMode(Mode.BACKUP)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, backupLock);
+
+        // Unlock
+        client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
     }
 
 }

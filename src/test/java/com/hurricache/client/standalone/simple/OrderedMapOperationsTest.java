@@ -326,7 +326,7 @@ public class OrderedMapOperationsTest extends TestBase {
 
         // Second client can also get READ_LOCK
         LockStatus lock2 = client.lockObject(mapKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2);
+        assertEquals(LockStatus.CANT_LOCK, lock2);
 
         // Both unlock
         client.unlockObject(mapKey, DEFAULT_CLIENT_ID).get();

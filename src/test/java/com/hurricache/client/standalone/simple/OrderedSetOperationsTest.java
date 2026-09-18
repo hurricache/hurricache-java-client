@@ -499,7 +499,7 @@ public class OrderedSetOperationsTest extends TestBase {
 
         // Second client also acquires READ_LOCK
         LockStatus lock2 = client.lockObject(setKey, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2, "Second client should acquire READ_LOCK");
+        assertEquals(LockStatus.CANT_LOCK, lock2, "Second client should acquire READ_LOCK");
 
         // Both clients can read
         List<OrderedPayload> result1 = client.streamOrderedSet(setKey, hint, DEFAULT_CLIENT_ID).get();

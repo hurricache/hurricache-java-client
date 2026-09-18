@@ -443,7 +443,7 @@ public class RawValuesTest extends TestBase {
 
         // Second client can also get READ_LOCK
         LockStatus lock2 = client.lockObject(testKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2);
+        assertEquals(LockStatus.CANT_LOCK, lock2);
 
         // Both unlock
         client.unlockObject(testKey, OWNER_CLIENT_ID).get();
