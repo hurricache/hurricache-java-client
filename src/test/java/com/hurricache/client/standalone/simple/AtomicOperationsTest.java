@@ -1,9 +1,7 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
-import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.AtomicCasRes;
-import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -14,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -22,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class AtomicOperationsTest extends TestBase {
 
@@ -29,7 +27,6 @@ public class AtomicOperationsTest extends TestBase {
     private static final int OWNER_CLIENT_ID = 100;
     private static final int INTRUDER_CLIENT_ID = 200;
     private static final Duration TEST_TIMEOUT = Duration.ofSeconds(2);
-
 
     @Test
     void atomicCreateAndStoreTest() throws ExecutionException, InterruptedException {
@@ -288,12 +285,19 @@ public class AtomicOperationsTest extends TestBase {
         client.atomicCreate(keyBytes, Long.MAX_VALUE).get();
 
         // atomicAdd on Long.MAX_VALUE → overflow
-        long afterAdd = client.atomicAdd(keyBytes, 1L).get();
-        assertEquals(Long.MAX_VALUE, afterAdd, "Returns old value");
+        try {
+            client.atomicAdd(keyBytes, 1L).get();
+            fail("Integer overflow should be raised");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.OUT_OF_RANGE, cause.getStatus().getCode());
+            Assertions.assertTrue(cause.getStatus().getDescription().contains("Integer overflow"),
+                                  "Expected 'Integer overflow' but got: " + cause.getStatus().getDescription());
+        }
 
         // After overflow value becomes Long.MIN_VALUE
         long current = client.atomicOr(keyBytes, null, 0L).get();
-        assertEquals(Long.MIN_VALUE, current, "Overflow resulted in Long.MIN_VALUE");
+        assertEquals(Long.MAX_VALUE, current, "Overflow resulted in Long.MIN_VALUE");
     }
 
     @Test
@@ -407,10 +411,12 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(keyBytes, 42L).get();
 
-        LockStatus lock1 = client.lockObject(testKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock1 = client.lockObject(testKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(LockStatus.OK, lock1);
 
-        LockStatus lock2 = client.lockObject(testKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock2 = client.lockObject(testKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(LockStatus.OK, lock2);
 
         // Both can read
@@ -431,7 +437,8 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(keyBytes, 42L).get();
 
-        LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
@@ -439,7 +446,8 @@ public class AtomicOperationsTest extends TestBase {
         assertEquals(42L, val);
 
         // Owner can write
-        long afterAdd = client.atomicAdd(bytes(testKey),null, 10L,null,OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        long afterAdd = client.atomicAdd(bytes(testKey), null, 10L, null, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(42L, afterAdd);
 
         assertDenied(client.atomicLoad(testKey, INTRUDER_CLIENT_ID));
@@ -484,7 +492,8 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(keyBytes, 42L).get();
 
-        LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(LockStatus.OK, lock);
 
         // Intruder tries to unlock
@@ -503,7 +512,8 @@ public class AtomicOperationsTest extends TestBase {
 
         client.atomicCreate(keyBytes, 42L).get();
 
-        LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(LockStatus.OK, lock);
 
         // Read OK
@@ -556,7 +566,8 @@ public class AtomicOperationsTest extends TestBase {
         Thread.sleep(3000);
 
         // Now intruder can get WRITE_LOCK
-        LockStatus newLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus newLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(LockStatus.OK, newLock);
 
         client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
@@ -575,7 +586,8 @@ public class AtomicOperationsTest extends TestBase {
         Thread.sleep(3000);
 
         // Now intruder can get WRITE_LOCK
-        LockStatus newLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus newLock = client.lockObject(testKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
         assertEquals(LockStatus.OK, newLock);
 
         client.unlockObject(testKey, INTRUDER_CLIENT_ID).get();
@@ -653,7 +665,7 @@ public class AtomicOperationsTest extends TestBase {
             Assertions.fail("Expected NOT_FOUND after delete");
         } catch (ExecutionException e) {
             Assertions.assertEquals(io.grpc.Status.Code.NOT_FOUND,
-                ((io.grpc.StatusRuntimeException) e.getCause()).getStatus().getCode());
+                                    ((io.grpc.StatusRuntimeException) e.getCause()).getStatus().getCode());
         }
     }
 

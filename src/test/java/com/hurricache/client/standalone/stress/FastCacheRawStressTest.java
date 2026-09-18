@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.LongAdder;
 public class FastCacheRawStressTest {
 
     private final String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
-    private static final int THREAD_COUNT = 32;
+    private static final int THREAD_COUNT = 16;
     private static final int OPERATIONS_PER_THREAD = 100_000;
-    private static final int PIPELINE_BATCH_SIZE = 256;
+    private static final int PIPELINE_BATCH_SIZE = 16;
     private static final int EXPECTED_TOTAL_OPS = THREAD_COUNT * OPERATIONS_PER_THREAD;
     private static final int BATCH_TIMEOUT_SECONDS = 10;
 

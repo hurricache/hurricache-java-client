@@ -1,6 +1,6 @@
 package com.hurricache.client;
 
-import com.google.protobuf.ByteString;
+import com.google.protobuf.UnsafeByteOperations;
 import com.hurricache.client.intf.HurriCacheClientInterface;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
@@ -47,7 +47,7 @@ import com.hurricache.utils.StreamBatchOrderedMapObserver;
 import com.hurricache.utils.StreamBatchOrderedObserver;
 import com.hurricache.utils.StreamBatchUnorderedObserver;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 
 import java.time.Duration;
 import java.util.List;
@@ -70,7 +70,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                       int defaultClientId,
                                       Duration timeout,
                                       int defaultCompressionThreshold) {
-        this.channel = ManagedChannelBuilder.forAddress(host, port).directExecutor().usePlaintext().build();
+        this.channel = NettyChannelBuilder.forAddress(host, port).flowControlWindow(4*1024*1024)
+                .usePlaintext()
+                .build();
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
@@ -545,7 +547,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<List<Payload>> streamSet(byte[] key, KeyHintData hint,int clientId,
-                                               Duration timeout){
+                                                      Duration timeout){
         CompletableFuture<List<Payload>> rawFuture = new CompletableFuture<>();
         getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchUnorderedObserver(rawFuture));
         return rawFuture;
@@ -563,9 +565,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<List<OrderedPayload>> streamOrderedSet(byte[] key,
-                                                             KeyHintData hint,
-                                                             int clientId,
-                                                             Duration timeout) {
+                                                                    KeyHintData hint,
+                                                                    int clientId,
+                                                                    Duration timeout) {
         CompletableFuture<List<OrderedPayload>> rawFuture = new CompletableFuture<>();
         getStub(timeout).getContainer(buildGetReq(key, hint, clientId), new StreamBatchOrderedObserver(rawFuture));
         return rawFuture;
@@ -628,12 +630,12 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     @Override
     public CompletableFuture<Map<OrderedPayload,Payload>> streamElementInRangeOrderedMap(byte[] key,
-                                                                                  KeyHintData hint,
-                                                                                  long startWeight,
-                                                                                  long endWeight,
-                                                                                  boolean reverse,
-                                                                                  int clientId,
-                                                                                  Duration timeout) {
+                                                                                         KeyHintData hint,
+                                                                                         long startWeight,
+                                                                                         long endWeight,
+                                                                                         boolean reverse,
+                                                                                         int clientId,
+                                                                                         Duration timeout) {
         KeyPositionRequest request = KeyPositionRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
                 .setType(ContainerType.ORDERED_MAP)
@@ -864,15 +866,17 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<Boolean> removeElementAtPosition(byte[] key,
                                                               KeyHintData hint,
-                                                              int pos,
-                                                              int endPos,
+                                                              long pos,
+                                                              long endPos,
                                                               int clientId,
                                                               Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setPos(pos)
-                .setEnd(endPos);
+                .setPos(pos);
+        if (endPos > pos) {
+            builder.setEnd(endPos);
+        }
         getStub(timeout).removeElementAtPosition(builder.build(),
                                                  new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
@@ -882,8 +886,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     public CompletableFuture<Integer> removeFromContainer(byte[] key,
                                                           KeyHintData hint,
                                                           ContainerType type,
-                                                          List<Payload> values,
                                                           List<Payload> keys,
+                                                          List<Payload> values,
                                                           int clientId,
                                                           Duration timeout) {
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -1120,13 +1124,10 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // =========================================================================
 
     private Key buildKey(byte[] key, KeyHintData hint, int clientId) {
-        int cid = (clientId != 0)
-                  ? clientId
-                  : defaultClientId;
-        return KeyValueUtils.createUnorderedKey(key, hint, cid, getDefaultCompressionThreshold()).build();
+        return KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()).build();
     }
 
-    private GetRequest buildGetReq(byte[] key, KeyHintData hint, Integer clientId) {
+    private GetRequest buildGetReq(byte[] key, KeyHintData hint, int clientId) {
         return GetRequest.newBuilder().setKey(buildKey(key, hint, clientId)).build();
     }
 
@@ -1243,13 +1244,13 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             Key.Builder uk = Key.newBuilder()
                     .setPayload(KeyBinaryPayload.newBuilder()
                                         .setSize(payload.getValue().length)
-                                        .setPayload(ByteString.copyFrom(payload.getValue()))
+                                        .setPayload(UnsafeByteOperations.unsafeWrap(payload.getValue()))
                                         .build());
 
             Value.Builder unorderedValueBuilder = Value.newBuilder()
                     .setValue(BinaryPayload.newBuilder()
                                       .setSize(upayload.getValue().length)
-                                      .setPayload(ByteString.copyFrom(upayload.getValue()))
+                                      .setPayload(UnsafeByteOperations.unsafeWrap(upayload.getValue()))
                                       .build());
 
             builder.addKeyUnordered(uk).addValueUnordered(unorderedValueBuilder);

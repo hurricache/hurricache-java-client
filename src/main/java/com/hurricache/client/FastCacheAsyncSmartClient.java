@@ -24,9 +24,11 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -230,10 +232,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     private HurriCacheClientInterface newFastCacheClient(String target) {
-        return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target)
+        return new FastCacheAsyncSimpleClient(NettyChannelBuilder.forTarget(target).flowControlWindow(4 * 1024 * 1024)
                                                       .maxInboundMessageSize(64 * 1024 * 1024)
                                                       .usePlaintext()
-                                                      .directExecutor()
                                                       .build(),
                                               defaultClientId,
                                               defaultTimeout,
@@ -560,8 +561,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<Boolean> removeElementAtPosition(byte[] key,
                                                               KeyHintData hint,
-                                                              int pos,
-                                                              int endPos,
+                                                              long pos,
+                                                              long endPos,
                                                               int clientId,
                                                               Duration timeout) {
         return executeWrite(hint, c -> c.removeElementAtPosition(key, hint, pos, endPos, clientId, timeout));

@@ -17,12 +17,20 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
      */
     CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
+    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return getAndDeleteValue(serializeKey(key), hint, clientId, timeout);
+    }
+
     default CompletableFuture<byte[]> getAndDeleteValue(String key) {
         return getAndDeleteValue(key, getDefaultClientId());
     }
 
+    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key) {
+        return getAndDeleteValue(key, null, getDefaultClientId(), getDefaultTimeout());
+    }
+
     default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint) {
-        return getAndDeleteValue(key, hint, getDefaultClientId());
+        return getAndDeleteValue(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint) {
@@ -33,8 +41,16 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
         return getAndDeleteValue(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
+    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, int clientId) {
+        return getAndDeleteValue(key, null, clientId, getDefaultTimeout());
+    }
+
     default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint, int clientId) {
         return getAndDeleteValue(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint, int clientId) {
+        return getAndDeleteValue(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
@@ -55,20 +71,33 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
                                                   int clientId,
                                                   Duration timeout);
 
+    default CompletableFuture<KeyHintData> createKeyValue(String key, KeyHintData hint, byte[] value,
+                                                         Duration ttl, int clientId, Duration timeout) {
+        return createKeyValue(serializeKey(key), hint, value, ttl, clientId, timeout);
+    }
+
     default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value, int clientId, Duration timeout) {
         return createKeyValue(key, null, value, getDefaultTtl(), clientId, timeout);
     }
 
     default CompletableFuture<KeyHintData> createKeyValue(String key, byte[] value) {
-        return createKeyValue(key, value, getDefaultClientId());
+        return createKeyValue(serializeKey(key), value, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value) {
         return createKeyValue(key, value, getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<KeyHintData> createKeyValue(String key, KeyHintData hint, byte[] value, int clientId) {
+        return createKeyValue(serializeKey(key), hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, KeyHintData hint, byte[] value, int clientId) {
+        return createKeyValue(key, hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
     default CompletableFuture<KeyHintData> createKeyValue(String key, byte[] value, int clientId) {
-        return createKeyValue(serializeKey(key), value, clientId, getDefaultTimeout());
+        return createKeyValue(serializeKey(key), null, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value, int clientId) {
@@ -106,12 +135,16 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
         return getValue(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(byte[] key, KeyHintData keyhint, int clientId) {
-        return getValue(key, keyhint, clientId, getDefaultTimeout());
+    default CompletableFuture<byte[]> getValue(byte[] key, int clientId) {
+        return getValue(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(String key, KeyHintData keyhint, int clientId) {
-        return getValue(serializeKey(key), keyhint, clientId, getDefaultTimeout());
+    default CompletableFuture<byte[]> getValue(String key, KeyHintData hint, int clientId) {
+        return getValue(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<byte[]> getValue(byte[] key, KeyHintData hint, int clientId) {
+        return getValue(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
@@ -132,34 +165,29 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
                                              int clientId,
                                              Duration timeout);
 
+    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData hint, byte[] value,
+                                                     Duration ttl, int clientId, Duration timeout) {
+        return updateKeyValue(serializeKey(key), hint, value, ttl, clientId, timeout);
+    }
+
     default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData hint, byte[] value) {
         return updateKeyValue(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value) {
-        return updateKeyValue(serializeKey(key),
-                              null,
-                              value,
-                              getDefaultTtl(),
-                              getDefaultClientId(),
-                              getDefaultTimeout());
+        return updateKeyValue(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData keyHint, byte[] value, int clientID) {
-        return updateKeyValue(key, keyHint, value, getDefaultTtl(), clientID, getDefaultTimeout());
+    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData keyHint, byte[] value, int clientId) {
+        return updateKeyValue(key, keyHint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData keyHint, byte[] value, int clientID) {
-        return updateKeyValue(serializeKey(key), keyHint, value, getDefaultTtl(), clientID, getDefaultTimeout());
+    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData keyHint, byte[] value, int clientId) {
+        return updateKeyValue(serializeKey(key), keyHint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData hint, byte[] value) {
-        return updateKeyValue(serializeKey(key),
-                              hint,
-                              value,
-                              getDefaultTtl(),
-                              getDefaultClientId(),
-                              getDefaultTimeout());
+        return updateKeyValue(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value, int clientId) {
@@ -176,6 +204,10 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
      * @return a {@link CompletableFuture} returning {@code true} if key exists, {@code false} otherwise.
      */
     CompletableFuture<Boolean> existKey(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    default CompletableFuture<Boolean> existKey(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return existKey(serializeKey(key), hint, clientId, timeout);
+    }
 
     default CompletableFuture<Boolean> existKey(String key) {
         return existKey(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
@@ -197,6 +229,7 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
         return existKey(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-
-
+    default CompletableFuture<Boolean> existKey(byte[] key, int clientId) {
+        return existKey(key, null, clientId, getDefaultTimeout());
+    }
 }
