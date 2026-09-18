@@ -117,7 +117,7 @@ public class LockMethodProtectionTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Master")
+    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists, cannot acquire another READ - Create on Master")
     void testLockCompatibilityCreateOnMaster() throws Exception {
         String testKey1 = testKey + UUID.randomUUID();
         Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
@@ -125,15 +125,26 @@ public class LockMethodProtectionTest extends TestBase {
 
         client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
+        // WRITE_LOCK should fail with CANT_LOCK (READ exists)
         LockStatus res = client.lockObject(testKey1, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, res);
 
+        // Another READ_LOCK should also fail (lock is exclusive, only one client at a time)
         LockStatus resRead = client.lockObject(testKey1, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, resRead);
+
+        // Owner can read
+        assertNotNull(client.getValue(testKey1, ownerId).get());
+
+        // Intruder can also read (READ_LOCK blocks writes, not reads)
+        assertNotNull(client.getValue(testKey1, intruderId).get());
+
+        // Only owner can unlock
+        client.unlockObject(testKey1, ownerId).get();
     }
 
     @Test
-    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Backup")
+    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists, cannot acquire another READ - Create on Backup")
     void testLockCompatibilityCreateOnBackup() throws Exception {
         String testKey1 = testKey + UUID.randomUUID();
         Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
@@ -141,11 +152,22 @@ public class LockMethodProtectionTest extends TestBase {
 
         client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
+        // WRITE_LOCK should fail with CANT_LOCK (READ exists)
         LockStatus res = client.lockObject(testKey1, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, res);
 
+        // Another READ_LOCK should also fail (lock is exclusive, only one client at a time)
         LockStatus resRead = client.lockObject(testKey1, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, resRead);
+
+        // Owner can read
+        assertNotNull(client.getValue(testKey1, ownerId).get());
+
+        // Intruder can also read (READ_LOCK blocks writes, not reads)
+        assertNotNull(client.getValue(testKey1, intruderId).get());
+
+        // Only owner can unlock
+        client.unlockObject(testKey1, ownerId).get();
     }
 
     private void assertPermissionDenied(Executable runnable) {

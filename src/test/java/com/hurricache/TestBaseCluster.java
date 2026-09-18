@@ -1,6 +1,7 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.grpc.LockStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -63,10 +64,6 @@ public abstract class TestBaseCluster {
                 return getTestTtl();
             }
 
-            @Override
-            public int getDefaultClientId() {
-                return 55;
-            }
         };
 
     }

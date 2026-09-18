@@ -1702,7 +1702,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     // =========================================================================
 
     @Test
-    @DisplayName("Two READ_LOCK simultaneously on one container")
+    @DisplayName("READ_LOCK is exclusive: second READ_LOCK fails with CANT_LOCK, but both can read")
     void testMultipleReadLocks() throws ExecutionException, InterruptedException {
         String key = "multiReadLock" + UUID.randomUUID();
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -1715,13 +1715,13 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         Thread.sleep(REPLICATION_DELAY_MS);
 
-        // First client gets READ_LOCK on MASTER
+        // First client gets READ_LOCK on MASTER (READ_LOCK is exclusive - only one holder)
         LockStatus lock1 = client.setMode(Mode.MASTER)
                 .lockObject(bytes(key), keyHint, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertEquals(LockStatus.OK, lock1);
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
-        // Second client can also get READ_LOCK on MASTER
+        // Second client CANNOT acquire READ_LOCK (READ_LOCK is exclusive)
         LockStatus lock2 = client.setMode(Mode.MASTER)
                 .lockObject(bytes(key), keyHint, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();

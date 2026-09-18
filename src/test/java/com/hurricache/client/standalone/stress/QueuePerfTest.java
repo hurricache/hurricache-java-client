@@ -2,6 +2,7 @@ package com.hurricache.client.standalone.stress;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
 import org.junit.jupiter.api.AfterAll;
@@ -38,7 +39,7 @@ public class QueuePerfTest {
     // Позволяет утилизировать сеть, не забивая RAM бесконечными тасками
     private static final int MAX_IN_FLIGHT_PER_THREAD = 100;
 
-    private static FastCacheAsyncSimpleClient client;
+    private static FastCacheAsyncStandaloneClient client;
     private static KeyHintData queueKeyHint;
 
     // Раздельные метрики производительности
@@ -52,13 +53,12 @@ public class QueuePerfTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000, 0, Duration.of(5, ChronoUnit.SECONDS)) {
+        client = new FastCacheAsyncStandaloneClient("127.0.0.1", 50000, 0, Duration.of(5, ChronoUnit.SECONDS)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }
         };
-//        client.setMode(LB_SMART);
 
         queueKeyHint = client.createQueue(QUEUE_NAME).get();
         assertNotNull(queueKeyHint, "Queue must be created");

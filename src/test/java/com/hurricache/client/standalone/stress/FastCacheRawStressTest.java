@@ -2,6 +2,7 @@ package com.hurricache.client.standalone.stress;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.AfterEach;
@@ -33,8 +34,7 @@ public class FastCacheRawStressTest {
     private static final byte[] PREALLOCATED_VALUE = "value_data_payload_placeholder_for_stress_testing".getBytes(StandardCharsets.UTF_8);
     private static final byte[] PREALLOCATED_UPDATE = "value_data_payload_placeholder_for_stress_testing_updated".getBytes(StandardCharsets.UTF_8);
 
-//    private HurriCacheClientInterface client;
-    private FastCacheAsyncSimpleClient client;
+    private FastCacheAsyncStandaloneClient client;
     private ExecutorService executor;
 
     // Кэш сгенерированных ключей: [threadId][opId]
@@ -53,7 +53,7 @@ public class FastCacheRawStressTest {
             }
         }
 
-        client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncStandaloneClient("127.0.0.1", 50000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(5);
