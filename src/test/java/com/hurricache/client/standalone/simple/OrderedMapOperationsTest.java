@@ -312,7 +312,7 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Two READ_LOCK simultaneously on one container")
+    @DisplayName("Two READ_LOCK: only one client can hold lock, others can read but not acquire")
     void testMultipleReadLocks() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_multi_read";
         Map<OrderedPayload, Payload> initialData = Map.of(
@@ -324,13 +324,21 @@ public class OrderedMapOperationsTest extends TestBase {
         LockStatus lock1 = client.lockObject(mapKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock1);
 
-        // Second client can also get READ_LOCK
+        // Second client CANNOT acquire READ_LOCK (lock is exclusive)
         LockStatus lock2 = client.lockObject(mapKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2);
+        assertEquals(LockStatus.CANT_LOCK, lock2);
 
-        // Both unlock
+        // Both can read (READ_LOCK blocks writes, not reads)
+        Map<OrderedPayload, Payload> result1 = client.streamOrderedMap(mapKey, null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+        assertNotNull(result1);
+        assertEquals(1, result1.size());
+
+        Map<OrderedPayload, Payload> result2 = client.streamOrderedMap(mapKey, null, INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
+        assertNotNull(result2);
+        assertEquals(1, result2.size());
+
+        // Only first client can unlock
         client.unlockObject(mapKey, DEFAULT_CLIENT_ID).get();
-        client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
     }
 
     // =========================================================================

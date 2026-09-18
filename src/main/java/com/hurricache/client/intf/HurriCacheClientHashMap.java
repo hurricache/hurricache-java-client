@@ -69,7 +69,15 @@ public interface HurriCacheClientHashMap extends HurriCacheClientInterfaceCommon
         return streamMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<Map<Payload, Payload>> streamMap(String key, KeyHintData hint, int clientId) {
+        return streamMap(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
     default CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key, KeyHintData hint) {
         return streamMap(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<Payload, Payload>> streamMap(byte[] key, KeyHintData hint, int clientId) {
+        return streamMap(key, hint, clientId, getDefaultTimeout());
     }
 }

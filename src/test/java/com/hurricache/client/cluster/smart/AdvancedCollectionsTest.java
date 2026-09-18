@@ -2,11 +2,11 @@ package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Mode;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -15,207 +15,259 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class AdvancedCollectionsTest extends TestBaseCluster {
 
-    @Test
-    void testHeadAndPositionalAdditionCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        String listKey = "headPosKey" + UUID.randomUUID();
-        // Start with a list: [Middle]
-        // Create on master
-        KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createList(listKey, List.of(Payload.of("Middle".getBytes(StandardCharsets.UTF_8))))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
+    private static final long REPLICATION_DELAY_MS = 100;
 
-        // addElementToHead -> [Head, Middle]
-        Integer boolResponse = client.setMode(Mode.BACKUP)
-                .addElementToHead(listKey, keyHint, List.of(Payload.of("Head".getBytes(StandardCharsets.UTF_8))))
-                .get();
-
-        // addElementToPosition at 1 -> [Head, NewPos1, Middle]
-        Integer boolResponse1 = client.setMode(Mode.BACKUP)
-                .addElementToPosition(listKey, keyHint, List.of(Payload.of("NewPos1".getBytes(StandardCharsets.UTF_8))), 1)
-                .get();
-
-        Payload head = client.setMode(Mode.BACKUP).getHead(listKey, keyHint).get();
-        Payload pos1 = client.setMode(Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
-
-        Assertions.assertNotNull(head);
-        Assertions.assertNotNull(pos1);
-        Assertions.assertEquals("Head", new String(head.getValue(), StandardCharsets.UTF_8));
-        Assertions.assertEquals("NewPos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
-    }
+    // =========================================================================
+    // 1. HEAD AND POSITIONAL ADDITION
+    // =========================================================================
 
     @Test
-    void testHeadAndPositionalAdditionCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        String listKey = "headPosKey" + UUID.randomUUID();
-        // Start with a list: [Middle]
-        // Create on backup
-        KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createList(listKey, List.of(Payload.of("Middle".getBytes(StandardCharsets.UTF_8))))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
+    @DisplayName("addElementToHead and addElementToPosition on List, verify replication")
+    void testHeadAndPositionalAddition() throws ExecutionException, InterruptedException {
+        String listKey = "headPosKeyCluster" + UUID.randomUUID();
 
-        // addElementToHead -> [Head, Middle]
-        Integer boolResponse = client.setMode(Mode.MASTER)
-                .addElementToHead(listKey, keyHint, List.of(Payload.of("Head".getBytes(StandardCharsets.UTF_8))))
+        // Create list with middle element
+        KeyHintData hint = client.createList(listKey, List.of(Payload.of(bytes("Middle"))))
                 .get();
 
-        // addElementToPosition at 1 -> [Head, NewPos1, Middle]
-        Integer boolResponse1 = client.setMode(Mode.MASTER)
-                .addElementToPosition(listKey, keyHint, List.of(Payload.of("NewPos1".getBytes(StandardCharsets.UTF_8))), 1)
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify initial state on both nodes
+        Payload masterHead = client.setMode(Mode.MASTER)
+                .getHead(bytes(listKey), hint)
                 .get();
+        assertEquals("Middle", new String(masterHead.getValue(), StandardCharsets.UTF_8));
 
-        Payload head = client.setMode(Mode.MASTER).getHead(listKey, keyHint).get();
-        Payload pos1 = client.setMode(Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
-
-        Assertions.assertNotNull(head);
-        Assertions.assertNotNull(pos1);
-        Assertions.assertEquals("Head", new String(head.getValue(), StandardCharsets.UTF_8));
-        Assertions.assertEquals("NewPos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    void testTailAndPositionalRemovalCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        String vecKey = "removePosKey" + UUID.randomUUID();
-        // Setup Vector: [0, 1, 2]
-        // Create on master
-        KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createVector(vecKey, List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8))))
+        Payload backupHead = client.setMode(Mode.BACKUP)
+                .getHead(bytes(listKey), hint)
                 .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
-        client.setMode(Mode.BACKUP)
-                .addElementToTail(vecKey, keyHint, Arrays.asList(
-                        Payload.of("1".getBytes(StandardCharsets.UTF_8)),
-                        Payload.of("2".getBytes(StandardCharsets.UTF_8))))
-                .get();
+        assertEquals("Middle", new String(backupHead.getValue(), StandardCharsets.UTF_8));
 
-        // removeTail -> [0, 1]
-        client.setMode(Mode.BACKUP).removeTail(vecKey, keyHint).get();
-
-        // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(Mode.BACKUP).removeElementAtPosition(vecKey, keyHint, 0).get();
-
-        Payload remaining = client.setMode(Mode.BACKUP).getElementAtPosition(vecKey, keyHint, 0).get();
-        Assertions.assertNotNull(remaining);
-        Assertions.assertEquals("1", new String(remaining.getValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    void testTailAndPositionalRemovalCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        String vecKey = "removePosKey" + UUID.randomUUID();
-        // Setup Vector: [0, 1, 2]
-        // Create on backup
-        KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(vecKey, List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8))))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
+        // addElementToHead on MASTER
         client.setMode(Mode.MASTER)
-                .addElementToTail(vecKey, keyHint, Arrays.asList(
-                        Payload.of("1".getBytes(StandardCharsets.UTF_8)),
-                        Payload.of("2".getBytes(StandardCharsets.UTF_8))))
+                .addElementToHead(bytes(listKey), hint, List.of(Payload.of(bytes("Head"))))
                 .get();
 
-        // removeTail -> [0, 1]
-        client.setMode(Mode.MASTER).removeTail(vecKey, keyHint).get();
+        // Verify on MASTER: getHead returns Head
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterHeadAfter = client.setMode(Mode.MASTER)
+                .getHead(bytes(listKey), hint)
+                .get();
+        assertEquals("Head", new String(masterHeadAfter.getValue(), StandardCharsets.UTF_8));
 
-        // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(Mode.MASTER).removeElementAtPosition(vecKey, keyHint, 0).get();
+        // Verify on BACKUP: getHead returns Head (replicated)
+        Payload backupHeadAfter = client.setMode(Mode.BACKUP)
+                .getHead(bytes(listKey), hint)
+                .get();
+        assertEquals("Head", new String(backupHeadAfter.getValue(), StandardCharsets.UTF_8));
 
-        Payload remaining = client.setMode(Mode.MASTER).getElementAtPosition(vecKey, keyHint, 0).get();
-        Assertions.assertNotNull(remaining);
-        Assertions.assertEquals("1", new String(remaining.getValue(), StandardCharsets.UTF_8));
+        // addElementToPosition on MASTER
+        client.setMode(Mode.MASTER)
+                .addElementToPosition(listKey, List.of(Payload.of(bytes("NewPos1"))), 1, 0)
+                .get();
+
+        // Verify on MASTER: getElementAtPosition(1) returns NewPos1
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload pos1 = client.setMode(Mode.MASTER)
+                .getElementAtPosition(bytes(listKey), hint, 1)
+                .get();
+        assertNotNull(pos1);
+        assertEquals("NewPos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getElementAtPosition(1) returns NewPos1 (replicated)
+        Payload backupPos1 = client.setMode(Mode.BACKUP)
+                .getElementAtPosition(bytes(listKey), hint, 1)
+                .get();
+        assertNotNull(backupPos1);
+        assertEquals("NewPos1", new String(backupPos1.getValue(), StandardCharsets.UTF_8));
     }
 
+    // =========================================================================
+    // 2. TAIL AND POSITIONAL REMOVAL
+    // =========================================================================
+
     @Test
-    void testRemoveElementInRangeSuccessCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        String key = "boolRangeKey" + UUID.randomUUID();
-        // Create on master
-        KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createVector(key, List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8))))
+    @DisplayName("removeTail and removeElementAtPosition on Vector, verify replication")
+    void testTailAndPositionalRemoval() throws ExecutionException, InterruptedException {
+        String vecKey = "removePosKeyCluster" + UUID.randomUUID();
+
+        // Create vector with initial element
+        KeyHintData hint = client.createVector(vecKey, List.of(Payload.of(bytes("0"))))
                 .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
-        for (int i = 1; i < 5; i++) {
-            client.setMode(Mode.BACKUP)
-                    .addElementToTail(key, keyHint, List.of(Payload.of(String.valueOf(i).getBytes(StandardCharsets.UTF_8))))
-                    .get();
-        }
 
-        // Remove indices 0 to 2
-        Boolean statusList = client.setMode(Mode.BACKUP).removeElementAtPosition(key, keyHint, 0, 2).get();
+        Thread.sleep(REPLICATION_DELAY_MS);
 
-        Assertions.assertTrue(statusList);
+        // addElementToTail on MASTER
+        client.setMode(Mode.MASTER)
+                .addElementToTail(bytes(vecKey), hint, Arrays.asList(
+                        Payload.of(bytes("1")),
+                        Payload.of(bytes("2"))))
+                .get();
+
+        // Verify on MASTER: 3 elements
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterTail = client.setMode(Mode.MASTER)
+                .getTail(bytes(vecKey), hint)
+                .get();
+        assertEquals("2", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: 3 elements (replicated)
+        Payload backupTail = client.setMode(Mode.BACKUP)
+                .getTail(bytes(vecKey), hint)
+                .get();
+        assertEquals("2", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+
+        // removeTail on MASTER (removes "2")
+        client.setMode(Mode.MASTER)
+                .removeTail(bytes(vecKey), hint)
+                .get();
+
+        // Verify on MASTER: getTail returns "1"
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterTailAfter = client.setMode(Mode.MASTER)
+                .getTail(bytes(vecKey), hint)
+                .get();
+        assertEquals("1", new String(masterTailAfter.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getTail returns "1" (replicated)
+        Payload backupTailAfter = client.setMode(Mode.BACKUP)
+                .getTail(bytes(vecKey), hint)
+                .get();
+        assertEquals("1", new String(backupTailAfter.getValue(), StandardCharsets.UTF_8));
+
+        // removeElementAtPosition(0, 0) on MASTER (removes "0")
+        client.setMode(Mode.MASTER)
+                .removeElementAtPosition(bytes(vecKey), hint, 0L, 0L)
+                .get();
+
+        // Verify on MASTER: getElementAtPosition(0) returns "1"
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterRemaining = client.setMode(Mode.MASTER)
+                .getElementAtPosition(bytes(vecKey), hint, 0)
+                .get();
+        assertNotNull(masterRemaining);
+        assertEquals("1", new String(masterRemaining.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getElementAtPosition(0) returns "1" (replicated)
+        Payload backupRemaining = client.setMode(Mode.BACKUP)
+                .getElementAtPosition(bytes(vecKey), hint, 0)
+                .get();
+        assertNotNull(backupRemaining);
+        assertEquals("1", new String(backupRemaining.getValue(), StandardCharsets.UTF_8));
     }
 
+    // =========================================================================
+    // 3. REMOVE ELEMENT IN RANGE SUCCESS
+    // =========================================================================
+
     @Test
-    void testRemoveElementInRangeSuccessCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        String key = "boolRangeKey" + UUID.randomUUID();
-        // Create on backup
-        KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(key, List.of(Payload.of("0".getBytes(StandardCharsets.UTF_8))))
+    @DisplayName("removeElementAtPosition with range on Vector, verify replication")
+    void testRemoveElementInRangeSuccess() throws ExecutionException, InterruptedException {
+        String key = "boolRangeKeyCluster" + UUID.randomUUID();
+
+        // Create vector with initial element
+        KeyHintData hint = client.createVector(key, List.of(Payload.of(bytes("0"))))
                 .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // addElementToTail on MASTER
         for (int i = 1; i < 5; i++) {
             client.setMode(Mode.MASTER)
-                    .addElementToTail(key, keyHint, List.of(Payload.of(String.valueOf(i).getBytes(StandardCharsets.UTF_8))))
+                    .addElementToTail(bytes(key), hint, List.of(Payload.of(bytes(String.valueOf(i)))))
                     .get();
         }
 
-        // Remove indices 0 to 2
-        Boolean statusList = client.setMode(Mode.MASTER).removeElementAtPosition(key, keyHint, 0, 2).get();
+        // Verify on MASTER: 5 elements
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterTail = client.setMode(Mode.MASTER)
+                .getTail(bytes(key), hint)
+                .get();
+        assertEquals("4", new String(masterTail.getValue(), StandardCharsets.UTF_8));
 
-        Assertions.assertTrue(statusList);
+        // Verify on BACKUP: 5 elements (replicated)
+        Payload backupTail = client.setMode(Mode.BACKUP)
+                .getTail(bytes(key), hint)
+                .get();
+        assertEquals("4", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+
+        // removeElementAtPosition(0, 2) on MASTER (removes positions 0-2: "0", "1", "2")
+        Boolean removed = client.setMode(Mode.MASTER)
+                .removeElementAtPosition(bytes(key), hint, 0L, 2L)
+                .get();
+        assertTrue(removed);
+
+        // Verify on MASTER: getTail returns "4" (3 elements remain: "3", "4")
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Payload masterTailAfter = client.setMode(Mode.MASTER)
+                .getTail(bytes(key), hint)
+                .get();
+        assertNotNull(masterTailAfter);
+        assertEquals("4", new String(masterTailAfter.getValue(), StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: getTail returns "4" (replicated)
+        Payload backupTailAfter = client.setMode(Mode.BACKUP)
+                .getTail(bytes(key), hint)
+                .get();
+        assertNotNull(backupTailAfter);
+        assertEquals("4", new String(backupTailAfter.getValue(), StandardCharsets.UTF_8));
     }
 
-    @Test
-    void testQueueTypeSafetyCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        String qKey = "strictQueue" + UUID.randomUUID();
-        // Create on master
-        KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createQueue(qKey, List.of(Payload.of("q1".getBytes(StandardCharsets.UTF_8))))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
-
-        // Queues typically don't support positional addition in many implementations.
-        // If your server returns an error for positional ops on Queues, this test verifies that.
-        try {
-            client.setMode(Mode.BACKUP)
-                    .addElementToPosition(qKey, keyHint, List.of(Payload.of("fail".getBytes(StandardCharsets.UTF_8))), 1)
-                    .get();
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            // Expecting an error code if Queues are strictly FIFO
-            Assertions.assertNotEquals(Status.Code.OK, cause.getStatus().getCode());
-        }
-    }
+    // =========================================================================
+    // 4. QUEUE TYPE SAFETY
+    // =========================================================================
 
     @Test
-    void testQueueTypeSafetyCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        String qKey = "strictQueue" + UUID.randomUUID();
-        // Create on backup
-        KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createQueue(qKey, List.of(Payload.of("q1".getBytes(StandardCharsets.UTF_8))))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(500);
+    @DisplayName("addElementToPosition not supported on Queue, verify on both nodes")
+    void testQueueTypeSafety() throws ExecutionException, InterruptedException {
+        String qKey = "strictQueueCluster" + UUID.randomUUID();
 
-        // Queues typically don't support positional addition in many implementations.
-        // If your server returns an error for positional ops on Queues, this test verifies that.
+        // Create queue
+        KeyHintData hint = client.createQueue(qKey, List.of(Payload.of(bytes("q1"))))
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify initial state on both nodes
+        Payload masterHead = client.setMode(Mode.MASTER)
+                .getHead(bytes(qKey), hint)
+                .get();
+        assertEquals("q1", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+
+        Payload backupHead = client.setMode(Mode.BACKUP)
+                .getHead(bytes(qKey), hint)
+                .get();
+        assertEquals("q1", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+
+        // addElementToPosition on MASTER should fail for Queue
         try {
             client.setMode(Mode.MASTER)
-                    .addElementToPosition(qKey, keyHint, List.of(Payload.of("fail".getBytes(StandardCharsets.UTF_8))), 1)
+                    .addElementToPosition(qKey, List.of(Payload.of(bytes("fail"))), 1, 0)
                     .get();
+            fail("addElementToPosition should throw an error for Queue");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            // Expecting an error code if Queues are strictly FIFO
-            Assertions.assertNotEquals(Status.Code.OK, cause.getStatus().getCode());
+            assertNotEquals(Status.Code.OK, cause.getStatus().getCode());
+        }
+
+        // addElementToPosition on BACKUP should also fail
+        try {
+            client.setMode(Mode.BACKUP)
+                    .addElementToPosition(qKey, List.of(Payload.of(bytes("fail"))), 1, 0)
+                    .get();
+            fail("addElementToPosition should throw an error for Queue");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertNotEquals(Status.Code.OK, cause.getStatus().getCode());
         }
     }
+
 }

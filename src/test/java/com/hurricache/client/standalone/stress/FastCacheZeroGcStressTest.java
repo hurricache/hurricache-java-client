@@ -1,8 +1,7 @@
 package com.hurricache.client.standalone.stress;
 
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +33,7 @@ public class FastCacheZeroGcStressTest {
     private static final byte[] PREALLOCATED_VALUE = "value_payload_placeholder_for_high_load_testing".getBytes(StandardCharsets.UTF_8);
     private static final byte[] PREALLOCATED_UPDATE = "value_payload_placeholder_for_high_load_testing_updated".getBytes(StandardCharsets.UTF_8);
 
-    private FastCacheAsyncSmartClient client;
+    private FastCacheAsyncStandaloneClient client;
     private ExecutorService executor;
     private ScheduledExecutorService reporterExecutor;
 
@@ -56,17 +55,13 @@ public class FastCacheZeroGcStressTest {
             errCounters[i] = new AtomicInteger(0);
         }
 
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncStandaloneClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(10);
             }
         };
-        client.setMode(Mode.MASTER_THAN_BACKUP);
 
-        while (!client.getReadyFlag()) {
-            Thread.sleep(100);
-        }
     }
 
     @AfterEach

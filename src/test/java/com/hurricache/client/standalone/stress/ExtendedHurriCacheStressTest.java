@@ -1,5 +1,6 @@
 package com.hurricache.client.standalone.stress;
 
+import com.hurricache.TestBase;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
@@ -25,7 +26,7 @@ import java.util.concurrent.atomic.LongAdder;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ExtendedHurriCacheStressTest extends TestBaseCluster {
+public class ExtendedHurriCacheStressTest extends TestBase {
 
     private static final int THREAD_COUNT = 16;
     private static final int OPS_PER_THREAD = 5000;

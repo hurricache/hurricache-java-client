@@ -2,6 +2,7 @@ package com.hurricache.client.standalone.stress;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
 import org.junit.jupiter.api.AfterAll;
@@ -36,11 +37,11 @@ public class QueueDrainPerfTest {
     // НАСТРОЙКА РАЗМЕРОВ: дефолтные значения количества элементов в очереди
     private static final int[] DEFAULT_SIZES = {16, 64, 512, 4096, 32768, 262144,262144*4};
 
-    private static FastCacheAsyncSimpleClient client;
+    private static FastCacheAsyncStandaloneClient client;
 
     @BeforeAll
     public static void setup() throws Exception {
-        client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000, 0, Duration.of(5, ChronoUnit.SECONDS)) {
+        client = new FastCacheAsyncStandaloneClient("127.0.0.1", 50000, 0, Duration.of(5, ChronoUnit.SECONDS)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);

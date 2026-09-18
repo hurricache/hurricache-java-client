@@ -927,7 +927,7 @@ public class ListOperationsTest extends TestBase {
                 Payload.of("data".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        // Reader locks for reading
+        // Reader locks for reading (READ_LOCK is exclusive - only one client can hold it)
         LockStatus lockStatus = client.lockObject(key, LockType.READ_LOCK, readerId, Duration.ofSeconds(60)).get();
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
@@ -935,7 +935,7 @@ public class ListOperationsTest extends TestBase {
         Payload readData = client.getHead(key).get();
         assertNotNull(readData);
 
-        // Others read in parallel
+        // Others can also read (READ_LOCK blocks writes, not reads)
         Payload otherReadData = client.getHead(key, otherReaderId).get();
         assertNotNull(otherReadData);
 

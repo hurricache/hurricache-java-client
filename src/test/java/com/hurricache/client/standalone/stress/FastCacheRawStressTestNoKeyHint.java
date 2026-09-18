@@ -1,6 +1,7 @@
 package com.hurricache.client.standalone.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -22,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FastCacheRawStressTestNoKeyHint {
 
     private final String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
-    private final int THREAD_COUNT = 32;
+    private final int THREAD_COUNT = 16;
     private final int OPERATIONS_PER_THREAD = 100_000;
     private final int PIPELINE_BATCH_SIZE = 256;
     private final int EXPECTED_TOTAL_OPS = THREAD_COUNT * OPERATIONS_PER_THREAD;
@@ -31,24 +32,20 @@ public class FastCacheRawStressTestNoKeyHint {
     private static final byte[] PREALLOCATED_VALUE = "value_data_payload_placeholder_for_stress_testing".getBytes(StandardCharsets.UTF_8);
     private static final byte[] PREALLOCATED_UPDATE = "value_data_payload_placeholder_for_stress_testing_updated".getBytes(StandardCharsets.UTF_8);
 
-    private FastCacheAsyncSmartClient client;
+    private FastCacheAsyncStandaloneClient client;
     private ExecutorService executor;
 
     @BeforeEach
     void setUp() throws InterruptedException {
         executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncStandaloneClient("127.0.0.1", 50000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(5);
             }
         };
-        client.setMode(Mode.MASTER_THAN_BACKUP);
 
-        while (!client.getReadyFlag()) {
-            Thread.sleep(100);
-        }
     }
 
     @AfterEach

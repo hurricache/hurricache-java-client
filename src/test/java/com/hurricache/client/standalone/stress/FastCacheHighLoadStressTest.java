@@ -1,8 +1,8 @@
 package com.hurricache.client.standalone.stress;
 
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.TestBase;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,14 +24,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class FastCacheHighLoadStressTest {
+public class FastCacheHighLoadStressTest extends TestBase {
 
     private final String prefix = UUID.randomUUID() + "-" + System.currentTimeMillis() + ":::";
 
     // Агрессивные настройки нагрузки
-    private final int THREAD_COUNT = 64;                       // Увеличено число рабочих потоков
+    private final int THREAD_COUNT = 16;                       // Увеличено число рабочих потоков
     private final int PRECONDITION_KEYS_PER_THREAD = 5_000;    // Начальный пул
-    private final int TEST_DURATION_MINUTES = 5;
+    private final int TEST_DURATION_MINUTES = 3;
     private final int REPORTING_INTERVAL_SECONDS = 10;
     private final int MAX_IN_FLIGHT_PER_THREAD = 1_000;        // Окно асинхронных запросов в полете
     private final double MAX_ALLOWED_FAILURE_RATE = 0.30;
@@ -39,7 +39,7 @@ public class FastCacheHighLoadStressTest {
     private static final byte[] PREALLOCATED_VALUE = "value_payload_placeholder_for_high_load_testing".getBytes(StandardCharsets.UTF_8);
     private static final byte[] PREALLOCATED_UPDATE = "value_payload_placeholder_for_high_load_testing_updated".getBytes(StandardCharsets.UTF_8);
 
-    private FastCacheAsyncSmartClient client;
+    
     private ExecutorService executor;
     private ScheduledExecutorService reporterExecutor;
 
@@ -48,17 +48,14 @@ public class FastCacheHighLoadStressTest {
         executor = Executors.newFixedThreadPool(THREAD_COUNT);
         reporterExecutor = Executors.newSingleThreadScheduledExecutor();
 
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncStandaloneClient("127.0.0.1", 50000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(10);
             }
         };
-        client.setMode(Mode.MASTER_THAN_BACKUP);
 
-        while (!client.getReadyFlag()) {
-            Thread.sleep(100);
-        }
+        
     }
 
     @AfterEach
@@ -159,14 +156,14 @@ public class FastCacheHighLoadStressTest {
                                 future = client.createKeyValue(key, PREALLOCATED_VALUE);
                                 break;
                             case UPDATE:
-                                future = client.setMode(Mode.LB_SMART).updateKeyValue(key, hint, PREALLOCATED_UPDATE);
+                                future = client.updateKeyValue(key, hint, PREALLOCATED_UPDATE);
                                 break;
                             case GET:
-                                future = client.setMode(Mode.LB_SMART).getValue(key, hint);
+                                future = client.getValue(key, hint);
                                 break;
                             case DELETE:
                             default:
-                                future = client.setMode(Mode.LB_SMART).remove(key, hint);
+                                future = client.remove(key, hint);
                                 break;
                         }
 

@@ -6,211 +6,314 @@ import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+/**
+ * Cluster tests for pivot-based insertion operations (addElementToPositionBefore/After).
+ * Each test verifies replication between MASTER and BACKUP nodes.
+ */
 public class RelativePositionOperationsTest extends TestBaseCluster {
 
-    // ------------------------------------------------------------------------------------------------
-    // addElementToPositionBefore Tests
-    // ------------------------------------------------------------------------------------------------
+    private static final long REPLICATION_DELAY_MS = 300;
+
+    // =========================================================================
+    // Section 1: addElementToPositionBefore
+    // =========================================================================
 
     @Test
-    @DisplayName("addElementToPositionBefore: Create on Master, insert before pivot on Backup")
-    void testAddElementToPositionBeforeCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        String key = "relativeBeforeMaster" + UUID.randomUUID();
+    @DisplayName("addElementToPositionBefore: write on Master, verify replication to Backup (List)")
+    void testAddElementToPositionBeforeListMaster() throws ExecutionException, InterruptedException {
+        String key = "relative_before_list_master_" + UUID.randomUUID();
         Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
         Payload item1 = Payload.of("item1".getBytes(StandardCharsets.UTF_8));
         Payload item2 = Payload.of("item2".getBytes(StandardCharsets.UTF_8));
 
-        // Create initial collection on Master containing the pivot
-        KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createList(key, List.of(pivot))
-                .get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createList(key, List.of(pivot)).get();
+        assertNotNull(hint);
 
-        // Allow cache to replicate data inside cluster
+        // Replication wait
         Thread.sleep(500);
 
-        // Insert items before pivot via Backup
-        Integer success = client.setMode(Mode.BACKUP)
-                .addElementToPositionBefore(key, keyHint, List.of(item1, item2), pivot)
-                .get();
+        // Write on MASTER (insert before pivot)
+        Integer added = client.setMode(Mode.MASTER)
+                .addElementToPositionBefore(bytes(key), hint, List.of(item1, item2), pivot).get();
+        assertEquals(2, added);
 
-        Assertions.assertTrue(success == 2, "Insertion before pivot should return true");
+        // Verify on MASTER (immediate)
+        List<Payload> masterStream = client.setMode(Mode.MASTER)
+                .streamList(bytes(key), hint).get();
+        assertEquals(3, masterStream.size());
+        assertEquals("item1", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(masterStream.get(2).getValue(), StandardCharsets.UTF_8));
 
-        // Validate the resulting order on Backup: [item1, item2, pivot]
-        List<String> results = client.setMode(Mode.BACKUP)
-                .streamList(key, keyHint)
-                .get()
-                .stream()
-                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
-                .toList();
-
-        Assertions.assertEquals(3, results.size());
-        Assertions.assertEquals("item1", results.get(0));
-        Assertions.assertEquals("item2", results.get(1));
-        Assertions.assertEquals("pivot", results.get(2));
+        // Replication delay → verify BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamList(bytes(key), hint).get();
+        assertEquals(3, backupStream.size());
+        assertEquals("item1", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(backupStream.get(2).getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
-    @DisplayName("addElementToPositionBefore: Create on Backup, insert before pivot on Master")
-    void testAddElementToPositionBeforeCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        String key = "relativeBeforeBackup" + UUID.randomUUID();
+    @DisplayName("addElementToPositionBefore: write on Backup, verify replication to Master (List)")
+    void testAddElementToPositionBeforeListBackup() throws ExecutionException, InterruptedException {
+        String key = "relative_before_list_backup_" + UUID.randomUUID();
+        Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
+        Payload inserted = Payload.of("inserted".getBytes(StandardCharsets.UTF_8));
+
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createList(key, List.of(pivot)).get();
+        assertNotNull(hint);
+
+        // Replication wait
+        Thread.sleep(500);
+
+        // Write on BACKUP (insert before pivot)
+        Integer added = client.setMode(Mode.BACKUP)
+                .addElementToPositionBefore(bytes(key), hint, List.of(inserted), pivot).get();
+        assertEquals(1, added);
+
+        // Verify on BACKUP (immediate)
+        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamList(bytes(key), hint).get();
+        assertEquals(2, backupStream.size());
+        assertEquals("inserted", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
+
+        // Replication delay → verify MASTER
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        List<Payload> masterStream = client.setMode(Mode.MASTER)
+                .streamList(bytes(key), hint).get();
+        assertEquals(2, masterStream.size());
+        assertEquals("inserted", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("addElementToPositionBefore: write on Master, verify replication to Backup (Vector)")
+    void testAddElementToPositionBeforeVectorMaster() throws ExecutionException, InterruptedException {
+        String key = "relative_before_vector_master_" + UUID.randomUUID();
+        Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
+        Payload before1 = Payload.of("before1".getBytes(StandardCharsets.UTF_8));
+        Payload before2 = Payload.of("before2".getBytes(StandardCharsets.UTF_8));
+
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createVector(key, List.of(pivot)).get();
+        assertNotNull(hint);
+
+        // Replication wait
+        Thread.sleep(500);
+
+        // Write on MASTER (insert before pivot)
+        Integer added = client.setMode(Mode.MASTER)
+                .addElementToPositionBefore(bytes(key), hint, List.of(before1, before2), pivot).get();
+        assertEquals(2, added);
+
+        // Verify on MASTER (immediate)
+        List<Payload> masterStream = client.setMode(Mode.MASTER)
+                .streamVector(bytes(key), hint).get();
+        assertEquals(3, masterStream.size());
+        assertEquals("before1", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("before2", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(masterStream.get(2).getValue(), StandardCharsets.UTF_8));
+
+        // Replication delay → verify BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamVector(bytes(key), hint).get();
+        assertEquals(3, backupStream.size());
+        assertEquals("before1", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("before2", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(backupStream.get(2).getValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("addElementToPositionBefore: write on Backup, verify replication to Master (Vector)")
+    void testAddElementToPositionBeforeVectorBackup() throws ExecutionException, InterruptedException {
+        String key = "relative_before_vector_backup_" + UUID.randomUUID();
         Payload head = Payload.of("head".getBytes(StandardCharsets.UTF_8));
         Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
         Payload inserted = Payload.of("inserted".getBytes(StandardCharsets.UTF_8));
 
-        // Create initial collection on Backup: [head, pivot]
-        KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(key, List.of(head, pivot))
-                .get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createVector(key, List.of(head, pivot)).get();
+        assertNotNull(hint);
 
-        // Allow cache to replicate data inside cluster
+        // Replication wait
         Thread.sleep(500);
 
-        // Insert item before pivot via Master
-        Integer success = client.setMode(Mode.MASTER)
-                .addElementToPositionBefore(key, keyHint, List.of(inserted), pivot)
-                .get();
+        // Write on BACKUP (insert before pivot)
+        Integer added = client.setMode(Mode.BACKUP)
+                .addElementToPositionBefore(bytes(key), hint, List.of(inserted), pivot).get();
+        assertEquals(1, added);
 
-        Assertions.assertTrue(success == 1);
+        // Verify on BACKUP (immediate)
+        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamVector(bytes(key), hint).get();
+        assertEquals(3, backupStream.size());
+        assertEquals("head", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(backupStream.get(2).getValue(), StandardCharsets.UTF_8));
 
-        // Validate on Master: [head, inserted, pivot]
-        List<String> results = client.setMode(Mode.MASTER)
-                .streamVector(key, keyHint)
-                .get()
-                .stream()
-                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
-                .toList();
-
-        Assertions.assertEquals(3, results.size());
-        Assertions.assertEquals("head", results.get(0));
-        Assertions.assertEquals("inserted", results.get(1));
-        Assertions.assertEquals("pivot", results.get(2));
+        // Replication delay → verify MASTER
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        List<Payload> masterStream = client.setMode(Mode.MASTER)
+                .streamVector(bytes(key), hint).get();
+        assertEquals(3, masterStream.size());
+        assertEquals("head", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(masterStream.get(2).getValue(), StandardCharsets.UTF_8));
     }
 
-    // ------------------------------------------------------------------------------------------------
-    // addElementToPositionAfter Tests
-    // ------------------------------------------------------------------------------------------------
+    // =========================================================================
+    // Section 2: addElementToPositionAfter
+    // =========================================================================
 
     @Test
-    @DisplayName("addElementToPositionAfter: Create on Master, insert after pivot on Backup")
-    void testAddElementToPositionAfterCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        String key = "relativeAfterMaster" + UUID.randomUUID();
+    @DisplayName("addElementToPositionAfter: write on Master, verify replication to Backup (List)")
+    void testAddElementToPositionAfterListMaster() throws ExecutionException, InterruptedException {
+        String key = "relative_after_list_master_" + UUID.randomUUID();
         Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
         Payload tail = Payload.of("tail".getBytes(StandardCharsets.UTF_8));
         Payload item1 = Payload.of("item1".getBytes(StandardCharsets.UTF_8));
         Payload item2 = Payload.of("item2".getBytes(StandardCharsets.UTF_8));
 
-        // Create initial collection on Master: [pivot, tail]
-        KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createList(key, List.of(pivot, tail))
-                .get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createList(key, List.of(pivot, tail)).get();
+        assertNotNull(hint);
 
-        // Allow cache to replicate data inside cluster
+        // Replication wait
         Thread.sleep(500);
 
-        // Insert items after pivot via Backup
-        Integer success = client.setMode(Mode.BACKUP)
-                .addElementToPositionAfter(key, keyHint, List.of(item1, item2), pivot)
-                .get();
+        // Write on MASTER (insert after pivot)
+        Integer added = client.setMode(Mode.MASTER)
+                .addElementToPositionAfter(bytes(key), hint, List.of(item1, item2), pivot).get();
+        assertEquals(2, added);
 
-        Assertions.assertTrue(success == 2, "Insertion after pivot should return true");
+        // Verify on MASTER (immediate)
+        List<Payload> masterStream = client.setMode(Mode.MASTER)
+                .streamList(bytes(key), hint).get();
+        assertEquals(4, masterStream.size());
+        assertEquals("pivot", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("item1", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(masterStream.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("tail", new String(masterStream.get(3).getValue(), StandardCharsets.UTF_8));
 
-        // Validate the resulting order on Backup: [pivot, item1, item2, tail]
-        List<String> results = client.setMode(Mode.BACKUP)
-                .streamList(key, keyHint)
-                .get()
-                .stream()
-                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
-                .toList();
-
-        Assertions.assertEquals(4, results.size());
-        Assertions.assertEquals("pivot", results.get(0));
-        Assertions.assertEquals("item1", results.get(1));
-        Assertions.assertEquals("item2", results.get(2));
-        Assertions.assertEquals("tail", results.get(3));
+        // Replication delay → verify BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamList(bytes(key), hint).get();
+        assertEquals(4, backupStream.size());
+        assertEquals("pivot", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("item1", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(backupStream.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("tail", new String(backupStream.get(3).getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
-    @DisplayName("addElementToPositionAfter: Create on Backup, insert after pivot on Master")
-    void testAddElementToPositionAfterCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        String key = "relativeAfterBackup" + UUID.randomUUID();
+    @DisplayName("addElementToPositionAfter: write on Backup, verify replication to Master (List)")
+    void testAddElementToPositionAfterListBackup() throws ExecutionException, InterruptedException {
+        String key = "relative_after_list_backup_" + UUID.randomUUID();
         Payload pivot = Payload.of("pivot".getBytes(StandardCharsets.UTF_8));
         Payload inserted = Payload.of("inserted".getBytes(StandardCharsets.UTF_8));
 
-        // Create initial collection on Backup containing the pivot
-        KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(key, List.of(pivot))
-                .get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createList(key, List.of(pivot)).get();
+        assertNotNull(hint);
 
-        // Allow cache to replicate data inside cluster
+        // Replication wait
         Thread.sleep(500);
 
-        // Insert item after pivot via Master
-        Integer success = client.setMode(Mode.MASTER)
-                .addElementToPositionAfter(key, keyHint, List.of(inserted), pivot)
-                .get();
+        // Write on BACKUP (insert after pivot)
+        Integer added = client.setMode(Mode.BACKUP)
+                .addElementToPositionAfter(bytes(key), hint, List.of(inserted), pivot).get();
+        assertEquals(1, added);
 
-        Assertions.assertTrue(success == 1);
+        // Verify on BACKUP (immediate)
+        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamList(bytes(key), hint).get();
+        assertEquals(2, backupStream.size());
+        assertEquals("pivot", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
 
-        // Validate on Master: [pivot, inserted]
-        List<String> results = client.setMode(Mode.MASTER)
-                .streamVector(key, keyHint)
-                .get()
-                .stream()
-                .map(p -> new String(p.getValue(), StandardCharsets.UTF_8))
-                .toList();
-
-        Assertions.assertEquals(2, results.size());
-        Assertions.assertEquals("pivot", results.get(0));
-        Assertions.assertEquals("inserted", results.get(1));
+        // Replication delay → verify MASTER
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        List<Payload> masterStream = client.setMode(Mode.MASTER)
+                .streamList(bytes(key), hint).get();
+        assertEquals(2, masterStream.size());
+        assertEquals("pivot", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
     }
 
-    // ------------------------------------------------------------------------------------------------
-    // Negative Scenarios
-    // ------------------------------------------------------------------------------------------------
+    // =========================================================================
+    // Section 3: Missing pivot error
+    // =========================================================================
 
     @Test
-    @DisplayName("Non-existent pivot should throw StatusRuntimeException NOT_FOUND without altering collection")
-    void testMissingPivotReturnsFalse() throws ExecutionException, InterruptedException {
-        String key = "missingPivotKey" + UUID.randomUUID();
-        Payload pivot = Payload.of("existing_pivot".getBytes(StandardCharsets.UTF_8));
+    @DisplayName("Non-existent pivot should throw NOT_FOUND without altering collection")
+    void testMissingPivotReturnsNotFound() throws ExecutionException, InterruptedException {
+        String key = "missing_pivot_" + UUID.randomUUID();
+        Payload existingPivot = Payload.of("existing_pivot".getBytes(StandardCharsets.UTF_8));
         Payload missingPivot = Payload.of("non_existent_pivot".getBytes(StandardCharsets.UTF_8));
-        Payload item = Payload.of("newItem".getBytes(StandardCharsets.UTF_8));
+        Payload newItem = Payload.of("newItem".getBytes(StandardCharsets.UTF_8));
 
-        KeyHintData keyHint = client.createList(key, List.of(pivot)).get();
-        Thread.sleep(150);
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createList(key, List.of(existingPivot)).get();
+        assertNotNull(hint);
 
-        // Attempt BEFORE with non-existent pivot
-        ExecutionException exBefore = Assertions.assertThrows(
+        // Replication wait
+        Thread.sleep(500);
+
+        // Verify list has 1 element before
+        List<Payload> beforeStream = client.setMode(Mode.MASTER)
+                .streamList(bytes(key), hint).get();
+        assertEquals(1, beforeStream.size());
+
+        // Try addElementToPositionBefore with missing pivot → should throw NOT_FOUND on MASTER
+        ExecutionException exBefore = org.junit.jupiter.api.Assertions.assertThrows(
                 ExecutionException.class,
-                () -> client.addElementToPositionBefore(key, keyHint, List.of(item), missingPivot).get(),
-                "Expected ExecutionException when pivot is missing"
+                () -> client.setMode(Mode.MASTER)
+                        .addElementToPositionBefore(bytes(key), hint, List.of(newItem), missingPivot).get()
         );
         StatusRuntimeException causeBefore = (StatusRuntimeException) exBefore.getCause();
-        Assertions.assertEquals(Status.Code.NOT_FOUND, causeBefore.getStatus().getCode());
-        Assertions.assertTrue(causeBefore.getStatus().getDescription().contains("Pivot element not found"));
+        assertEquals(Status.Code.NOT_FOUND, causeBefore.getStatus().getCode());
 
-        // Attempt AFTER with non-existent pivot
-        ExecutionException exAfter = Assertions.assertThrows(
+        // Try addElementToPositionAfter with missing pivot → should throw NOT_FOUND on MASTER
+        ExecutionException exAfter = org.junit.jupiter.api.Assertions.assertThrows(
                 ExecutionException.class,
-                () -> client.addElementToPositionAfter(key, keyHint, List.of(item), missingPivot).get(),
-                "Expected ExecutionException when pivot is missing"
+                () -> client.setMode(Mode.MASTER)
+                        .addElementToPositionAfter(bytes(key), hint, List.of(newItem), missingPivot).get()
         );
         StatusRuntimeException causeAfter = (StatusRuntimeException) exAfter.getCause();
-        Assertions.assertEquals(Status.Code.NOT_FOUND, causeAfter.getStatus().getCode());
-        Assertions.assertTrue(causeAfter.getStatus().getDescription().contains("Pivot element not found"));
+        assertEquals(Status.Code.NOT_FOUND, causeAfter.getStatus().getCode());
 
-        // Verify collection size remains unchanged
-        List<Payload> current = client.streamList(key, keyHint).get();
-        Assertions.assertEquals(1, current.size());
-        Assertions.assertEquals("existing_pivot", new String(current.get(0).getValue(), StandardCharsets.UTF_8));
+        // Verify list unchanged on MASTER
+        List<Payload> afterStream = client.setMode(Mode.MASTER)
+                .streamList(bytes(key), hint).get();
+        assertEquals(1, afterStream.size());
+        assertEquals("existing_pivot", new String(afterStream.get(0).getValue(), StandardCharsets.UTF_8));
+
+        // Replication delay → verify list unchanged on BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamList(bytes(key), hint).get();
+        assertEquals(1, backupStream.size());
+        assertEquals("existing_pivot", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
     }
 }

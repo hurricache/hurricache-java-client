@@ -1,8 +1,7 @@
 package com.hurricache.client.standalone.stress;
 
-import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.FastCacheAsyncStandaloneClient;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,7 +36,7 @@ public class ListPerfTest {
     // Позволяет утилизировать сеть, не забивая RAM бесконечными тасками
     private static final int MAX_IN_FLIGHT_PER_THREAD = 100;
 
-    private static FastCacheAsyncSmartClient client;
+    private static FastCacheAsyncStandaloneClient client;
     private static KeyHintData queueKeyHint;
 
     // Раздельные метрики производительности
@@ -51,7 +50,7 @@ public class ListPerfTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncStandaloneClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }
@@ -157,7 +156,7 @@ public class ListPerfTest {
                 inFlightWindow.acquire(); // Ждем свободного слота в окне отправки
 
                 byte[] payload = generate100ByteString(writerId + "-" + i++);
-                client.setMode(Mode.LB_SMART).addElementToTail(LIST_NAME, queueKeyHint, List.of(Payload.of(payload))).whenComplete((success, ex) -> {
+                client.addElementToTail(LIST_NAME, queueKeyHint, List.of(Payload.of(payload))).whenComplete((success, ex) -> {
                     inFlightWindow.release(); // Освобождаем слот сразу по завершению сетевой операции
                     if (ex == null && success == 1) {
                         metrics.produced.increment();
@@ -179,7 +178,7 @@ public class ListPerfTest {
             try {
                 inFlightWindow.acquire();
 
-                client.setMode(Mode.LB_SMART).getAndRemoveFront(LIST_NAME, queueKeyHint).whenComplete((resp, ex) -> {
+                client.getAndRemoveFront(LIST_NAME, queueKeyHint).whenComplete((resp, ex) -> {
                     inFlightWindow.release();
                     if (ex != null) {
                         metrics.failedReads.increment();

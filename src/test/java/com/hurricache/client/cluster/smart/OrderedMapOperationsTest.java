@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -30,7 +31,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
     private static final int OWNER_CLIENT_ID = 100;
     private static final int INTRUDER_CLIENT_ID = 200;
-    private static final long REPLICATION_DELAY_MS = 100;
+    private static final long REPLICATION_DELAY_MS = 150;
 
     private OrderedPayload op(Long order, String val) {
         return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
@@ -1587,6 +1588,739 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
                 .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterValAfter);
+    }
+
+    // =========================================================================
+    // 15. INTRUDER CANNOT UNLOCK
+    // =========================================================================
+
+    @Test
+    @DisplayName("INTRUDER cannot unlock when WRITE_LOCK is held by owner")
+    void testIntruderCannotUnlock() throws ExecutionException, InterruptedException {
+        String key = "intruderUnlock" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Owner gets WRITE_LOCK on MASTER
+        LockStatus lockStatus = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lockStatus);
+
+        // Verify on MASTER: owner can read
+        Thread.sleep(REPLICATION_DELAY_MS);
+        byte[] masterVal = client.setMode(Mode.MASTER)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(masterVal);
+
+        // Intruder cannot unlock on MASTER - gets CANT_UNLOCK
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertNotEquals(LockStatus.OK, unlock, "Intruder cannot unlock");
+
+        // Verify lock still held on MASTER
+        LockStatus stillLocked = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotEquals(LockStatus.OK, stillLocked, "Intruder cannot acquire lock while owner holds it");
+
+        // Owner unlocks
+        LockStatus unlockOwner = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlockOwner);
+
+        // Verify on BACKUP: lock also released
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus unlockBackup = client.setMode(Mode.BACKUP)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlockBackup);
+    }
+
+    // =========================================================================
+    // 16. LOCK EXPIRATION ACCESS
+    // =========================================================================
+
+    @Test
+    @DisplayName("After lock expiration container is accessible on both nodes")
+    void testLockExpirationAccess() throws ExecutionException, InterruptedException {
+        String key = "lockExpAccess" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Owner gets WRITE_LOCK with 1s TTL on MASTER
+        LockStatus lockStatus = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1))
+                .get();
+        assertEquals(LockStatus.OK, lockStatus);
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify on BACKUP: lock is replicated (intruder cannot read)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+
+        // Wait for lock TTL to expire
+        Thread.sleep(2000);
+
+        // Verify on MASTER: lock expired, intruder can read
+        byte[] masterValAfter = client.setMode(Mode.MASTER)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(masterValAfter);
+        assertEquals("v1", new String(masterValAfter, StandardCharsets.UTF_8));
+
+        // Verify on BACKUP: lock expired, intruder can read (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        byte[] backupValAfter = client.setMode(Mode.BACKUP)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(backupValAfter);
+        assertEquals("v1", new String(backupValAfter, StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 17. MULTIPLE READ LOCKS
+    // =========================================================================
+
+    @Test
+    @DisplayName("READ_LOCK is exclusive: second READ_LOCK fails with CANT_LOCK, but both can read")
+    void testMultipleReadLocks() throws ExecutionException, InterruptedException {
+        String key = "multiReadLock" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // First client gets READ_LOCK on MASTER (READ_LOCK is exclusive - only one holder)
+        LockStatus lock1 = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock1);
+        Thread.sleep(REPLICATION_DELAY_MS); // replication delay
+        // Second client CANNOT acquire READ_LOCK (READ_LOCK is exclusive)
+        LockStatus lock2 = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.CANT_LOCK, lock2);
+
+        // Both can read on MASTER
+        Thread.sleep(REPLICATION_DELAY_MS);
+        byte[] ownerVal = client.setMode(Mode.MASTER)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(ownerVal);
+
+        byte[] intruderVal = client.setMode(Mode.MASTER)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(intruderVal);
+
+        // Verify on BACKUP: lock is replicated
+        Thread.sleep(REPLICATION_DELAY_MS);
+        byte[] backupOwnerVal = client.setMode(Mode.BACKUP)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(backupOwnerVal);
+
+        byte[] backupIntruderVal = client.setMode(Mode.BACKUP)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(backupIntruderVal);
+
+        // Both unlock
+        LockStatus unlock1 = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock1);
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus unlock2 = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock2);
+    }
+
+    // =========================================================================
+    // 18. READ LOCK EXPIRATION TO WRITE
+    // =========================================================================
+
+    @Test
+    @DisplayName("After READ_LOCK expiration intruder can get WRITE_LOCK")
+    void testReadLockExpirationToWrite() throws ExecutionException, InterruptedException {
+        String key = "readLockExpWrite" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Owner gets READ_LOCK with 2s TTL on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify on BACKUP: READ_LOCK is replicated
+        Thread.sleep(REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)));
+
+        // Wait for READ_LOCK to expire
+        Thread.sleep(3000);
+
+        // Now intruder can get WRITE_LOCK on MASTER
+        LockStatus intruderLock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, intruderLock);
+
+        // Verify on BACKUP: WRITE_LOCK is replicated
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus backupLock = client.setMode(Mode.BACKUP)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, backupLock);
+
+        // Unlock
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
+    }
+
+    // =========================================================================
+    // 19. READ LOCK ORDERED MAP
+    // =========================================================================
+
+    @Test
+    @DisplayName("lockObject gets READ_LOCK for ordered map on master - intruder can read but not write")
+    void testReadLockOrderedMap() throws ExecutionException, InterruptedException {
+        String key = "readLockOrderedMap" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // lockObject READ_LOCK on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Verify on MASTER: owner can read
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Map<OrderedPayload, Payload> result = client.setMode(Mode.MASTER)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(1, result.size());
+
+        // Verify on BACKUP: intruder CAN read (READ_LOCK allows multiple readers)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Map<OrderedPayload, Payload> backupResult = client.setMode(Mode.BACKUP)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(backupResult);
+        assertEquals(1, backupResult.size());
+
+        // But intruder CANNOT write - addElementOrderedMap should be denied
+        assertDenied(client.setMode(Mode.BACKUP)
+                .addElementOrderedMap(bytes(key), keyHint,
+                        List.of(op(2L, "k2")), List.of(p("v2")), INTRUDER_CLIENT_ID));
+
+        // Unlock
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
+    }
+
+    // =========================================================================
+    // 20. REMOVE ELEMENT AT POSITION END INCLUDED
+    // =========================================================================
+
+    @Test
+    @DisplayName("removeElementAtPosition includes endPos in range (tail included)")
+    void testRemoveElementAtPositionEndIncluded() throws ExecutionException, InterruptedException {
+        String key = "removePosEndIncluded" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(10L, "k1"), p("v1"),
+                op(20L, "k2"), p("v2"),
+                op(30L, "k3"), p("v3"),
+                op(40L, "k4"), p("v4")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify initial state
+        Integer masterInitial = client.setMode(Mode.MASTER)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(4, masterInitial);
+
+        Integer backupInitial = client.setMode(Mode.BACKUP)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(4, backupInitial);
+
+        // removeElementAtPosition on MASTER (remove weights 20-30, includes k2@20 and k3@30)
+        client.setMode(Mode.MASTER)
+                .removeElementAtPosition(bytes(key), keyHint, 20L, 30L)
+                .get();
+
+        // Verify on MASTER: getSize returns 2
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Integer masterSize = client.setMode(Mode.MASTER)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(2, masterSize);
+
+        // Verify on BACKUP: getSize returns 2 (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Integer backupSize = client.setMode(Mode.BACKUP)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(2, backupSize);
+
+        // Verify k1 and k4 remain on BACKUP
+        byte[] backupK1 = client.setMode(Mode.BACKUP)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+                .get();
+        assertNotNull(backupK1);
+        assertEquals("v1", new String(backupK1, StandardCharsets.UTF_8));
+
+        byte[] backupK4 = client.setMode(Mode.BACKUP)
+                .getContainerValue(bytes(key), keyHint, bytes("k4"))
+                .get();
+        assertNotNull(backupK4);
+        assertEquals("v4", new String(backupK4, StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 21. REMOVE ELEMENT AT POSITION SAME POS
+    // =========================================================================
+
+    @Test
+    @DisplayName("removeElementAtPosition works when boundaries match")
+    void testRemoveElementAtPositionSamePos() throws ExecutionException, InterruptedException {
+        String key = "removePosSame" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(10L, "k1"), p("v1"),
+                op(20L, "k2"), p("v2"),
+                op(30L, "k3"), p("v3")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify initial state
+        Integer masterInitial = client.setMode(Mode.MASTER)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(3, masterInitial);
+
+        // removeElementAtPosition on MASTER (remove weight 20 only, minWeight = maxWeight = 20)
+        client.setMode(Mode.MASTER)
+                .removeElementAtPosition(bytes(key), keyHint, 20L, 20L)
+                .get();
+
+        // Verify on MASTER: getSize returns 2
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Integer masterSize = client.setMode(Mode.MASTER)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(2, masterSize);
+
+        // Verify on BACKUP: getSize returns 2 (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Integer backupSize = client.setMode(Mode.BACKUP)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(2, backupSize);
+
+        // Verify k2 is gone on BACKUP
+        try {
+            client.setMode(Mode.BACKUP)
+                    .getContainerValue(bytes(key), keyHint, bytes("k2"))
+                    .get();
+            fail("Expected NOT_FOUND for removed element");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        }
+    }
+
+    // =========================================================================
+    // 22. STREAM ELEMENT IN RANGE ORDERED MAP NO MATCH
+    // =========================================================================
+
+    @Test
+    @DisplayName("streamElementInRangeOrderedMap outside range returns empty on both nodes")
+    void testStreamElementInRangeOrderedMapNoMatch() throws ExecutionException, InterruptedException {
+        String key = "streamNoMatch" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(10L, "k1"), p("v1"),
+                op(20L, "k2"), p("v2"),
+                op(30L, "k3"), p("v3")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // streamElementInRangeOrderedMap on MASTER (weights 100-200, does not exist)
+        Map<OrderedPayload, Payload> streamResult = client.setMode(Mode.MASTER)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 100L, 200L, false, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(streamResult);
+        assertEquals(0, streamResult.size(), "Should return empty map");
+
+        // Verify on BACKUP: streamElementInRangeOrderedMap also returns empty (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Map<OrderedPayload, Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 100L, 200L, false, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(backupStream);
+        assertEquals(0, backupStream.size(), "Should return empty map on backup");
+    }
+
+    // =========================================================================
+    // 23. STREAM ELEMENT IN RANGE ORDERED MAP REVERSE
+    // =========================================================================
+
+    @Test
+    @DisplayName("streamElementInRangeOrderedMap reverse=true returns in reverse order on both nodes")
+    void testStreamElementInRangeOrderedMapReverse() throws ExecutionException, InterruptedException {
+        String key = "streamReverse" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(10L, "k1"), p("v1"),
+                op(20L, "k2"), p("v2"),
+                op(30L, "k3"), p("v3"),
+                op(40L, "k4"), p("v4"),
+                op(50L, "k5"), p("v5")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // streamElementInRangeOrderedMap on MASTER (weights 20-40, reverse)
+        Map<OrderedPayload, Payload> streamResult = client.setMode(Mode.MASTER)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 20L, 40L, true, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(streamResult);
+        assertEquals(3, streamResult.size(), "Should have 3 elements");
+
+        // Verify on BACKUP: streamElementInRangeOrderedMap returns same elements (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Map<OrderedPayload, Payload> backupStream = client.setMode(Mode.BACKUP)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 20L, 40L, true, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(backupStream);
+        assertEquals(3, backupStream.size());
+
+        // Verify all 3 elements exist
+        assertTrue(backupStream.containsKey(op(20L, "k2")));
+        assertTrue(backupStream.containsKey(op(30L, "k3")));
+        assertTrue(backupStream.containsKey(op(40L, "k4")));
+    }
+
+    // =========================================================================
+    // 24. UNSUPPORTED METHODS FOR ORDERED MAP
+    // =========================================================================
+
+    @Test
+    @DisplayName("Methods not applicable to ORDERED MAP should throw an error")
+    void testUnsupportedMethodsForOrderedMap() throws ExecutionException, InterruptedException {
+        String key = "unsupportedOrderedMap" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getElementAtPosition - not applicable to ORDERED MAP
+        try {
+            client.setMode(Mode.MASTER)
+                    .getElementAtPosition(bytes(key), keyHint, 0)
+                    .get();
+            fail("getElementAtPosition should throw an error for ORDERED MAP");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+
+        // getAndRemoveElementAtPosition - not applicable to ORDERED MAP
+        try {
+            client.setMode(Mode.MASTER)
+                    .getAndRemoveElementAtPosition(bytes(key), keyHint, 0)
+                    .get();
+            fail("getAndRemoveElementAtPosition should throw an error for ORDERED MAP");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        }
+
+        // getHead - not applicable to ORDERED MAP
+        try {
+            client.setMode(Mode.MASTER)
+                    .getHead(bytes(key), keyHint)
+                    .get();
+            fail("getHead should throw an error for ORDERED MAP");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+
+        // getTail - not applicable to ORDERED MAP
+        try {
+            client.setMode(Mode.MASTER)
+                    .getTail(bytes(key), keyHint)
+                    .get();
+            fail("getTail should throw an error for ORDERED MAP");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+    }
+
+    // =========================================================================
+    // 25. WRITE LOCK EXPIRATION
+    // =========================================================================
+
+    @Test
+    @DisplayName("After WRITE_LOCK expiration intruder can get lock on both nodes")
+    void testWriteLockExpiration() throws ExecutionException, InterruptedException {
+        String key = "writeLockExp" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Owner gets WRITE_LOCK with 2s TTL on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify on BACKUP: WRITE_LOCK is replicated (intruder cannot get lock)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus intruderLockBefore = client.setMode(Mode.BACKUP)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotEquals(LockStatus.OK, intruderLockBefore);
+
+        // Wait for WRITE_LOCK to expire
+        Thread.sleep(3000);
+
+        // Now intruder can get WRITE_LOCK on MASTER
+        LockStatus intruderLock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, intruderLock);
+
+        // Verify on BACKUP: WRITE_LOCK is replicated
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus backupLock = client.setMode(Mode.BACKUP)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, backupLock);
+
+        // Unlock
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
+    }
+
+    // =========================================================================
+    // 26. WRITE LOCK INTRUDER DENIED
+    // =========================================================================
+
+    @Test
+    @DisplayName("INTRUDER cannot acquire WRITE_LOCK when WRITE_LOCK exists on both nodes")
+    void testWriteLockIntruderDenied() throws ExecutionException, InterruptedException {
+        String key = "writeLockDenied" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Owner gets WRITE_LOCK on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify on MASTER: owner can read
+        byte[] masterVal = client.setMode(Mode.MASTER)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(masterVal);
+
+        // Intruder cannot get WRITE_LOCK on MASTER - gets CANT_UNLOCK
+        LockStatus intruderLock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertNotEquals(LockStatus.OK, intruderLock, "Intruder should not acquire lock");
+
+        // Verify on BACKUP: lock is replicated (intruder cannot read)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+
+        // Unlock by owner
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
+    }
+
+    // =========================================================================
+    // 27. WRITE LOCK ORDERED MAP
+    // =========================================================================
+
+    @Test
+    @DisplayName("lockObject gets WRITE_LOCK for ordered map on both nodes")
+    void testWriteLockOrderedMap() throws ExecutionException, InterruptedException {
+        String key = "writeLockOrderedMap" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // lockObject WRITE_LOCK on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Verify on MASTER: owner can read
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Map<OrderedPayload, Payload> result = client.setMode(Mode.MASTER)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(1, result.size());
+
+        // Verify on BACKUP: lock is replicated (intruder cannot read)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, INTRUDER_CLIENT_ID));
+
+        // Unlock
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock);
+    }
+
+    // =========================================================================
+    // 28. STREAM ORDERED MAP WITH CLIENT ID
+    // =========================================================================
+
+    @Test
+    @DisplayName("streamOrderedMap with explicit clientId on both nodes")
+    void testStreamOrderedMapWithClientId() throws ExecutionException, InterruptedException {
+        String key = "streamWithClientId" + UUID.randomUUID();
+        Map<OrderedPayload, Payload> initialData = Map.of(
+                op(1L, "k1"), p("v1"),
+                op(2L, "k2"), p("v2"),
+                op(3L, "k3"), p("v3")
+        );
+
+        // Create ordered map
+        KeyHintData keyHint = client.createOrderedMap(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // streamOrderedMap with explicit clientId on MASTER
+        Map<OrderedPayload, Payload> result = client.setMode(Mode.MASTER)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(result);
+        assertEquals(3, result.size());
+        assertTrue(result.containsKey(op(1L, "k1")));
+        assertTrue(result.containsKey(op(2L, "k2")));
+        assertTrue(result.containsKey(op(3L, "k3")));
+
+        // Verify on BACKUP: streamOrderedMap returns same elements (replicated)
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Map<OrderedPayload, Payload> backupResult = client.setMode(Mode.BACKUP)
+                .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(backupResult);
+        assertEquals(3, backupResult.size());
+        assertTrue(backupResult.containsKey(op(1L, "k1")));
+        assertTrue(backupResult.containsKey(op(2L, "k2")));
+        assertTrue(backupResult.containsKey(op(3L, "k3")));
     }
 
 }

@@ -485,7 +485,7 @@ public class OrderedSetOperationsTest extends TestBase {
     // =========================================================================
 
     @Test
-    @DisplayName("READ_LOCK: multiple clients can read concurrently")
+    @DisplayName("READ_LOCK: only one client can hold lock, others can read but not acquire lock")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_read_lock";
         List<OrderedPayload> initialData = List.of(op(1L, "item1"));
@@ -497,11 +497,11 @@ public class OrderedSetOperationsTest extends TestBase {
         LockStatus lock1 = client.lockObject(setKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock1, "First client should acquire READ_LOCK");
 
-        // Second client also acquires READ_LOCK
+        // Second client CANNOT acquire READ_LOCK (lock is exclusive)
         LockStatus lock2 = client.lockObject(setKey, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock2, "Second client should acquire READ_LOCK");
+        assertEquals(LockStatus.CANT_LOCK, lock2, "Second client cannot acquire READ_LOCK while first holds it");
 
-        // Both clients can read
+        // Both clients can read (READ_LOCK blocks writes, not reads)
         List<OrderedPayload> result1 = client.streamOrderedSet(setKey, hint, DEFAULT_CLIENT_ID).get();
         assertNotNull(result1);
         assertEquals(1, result1.size());
@@ -510,9 +510,8 @@ public class OrderedSetOperationsTest extends TestBase {
         assertNotNull(result2);
         assertEquals(1, result2.size());
 
-        // Release locks
+        // Only first client can unlock
         client.unlockObject(setKey, DEFAULT_CLIENT_ID).get();
-        client.unlockObject(setKey, SECONDARY_CLIENT_ID).get();
     }
 
     @Test

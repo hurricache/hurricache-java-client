@@ -534,9 +534,10 @@ public class SetOperationsTest extends TestBaseCluster {
         KeyHintData keyHint = client.createSet(bytes(key),
                         List.of(Payload.of(bytes("item1"))))
                 .get();
-        client.setTtl(key, keyHint, 2000).get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
+
+        client.setTtl(key, keyHint, 2000).get();
 
         // Verify on MASTER: getTtl > 0
         Long ttlMaster = client.setMode(Mode.MASTER)
@@ -1017,6 +1018,247 @@ public class SetOperationsTest extends TestBaseCluster {
                 .streamSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterStream2);
+    }
+
+    // =========================================================================
+    // 15. READ LOCK PARALLEL READS
+    // =========================================================================
+
+    @Test
+    @DisplayName("READ_LOCK: multiple clients can read in parallel on both nodes")
+    void testReadLockParallelReads() throws ExecutionException, InterruptedException {
+        String key = "readLockParallel" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+
+        // Create set
+        KeyHintData keyHint = client.createSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // First client acquires READ_LOCK on MASTER
+        LockStatus lock1 = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.OK, lock1);
+
+        // Second client can also acquire READ_LOCK on MASTER
+        LockStatus lock2 = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
+                .get();
+        assertEquals(LockStatus.CANT_LOCK, lock2);
+
+        // Both clients can read on MASTER
+        Thread.sleep(REPLICATION_DELAY_MS);
+        List<Payload> result1 = client.setMode(Mode.MASTER)
+                .streamSet(key, keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(result1);
+        assertEquals(1, result1.size());
+
+        List<Payload> result2 = client.setMode(Mode.MASTER)
+                .streamSet(key, keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(result2);
+        assertEquals(1, result2.size());
+
+        // Verify on BACKUP: lock is replicated, both can read
+        Thread.sleep(REPLICATION_DELAY_MS);
+        List<Payload> backupResult1 = client.setMode(Mode.BACKUP)
+                .streamSet(key, keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertNotNull(backupResult1);
+
+        List<Payload> backupResult2 = client.setMode(Mode.BACKUP)
+                .streamSet(key, keyHint, INTRUDER_CLIENT_ID)
+                .get();
+        assertNotNull(backupResult2);
+
+        // Release locks
+        client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, INTRUDER_CLIENT_ID)
+                .get();
+    }
+
+    // =========================================================================
+    // 16. UNSUPPORTED METHODS FOR SET
+    // =========================================================================
+
+    @Test
+    @DisplayName("Methods not applicable to set should throw an error")
+    void testUnsupportedMethodsForSet() throws ExecutionException, InterruptedException {
+        String key = "unsupportedSet" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+
+        // Create set
+        KeyHintData keyHint = client.createSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // getElementAtPosition - not applicable to set
+        try {
+            client.setMode(Mode.MASTER)
+                    .getElementAtPosition(bytes(key), keyHint, 0)
+                    .get();
+            fail("getElementAtPosition should throw an error for set");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+
+        // getHead - not applicable to set
+        try {
+            client.setMode(Mode.MASTER)
+                    .getHead(bytes(key), keyHint)
+                    .get();
+            fail("getHead should throw an error for set");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+
+        // getTail - not applicable to set
+        try {
+            client.setMode(Mode.MASTER)
+                    .getTail(bytes(key), keyHint)
+                    .get();
+            fail("getTail should throw an error for set");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
+        }
+    }
+
+    // =========================================================================
+    // 17. ADD ELEMENT EMPTY LIST
+    // =========================================================================
+
+    @Test
+    @DisplayName("addElementUnordered with empty list returns 0 on both nodes")
+    void testAddElementEmptyList() throws ExecutionException, InterruptedException {
+        String key = "addElementEmptyList" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+
+        // Create set
+        KeyHintData keyHint = client.createSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify initial state
+        Integer masterSize = client.setMode(Mode.MASTER)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(1, masterSize);
+
+        Integer backupSize = client.setMode(Mode.BACKUP)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(1, backupSize);
+
+        // addElementUnordered with empty list on MASTER
+        Integer added = client.setMode(Mode.MASTER)
+                .addElementUnordered(key, keyHint, new ArrayList<>())
+                .get();
+        assertEquals(0, added, "Adding empty list should return 0");
+
+        // Verify on MASTER: size unchanged
+        Thread.sleep(REPLICATION_DELAY_MS);
+        Integer masterSizeAfter = client.setMode(Mode.MASTER)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(1, masterSizeAfter);
+
+        // Verify on BACKUP: size unchanged (replicated)
+        Integer backupSizeAfter = client.setMode(Mode.BACKUP)
+                .getSize(key, keyHint)
+                .get();
+        assertEquals(1, backupSizeAfter);
+    }
+
+    // =========================================================================
+    // 18. STREAM SET NON EXISTENT
+    // =========================================================================
+
+    @Test
+    @DisplayName("streamSet on non-existent set returns NOT_FOUND on both nodes")
+    void testStreamSetNonExistent() throws ExecutionException, InterruptedException {
+        String key = "streamNonExistent" + UUID.randomUUID();
+
+        // Create a dummy KeyHint for non-existent set
+        KeyHintData keyHint = KeyHintData.of(1, 1);
+
+        // streamSet on MASTER should fail
+        try {
+            client.setMode(Mode.MASTER)
+                    .streamSet(key, keyHint)
+                    .get();
+            fail("streamSet on non-existent set should throw an error");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        }
+
+        // streamSet on BACKUP should also fail
+        try {
+            client.setMode(Mode.BACKUP)
+                    .streamSet(key, keyHint)
+                    .get();
+            fail("streamSet on non-existent set should throw an error");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        }
+    }
+
+    // =========================================================================
+    // 19. UNLOCK ON EXPIRED LOCK
+    // =========================================================================
+
+    @Test
+    @DisplayName("Lock with expired TTL: unlock returns OK on both nodes")
+    void testUnlockOnExpiredLock() throws ExecutionException, InterruptedException {
+        String key = "unlockExpired" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+
+        // Create set
+        KeyHintData keyHint = client.createSet(key, initialData)
+                .get();
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Acquire lock with TTL = 1 second on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(bytes(key), keyHint, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1))
+                .get();
+        assertEquals(LockStatus.OK, lock);
+
+        Thread.sleep(REPLICATION_DELAY_MS);
+
+        // Verify on BACKUP: lock is replicated
+        Thread.sleep(REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .streamSet(key, keyHint, INTRUDER_CLIENT_ID));
+
+        // Wait for lock TTL to expire
+        Thread.sleep(1500);
+
+        // Try to release expired lock on MASTER
+        LockStatus unlock = client.setMode(Mode.MASTER)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlock, "Releasing expired lock should return OK");
+
+        // Verify on BACKUP: lock is also released
+        Thread.sleep(REPLICATION_DELAY_MS);
+        LockStatus unlockBackup = client.setMode(Mode.BACKUP)
+                .unlockObject(bytes(key), keyHint, OWNER_CLIENT_ID)
+                .get();
+        assertEquals(LockStatus.OK, unlockBackup);
     }
 
 }

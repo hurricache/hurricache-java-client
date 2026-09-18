@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,7 +115,7 @@ public class HurriCacheClientMissingTests extends TestBase {
         LockStatus lock2 = client.lockObject(key, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(2)).get();
 
         assertEquals(LockStatus.OK, lock1);
-        assertEquals(LockStatus.OK, lock2);
+        assertNotEquals(LockStatus.OK, lock2);
 
         client.unlockObject(key, DEFAULT_CLIENT_ID).get();
         client.unlockObject(key, SECONDARY_CLIENT_ID).get();

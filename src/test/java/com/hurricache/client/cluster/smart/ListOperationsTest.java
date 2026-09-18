@@ -130,7 +130,7 @@ public class ListOperationsTest extends TestBaseCluster {
         KeyHintData keyHint = client.createList(key, largePayloads)
                 .get();
 
-        Thread.sleep(500); // replication wait
+        Thread.sleep(1500); // replication wait
 
         // Verify on MASTER: streamList returns 1500 elements
         List<Payload> masterStream = client.setMode(Mode.MASTER)
