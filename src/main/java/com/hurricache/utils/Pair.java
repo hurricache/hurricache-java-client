@@ -2,7 +2,7 @@ package com.hurricache.utils;
 
 import java.util.Objects;
 
-public class Pair <FIRST,SECOND>{
+public class Pair<FIRST, SECOND> {
     public final FIRST first;
     public final SECOND second;
 
@@ -10,8 +10,9 @@ public class Pair <FIRST,SECOND>{
         this.first = first;
         this.second = second;
     }
-    public static <F,S> Pair<F,S> of (F f,S s){
-        return new Pair<>(f,s);
+
+    public static <F, S> Pair<F, S> of(F f, S s) {
+        return new Pair<>(f, s);
     }
 
     @Override

@@ -1,7 +1,10 @@
 package com.hurricache.client;
 
 import com.hurricache.client.intf.HurriCacheClientInterface;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
+import com.hurricache.client.intf.Payload;
+import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import com.hurricache.grpc.coordinator.NodeRole;
@@ -21,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -61,11 +65,11 @@ public class FastCacheAsyncSmartClientTest {
     @Captor
     private ArgumentCaptor<Function<String, CompletableFuture<String>>> stringActionCaptor;
 
-    private final KeyHint keyHint = KeyHint.newBuilder().setWeekHash(123).build();
+    private final KeyHintData keyHint = KeyHintData.of(1,1);
 
     @BeforeEach
     void setUp() throws NoSuchFieldException, IllegalAccessException {
-        client = new FastCacheAsyncSmartClient(mock(ManagedChannel.class),0,Duration.ofSeconds(100));
+        client = new FastCacheAsyncSmartClient(mock(String.class), 0, Duration.ofSeconds(100));
         client.shutdown();
         // 2. Inject Mocked scheduledExecutorService into private field via Reflection
         Field executorField = FastCacheAsyncSmartClient.class.getDeclaredField("scheduledExecutorService");
@@ -106,25 +110,23 @@ public class FastCacheAsyncSmartClientTest {
 
 
         // Set up routing table
-        for(int i= 0; i <MAX_SHARDS ;i++) {
+        for (int i = 0; i < MAX_SHARDS; i++) {
             client.routing_info.get().routingTable().put(Pair.of(NodeRole.MASTER, i),
-                                                       masterClient);
-            client.routing_info.get().routingTable().put(Pair.of(NodeRole.BACKUP,i),
-                                                       backupClient);
+                                                         masterClient);
+            client.routing_info.get().routingTable().put(Pair.of(NodeRole.BACKUP, i),
+                                                         backupClient);
         }
         client.routing_info.get().routingTableTarget().put("target1", masterClient);
         client.routing_info.get().routingTableTarget().put("target2", backupClient);
         client.routing_info.get().routingTableTarget().put("reroute_target", rerouteClient);
-
-
     }
 
     @Test
     void testExecuteMasterModeSuccess() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), keyHint, 1, Duration.ofSeconds(5));
@@ -134,16 +136,16 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteBackupModeSuccess() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
+        client.setMode(Mode.BACKUP);
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        when(backupClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+        when(backupClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), keyHint, 1, Duration.ofSeconds(5));
@@ -153,16 +155,16 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(backupClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(masterClient, never()).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(backupClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(masterClient, never()).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterTimeout() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<byte[]> timeoutFuture = new CompletableFuture<>();
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(timeoutFuture);
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(timeoutFuture);
 
         // Simulate timeout
         timeoutFuture.completeExceptionally(new CompletionException(new StatusRuntimeException(Status.DEADLINE_EXCEEDED)));
@@ -176,19 +178,19 @@ public class FastCacheAsyncSmartClientTest {
         });
         assertTrue(exception.getCause() instanceof StatusRuntimeException);
         assertEquals(Status.Code.DEADLINE_EXCEEDED, ((StatusRuntimeException) exception.getCause()).getStatus().getCode());
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterUnavailableThenBackupSuccess() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         CompletableFuture<byte[]> unavailableFuture = new CompletableFuture<>();
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(unavailableFuture);
-        when(backupClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(unavailableFuture);
+        when(backupClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // Simulate master unavailable
         unavailableFuture.completeExceptionally(new CompletionException(new StatusRuntimeException(Status.UNAVAILABLE)));
@@ -201,19 +203,19 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterUnavailableThenBackupUnavailable() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         CompletableFuture<byte[]> masterFuture = new CompletableFuture<>();
         CompletableFuture<byte[]> backupFuture = new CompletableFuture<>();
-        
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(masterFuture);
-        when(backupClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(backupFuture);
+
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(masterFuture);
+        when(backupClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(backupFuture);
 
         // Simulate both unavailable
         masterFuture.completeExceptionally(new CompletionException(new StatusRuntimeException(Status.UNAVAILABLE)));
@@ -228,27 +230,27 @@ public class FastCacheAsyncSmartClientTest {
         });
         assertTrue(exception.getCause() instanceof StatusRuntimeException);
         assertEquals(Status.Code.UNAVAILABLE, ((StatusRuntimeException) exception.getCause()).getStatus().getCode());
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterReroute() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         CompletableFuture<byte[]> rerouteFuture = new CompletableFuture<>();
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(rerouteFuture);
-        when(rerouteClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(rerouteFuture);
+        when(rerouteClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // Create metadata with reroute target
         Metadata trailers = new Metadata();
         trailers.put(Metadata.Key.of("x-fastcache-route", Metadata.ASCII_STRING_MARSHALLER), "reroute_target");
-        
+
         // Simulate reroute
         rerouteFuture.completeExceptionally(new CompletionException(
-            new StatusRuntimeException(Status.FAILED_PRECONDITION, trailers)));
+                new StatusRuntimeException(Status.FAILED_PRECONDITION, trailers)));
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), keyHint, 1, Duration.ofSeconds(5));
@@ -258,28 +260,28 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(rerouteClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(rerouteClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterRerouteThenUnavailable() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         CompletableFuture<byte[]> rerouteFuture = new CompletableFuture<>();
         CompletableFuture<byte[]> unavailableFuture = new CompletableFuture<>();
-        
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(rerouteFuture);
-        when(rerouteClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(unavailableFuture);
+
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(rerouteFuture);
+        when(rerouteClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(unavailableFuture);
 
         // Create metadata with reroute target
         Metadata trailers = new Metadata();
         trailers.put(Metadata.Key.of("x-fastcache-route", Metadata.ASCII_STRING_MARSHALLER), "reroute_target");
-        
+
         // Simulate reroute then unavailable
         rerouteFuture.completeExceptionally(new CompletionException(
-            new StatusRuntimeException(Status.FAILED_PRECONDITION, trailers)));
+                new StatusRuntimeException(Status.FAILED_PRECONDITION, trailers)));
         unavailableFuture.completeExceptionally(new CompletionException(new StatusRuntimeException(Status.UNAVAILABLE)));
 
         // When
@@ -291,17 +293,17 @@ public class FastCacheAsyncSmartClientTest {
         });
         assertTrue(exception.getCause() instanceof StatusRuntimeException);
         assertEquals(Status.Code.UNAVAILABLE, ((StatusRuntimeException) exception.getCause()).getStatus().getCode());
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(rerouteClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(rerouteClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterTimeoutNoFallback() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         CompletableFuture<byte[]> timeoutFuture = new CompletableFuture<>();
-        
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(timeoutFuture);
+
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(timeoutFuture);
 
         // Simulate timeout
         timeoutFuture.completeExceptionally(new CompletionException(new StatusRuntimeException(Status.DEADLINE_EXCEEDED)));
@@ -315,19 +317,19 @@ public class FastCacheAsyncSmartClientTest {
         });
         assertTrue(exception.getCause() instanceof StatusRuntimeException);
         assertEquals(Status.Code.DEADLINE_EXCEEDED, ((StatusRuntimeException) exception.getCause()).getStatus().getCode());
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterNullThenBackupSuccess() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         // Clear master from routing table
         client.routing_info.get().routingTable().remove(Pair.of(NodeRole.MASTER, 3));
-        
+
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        when(backupClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+        when(backupClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), keyHint, 1, Duration.ofSeconds(5));
@@ -337,19 +339,19 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(backupClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(masterClient, never()).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(backupClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(masterClient, never()).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterNullThenBackupUnavailable() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         // Clear master from routing table
         client.routing_info.get().routingTable().remove(Pair.of(NodeRole.MASTER, 3));
-        
+
         CompletableFuture<byte[]> unavailableFuture = new CompletableFuture<>();
-        when(backupClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(unavailableFuture);
+        when(backupClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(unavailableFuture);
 
         // Simulate backup unavailable
         unavailableFuture.completeExceptionally(new CompletionException(new StatusRuntimeException(Status.UNAVAILABLE)));
@@ -363,15 +365,15 @@ public class FastCacheAsyncSmartClientTest {
         });
         assertTrue(exception.getCause() instanceof StatusRuntimeException);
         assertEquals(Status.Code.UNAVAILABLE, ((StatusRuntimeException) exception.getCause()).getStatus().getCode());
-        verify(backupClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(backupClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
     void testExecuteMasterThanBackupModeSuccess() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), keyHint, 1, Duration.ofSeconds(5));
@@ -381,50 +383,53 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     // --- COLLECTION OPERATIONS TESTS ---
-    
+
     @Test
     void testCreateOnMasterValidateOnBackup_createQueue() {
         // Given
         byte[] key = "test_queue".getBytes();
-        List<byte[]> initialValue = Arrays.asList("item1".getBytes(), "item2".getBytes());
-        
+        List<Payload> initialValue = Arrays.asList(
+                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("item2".getBytes(StandardCharsets.UTF_8))
+        );
+
         // Create on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
-        CompletableFuture<KeyHint> createFuture = CompletableFuture.completedFuture(keyHint);
-        when(masterClient.createQueue(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class))).thenReturn(createFuture);
-        
+        client.setMode(Mode.MASTER);
+        CompletableFuture<KeyHintData> createFuture = CompletableFuture.completedFuture(keyHint);
+        when(masterClient.createQueue(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class))).thenReturn(createFuture);
+
         // When
-        CompletableFuture<KeyHint> createResult = client.createQueue(key, initialValue,Duration.ZERO, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<KeyHintData> createResult = client.createQueue(key,any(KeyHintData.class), initialValue, Duration.ZERO, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
             assertNotNull(createResult.get(5, TimeUnit.SECONDS));
         });
-        verify(masterClient).createQueue(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).createQueue(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        
+        verify(masterClient).createQueue(any(byte[].class), any(KeyHintData.class),anyList(), any(Duration.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).createQueue(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class));
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
-        CompletableFuture<List<byte[]>> validateFuture = CompletableFuture.completedFuture(initialValue);
-        when(backupClient.streamList(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
-        
+        client.setMode(Mode.BACKUP);
+        CompletableFuture<List<Payload>> validateFuture = CompletableFuture.completedFuture(initialValue);
+        when(backupClient.streamList(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
+
         // When
-        CompletableFuture<List<byte[]>> validateResult = client.streamList(key, keyHint, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<List<Payload>> validateResult = client.streamList(key, keyHint, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
-            List<byte[]> result = validateResult.get(5, TimeUnit.SECONDS);
+            List<Payload> result = validateResult.get(5, TimeUnit.SECONDS);
             assertEquals(2, result.size());
-            assertArrayEquals("item1".getBytes(), result.get(0));
-            assertArrayEquals("item2".getBytes(), result.get(1));
+            assertArrayEquals("item1".getBytes(StandardCharsets.UTF_8), result.get(0).getValue());
+            assertArrayEquals("item2".getBytes(StandardCharsets.UTF_8), result.get(1).getValue());
         });
-        verify(backupClient).streamList(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        
+        verify(backupClient).streamList(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -437,40 +442,43 @@ public class FastCacheAsyncSmartClientTest {
     void testCreateOnMasterValidateOnBackup_createList() {
         // Given
         byte[] key = "test_list".getBytes();
-        List<byte[]> initialValue = Arrays.asList("item1".getBytes(), "item2".getBytes());
-        
+        List<Payload> initialValue = Arrays.asList(
+                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("item2".getBytes(StandardCharsets.UTF_8))
+        );
+
         // Create on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
-        CompletableFuture<KeyHint> createFuture = CompletableFuture.completedFuture(keyHint);
-        when(masterClient.createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class))).thenReturn(createFuture);
-        
+        client.setMode(Mode.MASTER);
+        CompletableFuture<KeyHintData> createFuture = CompletableFuture.completedFuture(keyHint);
+        when(masterClient.createList(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class) )).thenReturn(createFuture);
+
         // When
-        CompletableFuture<KeyHint> createResult = client.createList(key, initialValue,Duration.ZERO, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<KeyHintData> createResult = client.createList(key,any(KeyHintData.class), initialValue, Duration.ZERO, 1, Duration.ofSeconds(5) );
+
         // Then
         assertDoesNotThrow(() -> {
             assertNotNull(createResult.get(5, TimeUnit.SECONDS));
         });
-        verify(masterClient).createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        
+        verify(masterClient).createList(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class) );
+        verify(backupClient, never()).createList(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class));
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
-        CompletableFuture<List<byte[]>> validateFuture = CompletableFuture.completedFuture(initialValue);
-        when(backupClient.streamList(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
-        
+        client.setMode(Mode.BACKUP);
+        CompletableFuture<List<Payload>> validateFuture = CompletableFuture.completedFuture(initialValue);
+        when(backupClient.streamList(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
+
         // When
-        CompletableFuture<List<byte[]>> validateResult = client.streamList(key, keyHint, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<List<Payload>> validateResult = client.streamList(key, keyHint, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
-            List<byte[]> result = validateResult.get(5, TimeUnit.SECONDS);
+            List<Payload> result = validateResult.get(5, TimeUnit.SECONDS);
             assertEquals(2, result.size());
-            assertArrayEquals("item1".getBytes(), result.get(0));
-            assertArrayEquals("item2".getBytes(), result.get(1));
+            assertArrayEquals("item1".getBytes(StandardCharsets.UTF_8), result.get(0).getValue());
+            assertArrayEquals("item2".getBytes(StandardCharsets.UTF_8), result.get(1).getValue());
         });
-        verify(backupClient).streamList(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        
+        verify(backupClient).streamList(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -483,40 +491,43 @@ public class FastCacheAsyncSmartClientTest {
     void testCreateOnMasterValidateOnBackup_createVector() {
         // Given
         byte[] key = "test_vector".getBytes();
-        List<byte[]> initialValue = Arrays.asList("item1".getBytes(), "item2".getBytes());
-        
+        List<Payload> initialValue = Arrays.asList(
+                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("item2".getBytes(StandardCharsets.UTF_8))
+        );
+
         // Create on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
-        CompletableFuture<KeyHint> createFuture = CompletableFuture.completedFuture(keyHint);
-        when(masterClient.createVector(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class))).thenReturn(createFuture);
-        
+        client.setMode(Mode.MASTER);
+        CompletableFuture<KeyHintData> createFuture = CompletableFuture.completedFuture(keyHint);
+        when(masterClient.createVector(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class))).thenReturn(createFuture);
+
         // When
-        CompletableFuture<KeyHint> createResult = client.createVector(key, initialValue,Duration.ZERO, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<KeyHintData> createResult = client.createVector(key, any(KeyHintData.class),initialValue, Duration.ZERO, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
             assertNotNull(createResult.get(5, TimeUnit.SECONDS));
         });
-        verify(masterClient).createVector(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).createVector(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        
+        verify(masterClient).createVector(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).createVector(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class));
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
-        CompletableFuture<List<byte[]>> validateFuture = CompletableFuture.completedFuture(initialValue);
-        when(backupClient.streamVector(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
-        
+        client.setMode(Mode.BACKUP);
+        CompletableFuture<List<Payload>> validateFuture = CompletableFuture.completedFuture(initialValue);
+        when(backupClient.streamVector(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
+
         // When
-        CompletableFuture<List<byte[]>> validateResult = client.streamVector(key, keyHint, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<List<Payload>> validateResult = client.streamVector(key, keyHint, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
-            List<byte[]> result = validateResult.get(5, TimeUnit.SECONDS);
+            List<Payload> result = validateResult.get(5, TimeUnit.SECONDS);
             assertEquals(2, result.size());
-            assertArrayEquals("item1".getBytes(), result.get(0));
-            assertArrayEquals("item2".getBytes(), result.get(1));
+            assertArrayEquals("item1".getBytes(StandardCharsets.UTF_8), result.get(0).getValue());
+            assertArrayEquals("item2".getBytes(StandardCharsets.UTF_8), result.get(1).getValue());
         });
-        verify(backupClient).streamVector(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        
+        verify(backupClient).streamVector(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -526,45 +537,45 @@ public class FastCacheAsyncSmartClientTest {
     }
 
     // --- LOCK OPERATIONS TESTS ---
-    
+
     @Test
     void testCreateOnMasterValidateOnBackup_lockObject() {
         // Given
         byte[] key = "test_key".getBytes();
-        
+
         // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<LockStatus> lockFuture = CompletableFuture.completedFuture(LockStatus.OK);
-        when(masterClient.lockObject(any(byte[].class), any(KeyHint.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class))).thenReturn(lockFuture);
-        
+        when(masterClient.lockObject(any(byte[].class), any(KeyHintData.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class))).thenReturn(lockFuture);
+
         // When
         CompletableFuture<LockStatus> lockResult = client.lockObject(key, keyHint, LockType.GLOBAL, 1, Duration.ofSeconds(
                 MAX_SHARDS), Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             LockStatus status = lockResult.get(5, TimeUnit.SECONDS);
             assertEquals(LockStatus.OK, status);
         });
-        verify(masterClient).lockObject(any(byte[].class), any(KeyHint.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
-        verify(backupClient, never()).lockObject(any(byte[].class), any(KeyHint.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
-        
+        verify(masterClient).lockObject(any(byte[].class), any(KeyHintData.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
+        verify(backupClient, never()).lockObject(any(byte[].class), any(KeyHintData.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
+        client.setMode(Mode.BACKUP);
         CompletableFuture<LockStatus> validateFuture = CompletableFuture.completedFuture(LockStatus.OK);
-        when(backupClient.lockObject(any(byte[].class), any(KeyHint.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class))).thenReturn(validateFuture);
-        
+        when(backupClient.lockObject(any(byte[].class), any(KeyHintData.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class))).thenReturn(validateFuture);
+
         // When
         CompletableFuture<LockStatus> validateResult = client.lockObject(key, keyHint, LockType.GLOBAL, 1, Duration.ofSeconds(
                 MAX_SHARDS), Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             LockStatus status = validateResult.get(5, TimeUnit.SECONDS);
             assertEquals(LockStatus.OK, status);
         });
-        verify(backupClient).lockObject(any(byte[].class), any(KeyHint.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
-        
+        verify(backupClient).lockObject(any(byte[].class), any(KeyHintData.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -577,39 +588,39 @@ public class FastCacheAsyncSmartClientTest {
     void testCreateOnMasterValidateOnBackup_unlockObject() {
         // Given
         byte[] key = "test_key".getBytes();
-        
+
         // Unlock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<LockStatus> unlockFuture = CompletableFuture.completedFuture(LockStatus.OK);
-        when(masterClient.unlockObject(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(unlockFuture);
-        
+        when(masterClient.unlockObject(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(unlockFuture);
+
         // When
         CompletableFuture<LockStatus> unlockResult = client.unlockObject(key, keyHint, 1, Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             LockStatus status = unlockResult.get(5, TimeUnit.SECONDS);
             assertEquals(LockStatus.OK, status);
         });
-        verify(masterClient).unlockObject(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).unlockObject(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        
+        verify(masterClient).unlockObject(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).unlockObject(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
+        client.setMode(Mode.BACKUP);
         CompletableFuture<LockStatus> validateFuture = CompletableFuture.completedFuture(LockStatus.CANT_LOCK);
-        when(backupClient.lockObject(any(byte[].class), any(KeyHint.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class))).thenReturn(validateFuture);
-        
+        when(backupClient.lockObject(any(byte[].class), any(KeyHintData.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class))).thenReturn(validateFuture);
+
         // When
         CompletableFuture<LockStatus> validateResult = client.lockObject(key, keyHint, LockType.GLOBAL, 1, Duration.ofSeconds(
                 MAX_SHARDS), Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             LockStatus status = validateResult.get(5, TimeUnit.SECONDS);
             assertEquals(LockStatus.CANT_LOCK, status);
         });
-        verify(backupClient).lockObject(any(byte[].class), any(KeyHint.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
-        
+        verify(backupClient).lockObject(any(byte[].class), any(KeyHintData.class), any(LockType.class), anyInt(), any(Duration.class), any(Duration.class));
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -619,45 +630,48 @@ public class FastCacheAsyncSmartClientTest {
     }
 
     // --- STREAM OPERATIONS TESTS ---
-    
+
     @Test
     void testCreateOnMasterValidateOnBackup_streamList() {
         // Given
         byte[] key = "test_list".getBytes();
-        List<byte[]> expectedValues = Arrays.asList("item1".getBytes(), "item2".getBytes());
-        
+        List<Payload> expectedValues = Arrays.asList(
+                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("item2".getBytes(StandardCharsets.UTF_8))
+        );
+
         // Create on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
-        CompletableFuture<KeyHint> createFuture = CompletableFuture.completedFuture(keyHint);
-        when(masterClient.createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class))).thenReturn(createFuture);
-        
+        client.setMode(Mode.MASTER);
+        CompletableFuture<KeyHintData> createFuture = CompletableFuture.completedFuture(keyHint);
+        when(masterClient.createList(any(byte[].class), any(KeyHintData.class),anyList(), any(Duration.class), anyInt(), any(Duration.class) )).thenReturn(createFuture);
+
         // When
-        CompletableFuture<KeyHint> createResult = client.createList(key, expectedValues,Duration.ZERO, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<KeyHintData> createResult = client.createList(key,any(KeyHintData.class), expectedValues, Duration.ZERO, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
             assertNotNull(createResult.get(5, TimeUnit.SECONDS));
         });
-        verify(masterClient).createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
+        verify(masterClient).createList(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class) );
+        verify(backupClient, never()).createList(any(byte[].class), any(KeyHintData.class),anyList(), any(Duration.class), anyInt(), any(Duration.class) );
 
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
-        CompletableFuture<List<byte[]>> validateFuture = CompletableFuture.completedFuture(expectedValues);
-        when(backupClient.streamList(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
+        client.setMode(Mode.BACKUP);
+        CompletableFuture<List<Payload>> validateFuture = CompletableFuture.completedFuture(expectedValues);
+        when(backupClient.streamList(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(validateFuture);
 
         // When
-        CompletableFuture<List<byte[]>> validateResult = client.streamList(key, keyHint, 1, Duration.ofSeconds(5));
+        CompletableFuture<List<Payload>> validateResult = client.streamList(key, keyHint, 1, Duration.ofSeconds(5));
 
         // Then
         assertDoesNotThrow(() -> {
-            List<byte[]> result = validateResult.get(5, TimeUnit.SECONDS);
+            List<Payload> result = validateResult.get(5, TimeUnit.SECONDS);
             assertEquals(2, result.size());
-            assertArrayEquals("item1".getBytes(), result.get(0));
-            assertArrayEquals("item2".getBytes(), result.get(1));
+            assertArrayEquals("item1".getBytes(StandardCharsets.UTF_8), result.get(0).getValue());
+            assertArrayEquals("item2".getBytes(StandardCharsets.UTF_8), result.get(1).getValue());
         });
-        verify(backupClient).streamList(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
-        
+        verify(backupClient).streamList(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -670,40 +684,43 @@ public class FastCacheAsyncSmartClientTest {
     void testCreateOnMasterValidateOnBackup_streamVector() {
         // Given
         byte[] key = "test_vector".getBytes();
-        List<byte[]> expectedValues = Arrays.asList("item1".getBytes(), "item2".getBytes());
-        
+        List<Payload> expectedValues = Arrays.asList(
+                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("item2".getBytes(StandardCharsets.UTF_8))
+        );
+
         // Create on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
-        CompletableFuture<KeyHint> createFuture = CompletableFuture.completedFuture(keyHint);
-        when(masterClient.createVector(any(), any(),any(), anyInt(), any())).thenReturn(createFuture);
-        
+        client.setMode(Mode.MASTER);
+        CompletableFuture<KeyHintData> createFuture = CompletableFuture.completedFuture(keyHint);
+        when(masterClient.createVector(any(), any(KeyHintData.class),any(), any(), anyInt(), any())).thenReturn(createFuture);
+
         // When
-        CompletableFuture<KeyHint> createResult = client.createVector(key, expectedValues,Duration.ZERO, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<KeyHintData> createResult = client.createVector(key,any(KeyHintData.class), expectedValues, Duration.ZERO, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
             assertNotNull(createResult.get(5, TimeUnit.SECONDS));
         });
-        verify(masterClient).createVector(any(), any(),any(), anyInt(), any());
-        verify(backupClient, never()).createVector(any(), any(),any(), anyInt(), any());
-        
+        verify(masterClient).createVector(any(),any(KeyHintData.class), any(), any(), anyInt(), any());
+        verify(backupClient, never()).createVector(any(),any(KeyHintData.class), any(), any(), anyInt(), any());
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
-        CompletableFuture<List<byte[]>> validateFuture = CompletableFuture.completedFuture(expectedValues);
+        client.setMode(Mode.BACKUP);
+        CompletableFuture<List<Payload>> validateFuture = CompletableFuture.completedFuture(expectedValues);
         when(backupClient.streamVector(any(), any(), anyInt(), any())).thenReturn(validateFuture);
-        
+
         // When
-        CompletableFuture<List<byte[]>> validateResult = client.streamVector(key, keyHint, 1, Duration.ofSeconds(5));
-        
+        CompletableFuture<List<Payload>> validateResult = client.streamVector(key, keyHint, 1, Duration.ofSeconds(5));
+
         // Then
         assertDoesNotThrow(() -> {
-            List<byte[]> result = validateResult.get(5, TimeUnit.SECONDS);
+            List<Payload> result = validateResult.get(5, TimeUnit.SECONDS);
             assertEquals(2, result.size());
-            assertArrayEquals("item1".getBytes(), result.get(0));
-            assertArrayEquals("item2".getBytes(), result.get(1));
+            assertArrayEquals("item1".getBytes(StandardCharsets.UTF_8), result.get(0).getValue());
+            assertArrayEquals("item2".getBytes(StandardCharsets.UTF_8), result.get(1).getValue());
         });
         verify(backupClient).streamVector(any(), any(), anyInt(), any());
-        
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -716,40 +733,43 @@ public class FastCacheAsyncSmartClientTest {
     void testCreateOnMasterValidateOnBackup_streamElementInRange() {
         // Given
         byte[] key = "test_list".getBytes();
-        List<byte[]> expectedValues = Arrays.asList("item1".getBytes(), "item2".getBytes(), "item3".getBytes());
-        
+        List<Payload> expectedValues = Arrays.asList(
+                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("item2".getBytes(StandardCharsets.UTF_8)),
+                Payload.of("item3".getBytes(StandardCharsets.UTF_8))
+        );
+
         // Create on master
-        //client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
-        CompletableFuture<KeyHint> createFuture = CompletableFuture.completedFuture(keyHint);
-        when(masterClient.createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class))).thenReturn(createFuture);
+        CompletableFuture<KeyHintData> createFuture = CompletableFuture.completedFuture(keyHint);
+        when(masterClient.createList(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class) )).thenReturn(createFuture);
 
         // When
-        CompletableFuture<KeyHint> createResult = client.createList(key, expectedValues,Duration.ZERO, 1, Duration.ofSeconds(5));
+        CompletableFuture<KeyHintData> createResult = client.createList(key,any(KeyHintData.class), expectedValues, Duration.ZERO, 1, Duration.ofSeconds(5) );
 
         // Then
         assertDoesNotThrow(() -> {
             assertNotNull(createResult.get(5, TimeUnit.SECONDS));
         });
-        verify(masterClient).createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
-        verify(backupClient, never()).createList(any(byte[].class), any(List.class), any(Duration.class), anyInt(), any(Duration.class));
+        verify(masterClient).createList(any(byte[].class), any(KeyHintData.class),anyList(), any(Duration.class), anyInt(), any(Duration.class));
+        verify(backupClient, never()).createList(any(byte[].class),any(KeyHintData.class), anyList(), any(Duration.class), anyInt(), any(Duration.class));
 
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
-        CompletableFuture<List<byte[]>> validateFuture = CompletableFuture.completedFuture(expectedValues.subList(1, 2));
-        when(backupClient.streamElementInRange(any(byte[].class), any(KeyHint.class), anyBoolean(), anyInt(), anyInt(), anyInt(), any(Duration.class))).thenReturn(validateFuture);
+        client.setMode(Mode.BACKUP);
+        CompletableFuture<List<Payload>> validateFuture = CompletableFuture.completedFuture(expectedValues.subList(1, 2));
+        when(backupClient.streamElementInRangeUnordered(any(byte[].class), any(KeyHintData.class), any(ContainerType.class), anyInt(), anyInt(), anyInt(), any(Duration.class))).thenReturn(validateFuture);
 
         // When
-        CompletableFuture<List<byte[]>> validateResult = client.streamElementInRange(key, keyHint, false, 1, 1, 1, Duration.ofSeconds(5));
+        CompletableFuture<List<Payload>> validateResult = client.streamElementInRangeUnordered(key, keyHint, any(ContainerType.class), 1, 1, 1, Duration.ofSeconds(5));
 
         // Then
         assertDoesNotThrow(() -> {
-            List<byte[]> result = validateResult.get(5, TimeUnit.SECONDS);
+            List<Payload> result = validateResult.get(5, TimeUnit.SECONDS);
             assertNotNull(result);
             assertEquals(1, result.size());
-            assertArrayEquals("item2".getBytes(), result.get(0));
+            assertArrayEquals("item2".getBytes(StandardCharsets.UTF_8), result.get(0).getValue());
         });
-        verify(backupClient).streamElementInRange(any(byte[].class), any(KeyHint.class), anyBoolean(), anyInt(), anyInt(), anyInt(), any(Duration.class));
-        
+        verify(backupClient).streamElementInRangeUnordered(any(byte[].class), any(KeyHintData.class), any(ContainerType.class), anyInt(), anyInt(), anyInt(), any(Duration.class));
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -761,9 +781,9 @@ public class FastCacheAsyncSmartClientTest {
     @Test
     void testExecuteWithNullHint() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), null, 1, Duration.ofSeconds(5));
@@ -773,15 +793,15 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     // --- ERROR SCENARIOS TESTS ---
-    
+
     @Test
     void testExecuteWithTimeout() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<byte[]> timeoutFuture = new CompletableFuture<>();
         when(masterClient.getValue(any(), any(), anyInt(), any())).thenReturn(timeoutFuture);
 
@@ -804,7 +824,7 @@ public class FastCacheAsyncSmartClientTest {
     @Test
     void testExecuteWithNodeFailure() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<byte[]> failureFuture = new CompletableFuture<>();
         when(masterClient.getValue(any(), any(), anyInt(), any())).thenReturn(failureFuture);
 
@@ -827,20 +847,20 @@ public class FastCacheAsyncSmartClientTest {
     @Test
     void testExecuteWithRerouting() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<byte[]> rerouteFuture = new CompletableFuture<>();
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        
+
         when(masterClient.getValue(any(), any(), anyInt(), any())).thenReturn(rerouteFuture);
         when(rerouteClient.getValue(any(), any(), anyInt(), any())).thenReturn(successFuture);
 
         // Create metadata with reroute target
         Metadata trailers = new Metadata();
         trailers.put(Metadata.Key.of("x-fastcache-route", Metadata.ASCII_STRING_MARSHALLER), "reroute_target");
-        
+
         // Simulate reroute
         rerouteFuture.completeExceptionally(new CompletionException(
-            new StatusRuntimeException(Status.FAILED_PRECONDITION, trailers)));
+                new StatusRuntimeException(Status.FAILED_PRECONDITION, trailers)));
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), keyHint, 1, Duration.ofSeconds(5));
@@ -858,10 +878,10 @@ public class FastCacheAsyncSmartClientTest {
     @Test
     void testExecuteWithCorrectNodeForwarding() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.MASTER_THAN_BACKUP);
         CompletableFuture<byte[]> masterFuture = new CompletableFuture<>();
         CompletableFuture<byte[]> backupFuture = CompletableFuture.completedFuture("success".getBytes());
-        
+
         when(masterClient.getValue(any(), any(), anyInt(), any())).thenReturn(masterFuture);
         when(backupClient.getValue(any(), any(), anyInt(), any())).thenReturn(backupFuture);
 
@@ -883,9 +903,9 @@ public class FastCacheAsyncSmartClientTest {
     @Test
     void testExecuteWithRerouteInHandle() {
         // Given
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<byte[]> successFuture = CompletableFuture.completedFuture("success".getBytes());
-        when(masterClient.getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
+        when(masterClient.getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class))).thenReturn(successFuture);
 
         // When
         CompletableFuture<byte[]> result = client.getValue("test_key".getBytes(), keyHint, 1, Duration.ofSeconds(5));
@@ -895,7 +915,7 @@ public class FastCacheAsyncSmartClientTest {
             byte[] value = result.get(5, TimeUnit.SECONDS);
             assertArrayEquals("success".getBytes(), value);
         });
-        verify(masterClient).getValue(any(byte[].class), any(KeyHint.class), anyInt(), any(Duration.class));
+        verify(masterClient).getValue(any(byte[].class), any(KeyHintData.class), anyInt(), any(Duration.class));
     }
 
     @Test
@@ -925,7 +945,6 @@ public class FastCacheAsyncSmartClientTest {
         verify(masterClient).getValue(any(), any(), anyInt(), any());
         verify(rerouteClient).getValue(any(), any(), anyInt(), any());
     }
-
 
     @Test
     void testExecuteShouldRerouteWhenMasterReturnsFailedPrecondition() throws Exception {
@@ -964,41 +983,41 @@ public class FastCacheAsyncSmartClientTest {
     }
 
     // --- CREATE-ON-MASTER / VALIDATE-ON-BACKUP TESTS ---
-    
+
     @Test
     void testCreateOnMasterValidateOnBackup_setTtl() {
         // Given
         byte[] key = "test_key".getBytes();
-        
+
         // Create on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<Boolean> createFuture = CompletableFuture.completedFuture(true);
         when(masterClient.setTtl(any(), any(), anyLong(), anyInt(), any())).thenReturn(createFuture);
-        
+
         // When
         CompletableFuture<Boolean> createResult = client.setTtl(key, keyHint, 1000L, 1, Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             assertTrue(createResult.get(5, TimeUnit.SECONDS));
         });
         verify(masterClient).setTtl(any(), any(), anyLong(), anyInt(), any());
         verify(backupClient, never()).setTtl(any(), any(), anyLong(), anyInt(), any());
-        
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
+        client.setMode(Mode.BACKUP);
         CompletableFuture<Long> validateFuture = CompletableFuture.completedFuture(1000L);
         when(backupClient.getTtl(any(), any(), anyInt(), any())).thenReturn(validateFuture);
-        
+
         // When
         CompletableFuture<Long> validateResult = client.getTtl(key, keyHint, 1, Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             assertEquals(1000L, (long) validateResult.get(5, TimeUnit.SECONDS));
         });
         verify(backupClient).getTtl(any(), any(), anyInt(), any());
-        
+
         // Add delay for replication
         try {
             Thread.sleep(150);
@@ -1011,36 +1030,36 @@ public class FastCacheAsyncSmartClientTest {
     void testCreateOnMasterValidateOnBackup_getTtl() {
         // Given
         byte[] key = "test_key".getBytes();
-        
+
         // Create on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER);
+        client.setMode(Mode.MASTER);
         CompletableFuture<Boolean> createFuture = CompletableFuture.completedFuture(true);
         when(masterClient.setTtl(any(), any(), anyLong(), anyInt(), any())).thenReturn(createFuture);
-        
+
         // When
         CompletableFuture<Boolean> createResult = client.setTtl(key, keyHint, 1000L, 1, Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             assertTrue(createResult.get(5, TimeUnit.SECONDS));
         });
         verify(masterClient).setTtl(any(), any(), anyLong(), anyInt(), any());
         verify(backupClient, never()).setTtl(any(), any(), anyLong(), anyInt(), any());
-        
+
         // Validate on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP);
+        client.setMode(Mode.BACKUP);
         CompletableFuture<Long> validateFuture = CompletableFuture.completedFuture(1000L);
         when(backupClient.getTtl(any(), any(), anyInt(), any())).thenReturn(validateFuture);
-        
+
         // When
         CompletableFuture<Long> validateResult = client.getTtl(key, keyHint, 1, Duration.ofSeconds(5));
-        
+
         // Then
         assertDoesNotThrow(() -> {
             assertEquals(1000L, (long) validateResult.get(5, TimeUnit.SECONDS));
         });
         verify(backupClient).getTtl(any(), any(), anyInt(), any());
-        
+
         // Add delay for replication
         try {
             Thread.sleep(150);

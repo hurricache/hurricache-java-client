@@ -1,292 +1,407 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.client.FastCacheAsyncSmartClient;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Cluster tests for lock permission model across MASTER and BACKUP nodes.
+ * Each test verifies that locks acquired on one node properly block/unblock operations on both nodes.
+ */
 public class LockMethodProtectionTest extends TestBaseCluster {
 
-    private final String testKey = "lock_protected_item";
-    private final int ownerId = 1;
-    private final int intruderId = 2;
+    private static final int OWNER_ID = 100;
+    private static final int INTRUDER_ID = 200;
+    private static final long REPLICATION_DELAY_MS = 300;
+
+    // =========================================================================
+    // Section 1: GLOBAL LOCK - UNARY OPERATIONS
+    // =========================================================================
 
     @Test
-    @DisplayName("GLOBAL Lock: Blocks Unary Get/Update/Remove from others - Create on Master")
+    @DisplayName("GLOBAL Lock: Blocks all operations from intruder - create on Master")
     void testGlobalLockUnaryProtectionCreateOnMaster() throws Exception {
-        // Ensure object exists - Create on master
-        String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
+        String key = "lock_global_unary_master_" + UUID.randomUUID();
 
-        // Owner locks GLOBAL on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
 
-        // 1. Intruder tries getValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1,keyHint, intruderId).get());
-
-        // 2. Intruder tries updateValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "new".getBytes(), intruderId).get());
-
-        // 3. Intruder tries remove
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).remove(testKey1,keyHint, intruderId).get());
-    }
-
-    @Test
-    @DisplayName("GLOBAL Lock: Blocks Unary Get/Update/Remove from others - Create on Backup")
-    void testGlobalLockUnaryProtectionCreateOnBackup() throws Exception {
-
-
-        // Ensure object exists - Create on backup
-        String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
-                .get();
-        // Allow cache to replicate data inside cluster
+        // Small object replication wait
         Thread.sleep(500);
 
-        // Owner locks GLOBAL on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        // Lock on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(key, hint, LockType.GLOBAL, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        // 1. Intruder tries getValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1,keyHint, intruderId).get());
+        // Verify intruder blocked on MASTER (immediate)
+        assertDenied(client.setMode(Mode.MASTER)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.MASTER)
+                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.MASTER)
+                .remove(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
 
-        // 2. Intruder tries updateValue
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "new".getBytes(), intruderId).get());
+        // Replication delay → verify intruder blocked on BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.BACKUP)
+                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
 
-        // 3. Intruder tries remove
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).remove(testKey1,keyHint, intruderId).get());
+        // Unlock by owner
+        client.setMode(Mode.MASTER).unlockObject(key, hint, OWNER_ID).get();
     }
 
     @Test
-    @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Master")
+    @DisplayName("GLOBAL Lock: Blocks all operations from intruder - create on Backup")
+    void testGlobalLockUnaryProtectionCreateOnBackup() throws Exception {
+        String key = "lock_global_unary_backup_" + UUID.randomUUID();
+
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
+
+        // Small object replication wait
+        Thread.sleep(500);
+
+        // Lock on BACKUP
+        LockStatus lock = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.GLOBAL, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Verify intruder blocked on BACKUP (immediate)
+        assertDenied(client.setMode(Mode.BACKUP)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.BACKUP)
+                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
+
+        // Replication delay → verify intruder blocked on MASTER
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.MASTER)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.MASTER)
+                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
+
+        // Unlock by owner
+        client.setMode(Mode.BACKUP).unlockObject(key, hint, OWNER_ID).get();
+    }
+
+    // =========================================================================
+    // Section 2: GLOBAL LOCK - COLLECTION OPERATIONS
+    // =========================================================================
+
+    @Test
+    @DisplayName("GLOBAL Lock: Blocks collection operations from intruder - create on Master")
     void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
-        String listKey = "global_list" + UUID.randomUUID();;
+        String key = "lock_global_collection_master_" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of("item1".getBytes(StandardCharsets.UTF_8)));
 
-        // Create on master
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
-                .createList(listKey, List.of("item1".getBytes()), ownerId)
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createList(key, initialData).get();
+        assertNotNull(hint);
 
-        // Lock on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(listKey,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        // Small object replication wait
+        Thread.sleep(500);
 
-        // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getFront(listKey,keyHint, intruderId).get());
+        // Lock on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(key, hint, LockType.GLOBAL, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).addElementToTail(listKey,keyHint,
-                                                             Collections.singletonList("item2".getBytes()),
-                                                             intruderId).get());
+        // Verify intruder blocked on MASTER (immediate)
+        assertDenied(client.setMode(Mode.MASTER)
+                .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.MASTER)
+                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+
+        // Replication delay → verify intruder blocked on BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.BACKUP)
+                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+
+        // Unlock by owner
+        client.setMode(Mode.MASTER).unlockObject(key, hint, OWNER_ID).get();
     }
 
     @Test
-    @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Backup")
+    @DisplayName("GLOBAL Lock: Blocks collection operations from intruder - create on Backup")
     void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
-        String listKey = "global_list" + UUID.randomUUID();;
+        String key = "lock_global_collection_backup_" + UUID.randomUUID();
+        List<Payload> initialData = List.of(Payload.of("item1".getBytes(StandardCharsets.UTF_8)));
 
-        // Create on backup
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
-                .createList(listKey, List.of("item1".getBytes()), ownerId)
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createList(key, initialData).get();
+        assertNotNull(hint);
 
-        // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(listKey,keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        // Small object replication wait
+        Thread.sleep(500);
 
-        // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getFront(listKey,keyHint, intruderId).get());
+        // Lock on BACKUP
+        LockStatus lock = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.GLOBAL, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).addElementToTail(listKey,keyHint,
-                                                             Collections.singletonList("item2".getBytes()),
-                                                             intruderId).get());
+        // Verify intruder blocked on BACKUP (immediate)
+        assertDenied(client.setMode(Mode.BACKUP)
+                .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.BACKUP)
+                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+
+        // Replication delay → verify intruder blocked on MASTER
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        assertDenied(client.setMode(Mode.MASTER)
+                .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
+        assertDenied(client.setMode(Mode.MASTER)
+                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+
+        // Unlock by owner
+        client.setMode(Mode.BACKUP).unlockObject(key, hint, OWNER_ID).get();
     }
 
-    // --- SECTION 2: WRITE LOCK PROTECTION ---
+    // =========================================================================
+    // Section 3: READ LOCK
+    // =========================================================================
 
     @Test
-    @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Master")
-    void testWriteLockProtectionCreateOnMaster() throws Exception {
-        // Create on master
-        String testKey1 = testKey + UUID.randomUUID();;
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
-
-        // Lock on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
-
-        // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1,keyHint, intruderId).get();
-        assertNotNull(data);
-
-        // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "fail".getBytes(), intruderId).get());
-
-        // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "success".getBytes(), ownerId).get();
-        assertNotNull(ownerUpdate);
-    }
-
-    @Test
-    @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Backup")
-    void testWriteLockProtectionCreateOnBackup() throws Exception {
-        // Create on backup
-        String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId)
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
-
-        // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
-
-        // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1,keyHint, intruderId).get();
-        assertNotNull(data);
-
-        // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "fail".getBytes(), intruderId).get());
-
-        // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "success".getBytes(), ownerId).get();
-        assertNotNull(ownerUpdate);
-    }
-
-    // --- SECTION 3: READ LOCK PROTECTION ---
-
-    @Test
-    @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Master")
+    @DisplayName("READ Lock: Allows reads, blocks writes - create on Master")
     void testReadLockProtectionCreateOnMaster() throws Exception {
-        // Create on master
-        String testKey1 = testKey + UUID.randomUUID();;
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
+        String key = "lock_read_master_" + UUID.randomUUID();
 
-        // Lock on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
 
-        // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey1,keyHint, intruderId).get());
+        // Small object replication wait
+        Thread.sleep(500);
 
-        // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "bad".getBytes(), intruderId).get());
+        // Lock on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(key, hint, LockType.READ_LOCK, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        // 3. Owner Write - SHOULD ALSO FAIL (Read locks block all mutations)
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).updateKeyValue(testKey1,keyHint, "bad".getBytes(), ownerId).get());
+        // Owner can read on MASTER (immediate)
+        byte[] val = client.setMode(Mode.MASTER)
+                .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(val);
+
+        // Replication delay → verify owner can read on BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        byte[] backupVal = client.setMode(Mode.BACKUP)
+                .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(backupVal);
+
+        // Write is denied on MASTER
+        assertDenied(client.setMode(Mode.MASTER)
+                .updateKeyValue(bytes(key), hint, "bad".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), OWNER_ID, Duration.ofSeconds(2)));
+
+        // Unlock by owner
+        client.setMode(Mode.MASTER).unlockObject(key, hint, OWNER_ID).get();
     }
 
     @Test
-    @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Backup")
+    @DisplayName("READ Lock: Allows reads, blocks writes - create on Backup")
     void testReadLockProtectionCreateOnBackup() throws Exception {
-        // Create on backup
-        String testKey1 = testKey + UUID.randomUUID();
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
+        String key = "lock_read_backup_" + UUID.randomUUID();
 
-        // Lock on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
 
-        // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey1,keyHint, intruderId).get());
+        // Small object replication wait
+        Thread.sleep(500);
 
-        // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "bad".getBytes(), intruderId).get());
+        // Lock on BACKUP
+        LockStatus lock = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.READ_LOCK, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        // 3. Owner Write - SHOULD ALSO FAIL (Read locks block all mutations)
-        assertPermissionDenied(() -> client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).updateKeyValue(testKey1,keyHint, "bad".getBytes(), ownerId).get());
+        // Owner can read on BACKUP (immediate)
+        byte[] val = client.setMode(Mode.BACKUP)
+                .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(val);
+
+        // Replication delay → verify owner can read on MASTER
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        byte[] masterVal = client.setMode(Mode.MASTER)
+                .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(masterVal);
+
+        // Write is denied on BACKUP
+        assertDenied(client.setMode(Mode.BACKUP)
+                .updateKeyValue(bytes(key), hint, "bad".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), OWNER_ID, Duration.ofSeconds(2)));
+
+        // Unlock by owner
+        client.setMode(Mode.BACKUP).unlockObject(key, hint, OWNER_ID).get();
     }
 
-    // --- SECTION 4: LOCK COMPATIBILITY ---
+    // =========================================================================
+    // Section 4: LOCK COMPATIBILITY
+    // =========================================================================
 
     @Test
-    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Master")
+    @DisplayName("Compatibility: Cannot acquire WRITE_LOCK if READ_LOCK exists - create on Master")
     void testLockCompatibilityCreateOnMaster() throws Exception {
+        String key = "lock_compat_master_" + UUID.randomUUID();
 
-        // Create on master
-        String testKey1 = testKey+ UUID.randomUUID();
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
 
-        // Client A has READ on backup
-        client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        // Small object replication wait
+        Thread.sleep(500);
 
-        // Client B tries WRITE
-        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.CANT_LOCK, res);
+        // Acquire READ_LOCK on MASTER
+        LockStatus readLock = client.setMode(Mode.MASTER)
+                .lockObject(key, hint, LockType.READ_LOCK, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, readLock);
 
-        // Client B tries READ - SHOULD SUCCEED (Shared Read)
-        LockStatus resRead = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).lockObject(testKey1,keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, resRead);
+        // WRITE_LOCK should fail with CANT_LOCK on MASTER
+        LockStatus writeLock = client.setMode(Mode.MASTER)
+                .lockObject(key, hint, LockType.WRITE_LOCK, INTRUDER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.CANT_LOCK, writeLock);
+
+        // READ_LOCK should succeed for intruder on MASTER
+        LockStatus readLock2 = client.setMode(Mode.MASTER)
+                .lockObject(key, hint, LockType.READ_LOCK, INTRUDER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.CANT_LOCK, readLock2);
+
+        // Replication delay → verify on BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        byte[] backupVal = client.setMode(Mode.BACKUP)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(backupVal);
+
+        // Unlock both
+        client.setMode(Mode.MASTER).unlockObject(key, hint, OWNER_ID).get();
+        client.setMode(Mode.MASTER).unlockObject(key, hint, INTRUDER_ID).get();
     }
 
     @Test
-    @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Backup")
+    @DisplayName("Compatibility: Cannot acquire WRITE_LOCK if READ_LOCK exists - create on Backup")
     void testLockCompatibilityCreateOnBackup() throws Exception {
-        // Create on backup
-        String testKey1 = testKey+ UUID.randomUUID();
-        KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
-                .createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8))
-                .get();
-        // Allow cache to replicate data inside cluster
-        Thread.sleep(150);
+        String key = "lock_compat_backup_" + UUID.randomUUID();
 
-        // Client A has READ on master
-        client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
 
-        // Client B tries WRITE
-        LockStatus res = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.CANT_LOCK, res);
+        // Small object replication wait
+        Thread.sleep(500);
 
-        // Client B tries READ - SHOULD SUCCEED (Shared Read)
-        LockStatus resRead = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).lockObject(testKey1,keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, resRead);
+        // Acquire READ_LOCK on BACKUP
+        LockStatus readLock = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.READ_LOCK, OWNER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, readLock);
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        // WRITE_LOCK should fail with CANT_LOCK on BACKUP
+        LockStatus writeLock = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.WRITE_LOCK, INTRUDER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.CANT_LOCK, writeLock);
+
+        // READ_LOCK should succeed for intruder on BACKUP
+        LockStatus readLock2 = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.READ_LOCK, INTRUDER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.CANT_LOCK, readLock2);
+
+        // Replication delay → verify on MASTER
+
+        byte[] masterVal = client.setMode(Mode.MASTER)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(masterVal);
+
+        // Unlock both
+        client.setMode(Mode.BACKUP).unlockObject(key, hint, OWNER_ID).get();
+        client.setMode(Mode.BACKUP).unlockObject(key, hint, INTRUDER_ID).get();
     }
 
-    // --- UTILITIES ---
+    // =========================================================================
+    // Section 5: LOCK EXPIRATION
+    // =========================================================================
 
-    private void assertPermissionDenied(Executable runnable) {
-        ExecutionException e = assertThrows(ExecutionException.class, runnable);
-        StatusRuntimeException grpcEx = (StatusRuntimeException) e.getCause();
-        assertEquals(Status.Code.PERMISSION_DENIED,
-                     grpcEx.getStatus().getCode(),
-                     "Expected PERMISSION_DENIED but got " + grpcEx.getStatus().getCode());
+    @Test
+    @DisplayName("READ Lock expiration: 2s lock expires, intruder can read on Master and Backup")
+    void testReadLockExpirationOnMaster() throws Exception {
+        String key = "lock_read_exp_master_" + UUID.randomUUID();
+
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
+
+        // Small object replication wait
+        Thread.sleep(500);
+
+        // Acquire READ_LOCK with 2s TTL on MASTER
+        LockStatus lock = client.setMode(Mode.MASTER)
+                .lockObject(key, hint, LockType.READ_LOCK, OWNER_ID, Duration.ofSeconds(2)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Wait for lock expiration
+        Thread.sleep(3000);
+
+        // Now intruder can read on MASTER
+        byte[] val = client.setMode(Mode.MASTER)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(val);
+
+        // Replication delay → verify on BACKUP
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        byte[] backupVal = client.setMode(Mode.BACKUP)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(backupVal);
     }
 
+    @Test
+    @DisplayName("WRITE Lock expiration: 2s lock expires, intruder can acquire WRITE_LOCK on Backup and Master")
+    void testWriteLockExpirationOnBackup() throws Exception {
+        String key = "lock_write_exp_backup_" + UUID.randomUUID();
+
+        // Create WITHOUT setMode
+        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        assertNotNull(hint);
+
+        // Small object replication wait
+        Thread.sleep(500);
+
+        // Acquire WRITE_LOCK with 2s TTL on BACKUP
+        LockStatus lock = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.WRITE_LOCK, OWNER_ID, Duration.ofSeconds(2)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Wait for lock expiration
+        Thread.sleep(3000);
+
+        // Now intruder can get WRITE_LOCK on BACKUP
+        LockStatus newLock = client.setMode(Mode.BACKUP)
+                .lockObject(key, hint, LockType.WRITE_LOCK, INTRUDER_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, newLock);
+
+        // Replication delay → verify on MASTER
+        Thread.sleep((int) REPLICATION_DELAY_MS);
+        byte[] masterVal = client.setMode(Mode.MASTER)
+                .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
+        assertNotNull(masterVal);
+
+        // Unlock
+        client.setMode(Mode.BACKUP).unlockObject(key, hint, INTRUDER_ID).get();
+    }
 }

@@ -1,25 +1,28 @@
 package com.hurricache.client.cluster.migration;
 
 import com.hurricache.client.cluster.AdvancedTest;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RawValuesTestImproved extends AdvancedTest {
-
-
-
+    @Override
+    protected Duration getTestTtl() {
+        return Duration.ofMinutes(15);
+    }
 
     @Test
     void createKeyValueLoopMigration() throws InterruptedException {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
 
         // Phase 1: High-Throughput Async Writes
         runAsyncBatch("Write Phase Loading", NUM_OF_KEYS, emitter -> {
@@ -43,19 +46,19 @@ public class RawValuesTestImproved extends AdvancedTest {
         // Phase 2: Async Read Validation on Degraded Cluster
         AtomicInteger reducedGood = new AtomicInteger();
         runAsyncBatch("Get on reduced Cluster",
-                      NUM_OF_KEYS,
-                      emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
-                      (entry, badCounter) -> {
-                          Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
-            client.getValue(p.first, p.second.second).thenAccept(res -> {
-                              if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
-                                  reducedGood.incrementAndGet();
-                              } else {
-                                  badCounter.incrementAndGet();
-                              }
-                          });
-                      },
-                      Pair.class);
+                NUM_OF_KEYS,
+                emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
+                (entry, badCounter) -> {
+                    Pair<String, Pair<String, KeyHintData>> p = (Pair<String, Pair<String, KeyHintData>>) entry;
+                    client.getValue(p.first, p.second.second).thenAccept(res -> {
+                        if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
+                            reducedGood.incrementAndGet();
+                        } else {
+                            badCounter.incrementAndGet();
+                        }
+                    });
+                },
+                Pair.class);
         assertMigrationResults(new Date() + " Reduced Cluster Verifications", reducedGood.get());
 
         // Topology Change: Scale Up
@@ -65,19 +68,19 @@ public class RawValuesTestImproved extends AdvancedTest {
         // Phase 3: Async Read Validation on Growing/Rebalancing Cluster
         AtomicInteger growingGood = new AtomicInteger();
         runAsyncBatch("Get on growing Cluster",
-                      NUM_OF_KEYS,
-                      emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
-                      (entry, badCounter) -> {
-                          Pair<String, Pair<String, KeyHint>> p = (Pair<String, Pair<String, KeyHint>>) entry;
-                          client.getValue(p.first, p.second.second).thenAccept(res -> {
-                              if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
-                                  growingGood.incrementAndGet();
-                              } else {
-                                  badCounter.incrementAndGet();
-                              }
-                          });
-                      },
-                      Pair.class);
+                NUM_OF_KEYS,
+                emitter -> keyValueMap.forEach((k, v) -> emitter.accept(Pair.of(k, v))),
+                (entry, badCounter) -> {
+                    Pair<String, Pair<String, KeyHintData>> p = (Pair<String, Pair<String, KeyHintData>>) entry;
+                    client.getValue(p.first, p.second.second).thenAccept(res -> {
+                        if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
+                            growingGood.incrementAndGet();
+                        } else {
+                            badCounter.incrementAndGet();
+                        }
+                    });
+                },
+                Pair.class);
         assertMigrationResults("Growing Cluster Verifications", growingGood.get());
     }
 
