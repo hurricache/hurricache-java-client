@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class RoutingObserver extends CompletableFutureObserver<RoutingInfoData,List<PeerRouting>> {
+public class RoutingObserver extends CompletableFutureObserver<RoutingInfoData, List<PeerRouting>> {
 
     private int maxShards;
 
@@ -18,7 +18,7 @@ public class RoutingObserver extends CompletableFutureObserver<RoutingInfoData,L
 
     @Override
     public void onNext(RoutingInfoData value) {
-        maxShards = Math.max(maxShards,value.getMaxShards());
+        maxShards = Math.max(maxShards, value.getMaxShards());
         this.value.addAll(function.apply(value));
     }
 

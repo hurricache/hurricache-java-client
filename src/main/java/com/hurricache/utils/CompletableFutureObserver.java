@@ -1,20 +1,23 @@
 package com.hurricache.utils;
 
 import io.grpc.stub.StreamObserver;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-public class CompletableFutureObserver<T,VAL> implements StreamObserver<T> {
+public class CompletableFutureObserver<T, VAL> implements StreamObserver<T> {
     protected final CompletableFuture<VAL> future;
     protected final Function<T, VAL> function;
     protected VAL value;
 
 
-    public CompletableFutureObserver(CompletableFuture<VAL> future){
-        this(future,t -> (VAL)t);
+    public CompletableFutureObserver(CompletableFuture<VAL> future) {
+        this(future, t -> (VAL) t);
     }
-    public CompletableFutureObserver(CompletableFuture<VAL> future, Function<T,VAL> function) {
+
+    public CompletableFutureObserver(CompletableFuture<VAL> future, Function<T, VAL> function) {
         this.future = future;
         this.function = function;
     }
@@ -24,7 +27,7 @@ public class CompletableFutureObserver<T,VAL> implements StreamObserver<T> {
         this.value = function.apply(value);
     }
 
-        @Override
+    @Override
     public void onError(Throwable t) {
         future.completeExceptionally(t);
     }
@@ -33,4 +36,5 @@ public class CompletableFutureObserver<T,VAL> implements StreamObserver<T> {
     public void onCompleted() {
         future.complete(value);
     }
+
 }

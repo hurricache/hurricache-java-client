@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.migration;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ public class RawValuesTest extends TestBaseCluster {
 
     @Test
     void createKeyValueLoopMigration() throws ExecutionException, InterruptedException {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
         {
             CountDownLatch latch = new CountDownLatch(NUM_OF_KEYS);
             AtomicInteger count = new AtomicInteger();
@@ -110,12 +111,12 @@ public class RawValuesTest extends TestBaseCluster {
 
     @Test
     void createKeyValueLoopLeakTest() throws ExecutionException, InterruptedException {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
 
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHint keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -139,12 +140,12 @@ public class RawValuesTest extends TestBaseCluster {
 
     @Test
     void createDeleteKeyValueLoopLeakTest() throws ExecutionException, InterruptedException {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
 
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHint keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -167,12 +168,12 @@ public class RawValuesTest extends TestBaseCluster {
 
     @Test
     void createUpdateKeyValueLoopLeakTest() throws ExecutionException, InterruptedException {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
 
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHint keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -213,12 +214,12 @@ public class RawValuesTest extends TestBaseCluster {
 
     @Test
     void createTTLKeyValueLoopLeakTest() throws ExecutionException, InterruptedException {
-        ConcurrentHashMap<String, Pair<String, KeyHint>> keyValueMap = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = new ConcurrentHashMap<>();
 
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHint keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
             client.setTtl(client.serializeKey(key), keyHint, TTL).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }

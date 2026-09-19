@@ -1,6 +1,7 @@
 package com.hurricache.replication;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -28,7 +29,7 @@ public class RawValuesReplicationTest {
     void singleCreateValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey";
         String testValue = "singleCreateValueValue";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         byte[] bytes1 = client.getValue(testKey, KeyHint).get();
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
@@ -48,7 +49,7 @@ public class RawValuesReplicationTest {
     void singleCreateExistValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue";
         String testValue = "singleCreateExistValue123";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Boolean isExist = client.existKey(testKey).get();
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
@@ -65,7 +66,7 @@ public class RawValuesReplicationTest {
     void singleCreateExistHintValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistHintValue";
         String testValue = "singleCreateExistHintValue123";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Boolean isExist = client.existKey(testKey, KeyHint).get();
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));
@@ -80,7 +81,7 @@ public class RawValuesReplicationTest {
     void singleCreateGetAndDeleteValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateGetAndDeleteValue";
         String testValue = "singleCreateGetAndDeleteValue";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getAndDeleteValue(testKey).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
@@ -134,7 +135,7 @@ public class RawValuesReplicationTest {
         String testKey = "singleCreateUpdateValue";
         String testValue = "singleCreateUpdateValueValue";
         String testValueUpdate = "singleCreateUpdateValueValue123";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
@@ -150,7 +151,7 @@ public class RawValuesReplicationTest {
         String testKey = "singleCreateUpdateKeyHintValue";
         String testValue = "singleCreateUpdateKeyHintValue123";
         String testValueUpdate = "singleCreateUpdateKeyHintValue56543";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
