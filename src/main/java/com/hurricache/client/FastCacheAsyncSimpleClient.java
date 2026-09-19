@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
@@ -72,6 +73,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                       int defaultCompressionThreshold) {
         this.channel = NettyChannelBuilder.forAddress(host, port).flowControlWindow(4*1024*1024)
                 .usePlaintext()
+                .executor(Executors.newWorkStealingPool())
                 .build();
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
         this.defaultClientId = defaultClientId;
