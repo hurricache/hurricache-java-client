@@ -608,39 +608,39 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void testReadLockOnAtomic() throws ExecutionException, InterruptedException {
         String testKey = "readLockAtomic" + UUID.randomUUID();
 
-        client.atomicCreate(bytes(testKey), 42L).get();
+        KeyHintData keyHint = client.atomicCreate(bytes(testKey), 42L).get();
 
         Thread.sleep(150);
 
         LockStatus lock1 = client
-                .lockObject(testKey, LockType.READ_LOCK, Duration.ofSeconds(30))
+                .lockObject(testKey,keyHint, LockType.READ_LOCK,OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertEquals(LockStatus.OK, lock1);
 
         LockStatus lock2 = client
-                .lockObject(testKey, LockType.READ_LOCK, Duration.ofSeconds(30))
+                .lockObject(testKey,keyHint, LockType.READ_LOCK,OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertEquals(LockStatus.OK, lock2);
 
         // Both can read
         long val1 = client
-                .atomicLoad(testKey)
+                .atomicLoad(testKey,keyHint)
                 .get();
         assertEquals(42L, val1);
 
         long val2 = client
-                .atomicLoad(testKey)
+                .atomicLoad(testKey,keyHint)
                 .get();
         assertEquals(42L, val2);
 
         // Verify on backup
         long valBackup = client
-                .atomicLoad(testKey)
+                .atomicLoad(testKey,keyHint)
                 .get();
         assertEquals(42L, valBackup);
 
-        client.unlockObject(testKey).get();
-        client.unlockObject(testKey).get();
+        client.unlockObject(testKey,keyHint,OWNER_CLIENT_ID).get();
+        client.unlockObject(testKey,keyHint,OWNER_CLIENT_ID).get();
     }
 
     @Test
