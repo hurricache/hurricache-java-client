@@ -68,9 +68,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testCreateQueueWithInitialData() throws ExecutionException, InterruptedException {
         String key = "queueWithData" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -81,7 +81,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: getAndRemoveFront returns k1
         Payload masterFront = client.setMode(Mode.MASTER)
-                .getAndRemoveFront(bytes(key), keyHint)
+                .getAndDeleteHead(bytes(key), keyHint)
                 .get();
         assertNotNull(masterFront);
         assertEquals("k1", new String(masterFront.bytesValue(), StandardCharsets.UTF_8));
@@ -103,7 +103,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         List<Payload> payloads = new java.util.ArrayList<>();
         for (int i = 0; i < elementCount; i++) {
-            payloads.add(Payload.of(bytes("elem_" + i)));
+            payloads.add(Variant.ofBytes(bytes("elem_" + i)));
         }
 
         // Create large queue
@@ -190,14 +190,14 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: getAndRemoveFront returns empty
         Payload masterFront = client.setMode(Mode.MASTER)
-                .getAndRemoveFront(bytes(key), keyHint)
+                .getAndDeleteHead(bytes(key), keyHint)
                 .get();
         assertNotNull(masterFront);
         assertEquals(0, masterFront.bytesValue().length);
 
         // Verify on BACKUP: getAndRemoveFront returns empty
         Payload backupFront = client.setMode(Mode.BACKUP)
-                .getAndRemoveFront(bytes(key), keyHint)
+                .getAndDeleteHead(bytes(key), keyHint)
                 .get();
         assertNotNull(backupFront);
         assertEquals(0, backupFront.bytesValue().length);
@@ -211,7 +211,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("addElementToTail on master, verify replication to backup")
     void testAddElementToTailOnMaster() throws ExecutionException, InterruptedException {
         String key = "addTailMaster" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -232,8 +232,8 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // addElementToTail on MASTER
         List<Payload> newElements = List.of(
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
         client.setMode(Mode.MASTER)
                 .addElementToTail(bytes(key), keyHint, newElements)
@@ -257,7 +257,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("addElementToTail on backup, verify replication to master")
     void testAddElementToTailOnBackup() throws ExecutionException, InterruptedException {
         String key = "addTailBackup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -278,8 +278,8 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // addElementToTail on BACKUP
         List<Payload> newElements = List.of(
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
         client.setMode(Mode.BACKUP)
                 .addElementToTail(bytes(key), keyHint, newElements)
@@ -308,9 +308,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetAndRemoveFrontOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeFrontMaster" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -332,7 +332,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveFront on MASTER
         Payload removed = client.setMode(Mode.MASTER)
-                .getAndRemoveFront(bytes(key), keyHint)
+                .getAndDeleteHead(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("k1", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -356,9 +356,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetAndRemoveFrontOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeFrontBackup" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -380,7 +380,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveFront on BACKUP
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveFront(bytes(key), keyHint)
+                .getAndDeleteHead(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("k1", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -408,9 +408,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetAndRemoveTailOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeTailMaster" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -432,7 +432,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveTail on MASTER
         Payload removed = client.setMode(Mode.MASTER)
-                .getAndRemoveTail(bytes(key), keyHint)
+                .getAndDeleteTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("k3", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -457,9 +457,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetAndRemoveTailOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeTailBackup" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -481,7 +481,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveTail on BACKUP
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveTail(bytes(key), keyHint)
+                .getAndDeleteTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("k3", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -510,9 +510,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testRemoveHeadOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeHeadMaster" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -534,7 +534,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // removeHead on MASTER
         client.setMode(Mode.MASTER)
-                .removeHead(bytes(key), keyHint)
+                .deleteHead(bytes(key), keyHint)
                 .get();
 
         // Verify on MASTER: getHead returns k2
@@ -556,9 +556,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testRemoveHeadOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeHeadBackup" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -580,7 +580,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // removeHead on BACKUP
         client.setMode(Mode.BACKUP)
-                .removeHead(bytes(key), keyHint)
+                .deleteHead(bytes(key), keyHint)
                 .get();
 
         // Verify on BACKUP: getHead returns k2
@@ -606,9 +606,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetHeadOnMaster() throws ExecutionException, InterruptedException {
         String key = "getHeadMaster" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -637,9 +637,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetHeadOnBackup() throws ExecutionException, InterruptedException {
         String key = "getHeadBackup" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -672,9 +672,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetTailOnMaster() throws ExecutionException, InterruptedException {
         String key = "getTailMaster" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -703,9 +703,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetTailOnBackup() throws ExecutionException, InterruptedException {
         String key = "getTailBackup" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -737,7 +737,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("existKey on master, verify replication to backup")
     void testExistKeyOnMaster() throws ExecutionException, InterruptedException {
         String key = "existKeyMaster" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -768,7 +768,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("existKey on backup, verify replication to master")
     void testExistKeyOnBackup() throws ExecutionException, InterruptedException {
         String key = "existKeyBackup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -794,9 +794,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetSizeReturnsZero() throws ExecutionException, InterruptedException {
         String key = "getSizeQueue" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("k1")),
-                Payload.of(bytes("k2")),
-                Payload.of(bytes("k3"))
+                Variant.ofBytes(bytes("k1")),
+                Variant.ofBytes(bytes("k2")),
+                Variant.ofBytes(bytes("k3"))
         );
 
         // Create queue
@@ -826,7 +826,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("remove queue on master, verify replication to backup")
     void testRemoveQueueOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeQueueMaster" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -869,7 +869,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("remove queue on backup, verify replication to master")
     void testRemoveQueueOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeQueueBackup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -916,7 +916,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("setTtl on master, verify getTtl on both nodes")
     void testSetTtlOnMaster() throws ExecutionException, InterruptedException {
         String key = "setTtlMaster" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -950,7 +950,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("setTtl on backup, verify getTtl on both nodes")
     void testSetTtlOnBackup() throws ExecutionException, InterruptedException {
         String key = "setTtlBackup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -988,7 +988,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("TTL expiration: set short TTL on master, verify both nodes expire")
     void testTtlExpirationOnMaster() throws ExecutionException, InterruptedException {
         String key = "ttlExpMaster" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1035,7 +1035,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("TTL expiration: set short TTL on backup, verify both nodes expire")
     void testTtlExpirationOnBackup() throws ExecutionException, InterruptedException {
         String key = "ttlExpBackup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1086,7 +1086,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject on master, verify lock replicates to backup")
     void testLockObjectOnMaster() throws ExecutionException, InterruptedException {
         String key = "lockMaster" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1124,7 +1124,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject on backup, verify lock replicates to master")
     void testLockObjectOnBackup() throws ExecutionException, InterruptedException {
         String key = "lockBackup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1166,7 +1166,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("Lock expiration: set short TTL lock on master, verify both nodes expire")
     void testLockExpirationOnMaster() throws ExecutionException, InterruptedException {
         String key = "lockExpMaster" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1214,7 +1214,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("Lock expiration: set short TTL lock on backup, verify both nodes expire")
     void testLockExpirationOnBackup() throws ExecutionException, InterruptedException {
         String key = "lockExpBackup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("k1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("k1")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1267,9 +1267,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetAndRemoveFrontOnMultiElement() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveFrontMulti" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("first")),
-                Payload.of(bytes("second")),
-                Payload.of(bytes("third"))
+                Variant.ofBytes(bytes("first")),
+                Variant.ofBytes(bytes("second")),
+                Variant.ofBytes(bytes("third"))
         );
 
         // Create queue
@@ -1280,7 +1280,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveFront on MASTER
         Payload removed = client.setMode(Mode.MASTER)
-                .getAndRemoveFront(bytes(key), keyHint)
+                .getAndDeleteHead(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("first", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -1307,7 +1307,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveFront: dequeue from single-element queue on master")
     void testGetAndRemoveFrontOnSingleElement() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveFrontSingle" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("only")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("only")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1317,7 +1317,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveFront on MASTER
         Payload removed = client.setMode(Mode.MASTER)
-                .getAndRemoveFront(bytes(key), keyHint)
+                .getAndDeleteHead(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -1345,9 +1345,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testGetAndRemoveTailOnMultiElement() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveTailMulti" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("first")),
-                Payload.of(bytes("second")),
-                Payload.of(bytes("third"))
+                Variant.ofBytes(bytes("first")),
+                Variant.ofBytes(bytes("second")),
+                Variant.ofBytes(bytes("third"))
         );
 
         // Create queue
@@ -1358,7 +1358,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveTail on MASTER
         Payload removed = client.setMode(Mode.MASTER)
-                .getAndRemoveTail(bytes(key), keyHint)
+                .getAndDeleteTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("third", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -1385,7 +1385,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveTail: single element, queue becomes empty on master")
     void testGetAndRemoveTailOnSingleElement() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveTailSingle" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("only")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("only")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1395,7 +1395,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // getAndRemoveTail on MASTER
         Payload removed = client.setMode(Mode.MASTER)
-                .getAndRemoveTail(bytes(key), keyHint)
+                .getAndDeleteTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -1423,8 +1423,8 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testAddElementToHeadOnMaster() throws ExecutionException, InterruptedException {
         String key = "addElementToHeadMaster" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("second")),
-                Payload.of(bytes("third"))
+                Variant.ofBytes(bytes("second")),
+                Variant.ofBytes(bytes("third"))
         );
 
         // Create queue
@@ -1435,7 +1435,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // addElementToHead on MASTER
         client.setMode(Mode.MASTER)
-                .addElementToHead(bytes(key), keyHint, List.of(Payload.of(bytes("first"))))
+                .addElementToHead(bytes(key), keyHint, List.of(Variant.ofBytes(bytes("first"))))
                 .get();
 
         // Verify on MASTER: getHead returns first
@@ -1461,9 +1461,9 @@ public class QueueOperationsTest extends TestBaseCluster {
     void testRemoveTailOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeTailMaster" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("first")),
-                Payload.of(bytes("second")),
-                Payload.of(bytes("third"))
+                Variant.ofBytes(bytes("first")),
+                Variant.ofBytes(bytes("second")),
+                Variant.ofBytes(bytes("third"))
         );
 
         // Create queue
@@ -1485,7 +1485,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // removeTail on MASTER
         client.setMode(Mode.MASTER)
-                .removeTail(bytes(key), keyHint)
+                .deleteTail(bytes(key), keyHint)
                 .get();
 
         // Verify on MASTER: getTail returns second
@@ -1510,7 +1510,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject gets READ_LOCK for queue on master - intruder can read but not write")
     void testReadLockOnQueue() throws ExecutionException, InterruptedException {
         String key = "readLockQueue" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("data")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("data")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1542,7 +1542,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // But intruder CANNOT write - addElementToTail should be denied
         assertDenied(client.setMode(Mode.BACKUP)
-                .addElementToTail(bytes(key), keyHint, List.of(Payload.of(bytes("intruder_data"))), INTRUDER_CLIENT_ID));
+                .addElementToTail(bytes(key), keyHint, List.of(Variant.ofBytes(bytes("intruder_data"))), INTRUDER_CLIENT_ID));
 
         // Unlock
         LockStatus unlock = client.setMode(Mode.MASTER)
@@ -1559,7 +1559,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject gets GLOBAL_LOCK for queue on master")
     void testGlobalLockOnQueue() throws ExecutionException, InterruptedException {
         String key = "globalLockQueue" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("data")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("data")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)
@@ -1601,7 +1601,7 @@ public class QueueOperationsTest extends TestBaseCluster {
     @DisplayName("cannot lock by other client when already locked on master")
     void testCannotLockByOtherClient() throws ExecutionException, InterruptedException {
         String key = "cannotLockByOther" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("data")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("data")));
 
         // Create queue
         KeyHintData keyHint = client.createQueue(key, initialData)

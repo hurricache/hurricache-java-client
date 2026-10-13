@@ -63,9 +63,9 @@ public class SetOperationsTest extends TestBaseCluster {
     void testCreateSetWithData() throws ExecutionException, InterruptedException {
         String key = "setWithData" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("item1")),
-                Payload.of(bytes("item2")),
-                Payload.of(bytes("item3"))
+                Variant.ofBytes(bytes("item1")),
+                Variant.ofBytes(bytes("item2")),
+                Variant.ofBytes(bytes("item3"))
         );
 
         // Create set
@@ -90,7 +90,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementUnordered
         client.setMode(Mode.BACKUP)
-                .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item4"))))
+                .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item4"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -118,7 +118,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         List<Payload> payloads = new ArrayList<>(elementCount);
         for (int i = 0; i < elementCount; i++) {
-            payloads.add(Payload.of(bytes("large_item_" + i + "_" + UUID.randomUUID())));
+            payloads.add(Variant.ofBytes(bytes("large_item_" + i + "_" + UUID.randomUUID())));
         }
 
         // Create large set
@@ -149,9 +149,9 @@ public class SetOperationsTest extends TestBaseCluster {
     void testStreamSet() throws ExecutionException, InterruptedException {
         String key = "streamSetTest" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("elem1")),
-                Payload.of(bytes("elem2")),
-                Payload.of(bytes("elem3"))
+                Variant.ofBytes(bytes("elem1")),
+                Variant.ofBytes(bytes("elem2")),
+                Variant.ofBytes(bytes("elem3"))
         );
 
         // Create set
@@ -176,7 +176,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementUnordered
         client.setMode(Mode.BACKUP)
-                .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("elem4"))))
+                .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("elem4"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -202,7 +202,7 @@ public class SetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementUnordered on master, verify replication and write on backup")
     void testAddElementUnordered() throws ExecutionException, InterruptedException {
         String key = "addElementUnorderedTest" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("item1")));
 
         // Create set
         KeyHintData keyHint = client.createSet(key, initialData)
@@ -213,8 +213,8 @@ public class SetOperationsTest extends TestBaseCluster {
         // Write on BACKUP: addElementUnordered
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementUnordered(key, keyHint, List.of(
-                        Payload.of(bytes("item2")),
-                        Payload.of(bytes("item3"))
+                        Variant.ofBytes(bytes("item2")),
+                        Variant.ofBytes(bytes("item3"))
                 ))
                 .get();
         assertEquals(2, added, "2 unique elements should be added");
@@ -237,7 +237,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementUnordered
         Integer addedMaster = client.setMode(Mode.MASTER)
-                .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item4"))))
+                .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item4"))))
                 .get();
         assertEquals(1, addedMaster);
 
@@ -262,7 +262,7 @@ public class SetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementUnordered does not add duplicates and returns 0 for duplicates")
     void testAddElementUnorderedNoDuplicates() throws ExecutionException, InterruptedException {
         String key = "addElementUnorderedNoDup" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("item1")));
 
         // Create set
         KeyHintData keyHint = client.createSet(key, initialData)
@@ -273,8 +273,8 @@ public class SetOperationsTest extends TestBaseCluster {
         // Write on BACKUP: addElementUnordered with duplicate
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementUnordered(key, keyHint, List.of(
-                        Payload.of(bytes("item1")),
-                        Payload.of(bytes("item2"))
+                        Variant.ofBytes(bytes("item1")),
+                        Variant.ofBytes(bytes("item2"))
                 ))
                 .get();
         assertEquals(1, added, "Only 1 new element (item2) should be added, item1 is duplicate");
@@ -303,9 +303,9 @@ public class SetOperationsTest extends TestBaseCluster {
     void testRemoveFromContainer() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerSetTest" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("item1")),
-                Payload.of(bytes("item2")),
-                Payload.of(bytes("item3"))
+                Variant.ofBytes(bytes("item1")),
+                Variant.ofBytes(bytes("item2")),
+                Variant.ofBytes(bytes("item3"))
         );
 
         // Create set
@@ -364,8 +364,8 @@ public class SetOperationsTest extends TestBaseCluster {
     void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerNonExistSet" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("item1")),
-                Payload.of(bytes("item2"))
+                Variant.ofBytes(bytes("item1")),
+                Variant.ofBytes(bytes("item2"))
         );
 
         // Create set
@@ -404,8 +404,8 @@ public class SetOperationsTest extends TestBaseCluster {
     void testContainsContainerKey() throws ExecutionException, InterruptedException {
         String key = "containsContainerKeySetTest" + UUID.randomUUID();
         List<Payload> initialData = List.of(
-                Payload.of(bytes("item1")),
-                Payload.of(bytes("item2"))
+                Variant.ofBytes(bytes("item1")),
+                Variant.ofBytes(bytes("item2"))
         );
 
         // Create set
@@ -438,7 +438,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementUnordered
         client.setMode(Mode.MASTER)
-                .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item3"))))
+                .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item3"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -466,7 +466,7 @@ public class SetOperationsTest extends TestBaseCluster {
         String key = "setTtlSetTest" + UUID.randomUUID();
 
         // Create set
-        KeyHintData keyHint = client.createSet(key, List.of(Payload.of(bytes("item1"))))
+        KeyHintData keyHint = client.createSet(key, List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -533,7 +533,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Create set with 2s TTL
         KeyHintData keyHint = client.createSet(bytes(key),
-                        List.of(Payload.of(bytes("item1"))))
+                        List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -582,7 +582,7 @@ public class SetOperationsTest extends TestBaseCluster {
         // Create set on BACKUP with 2s TTL
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createSet(key,
-                        List.of(Payload.of(bytes("item1"))))
+                        List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
@@ -632,7 +632,7 @@ public class SetOperationsTest extends TestBaseCluster {
         String key = "readLockSetTest" + UUID.randomUUID();
 
         // Create set
-        KeyHintData keyHint = client.createSet(key, List.of(Payload.of(bytes("item1"))))
+        KeyHintData keyHint = client.createSet(key, List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -668,7 +668,7 @@ public class SetOperationsTest extends TestBaseCluster {
         // Write on BACKUP: intruder tries to write (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item2"))), INTRUDER_CLIENT_ID)
+                    .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item2"))), INTRUDER_CLIENT_ID)
                     .get();
             fail("Expected PERMISSION_DENIED for write with READ_LOCK");
         } catch (ExecutionException e) {
@@ -709,7 +709,7 @@ public class SetOperationsTest extends TestBaseCluster {
         String key = "writeLockSetTest" + UUID.randomUUID();
 
         // Create set
-        KeyHintData keyHint = client.createSet(key, List.of(Payload.of(bytes("item1"))))
+        KeyHintData keyHint = client.createSet(key, List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -724,7 +724,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: owner can write (addElementUnordered)
         client.setMode(Mode.BACKUP)
-                .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item2"))), OWNER_CLIENT_ID)
+                .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item2"))), OWNER_CLIENT_ID)
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -749,7 +749,7 @@ public class SetOperationsTest extends TestBaseCluster {
         // Write on BACKUP: intruder tries to write (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item3"))), INTRUDER_CLIENT_ID)
+                    .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item3"))), INTRUDER_CLIENT_ID)
                     .get();
             fail("Expected PERMISSION_DENIED for write with WRITE_LOCK");
         } catch (ExecutionException e) {
@@ -790,7 +790,7 @@ public class SetOperationsTest extends TestBaseCluster {
         String key = "globalLockSetTest" + UUID.randomUUID();
 
         // Create set
-        KeyHintData keyHint = client.createSet(key, List.of(Payload.of(bytes("item1"))))
+        KeyHintData keyHint = client.createSet(key, List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -831,7 +831,7 @@ public class SetOperationsTest extends TestBaseCluster {
         // Write on BACKUP: client 2 tries to write (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item2"))))
+                    .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item2"))))
                     .get();
             fail("Expected PERMISSION_DENIED for write with GLOBAL_LOCK");
         } catch (ExecutionException e) {
@@ -872,7 +872,7 @@ public class SetOperationsTest extends TestBaseCluster {
         String key = "unlockOwnerSetTest" + UUID.randomUUID();
 
         // Create set
-        KeyHintData keyHint = client.createSet(key, List.of(Payload.of(bytes("item1"))))
+        KeyHintData keyHint = client.createSet(key, List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -914,7 +914,7 @@ public class SetOperationsTest extends TestBaseCluster {
         String key = "lockExpirationSetMaster" + UUID.randomUUID();
 
         // Create set
-        KeyHintData keyHint = client.createSet(key, List.of(Payload.of(bytes("item1"))))
+        KeyHintData keyHint = client.createSet(key, List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -929,7 +929,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: owner can write (addElementUnordered)
         client.setMode(Mode.MASTER)
-                .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item2"))), OWNER_CLIENT_ID)
+                .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item2"))), OWNER_CLIENT_ID)
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -971,7 +971,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Create set on BACKUP
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createSet(key, List.of(Payload.of(bytes("item1"))))
+                .createSet(key, List.of(Variant.ofBytes(bytes("item1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -986,7 +986,7 @@ public class SetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: owner can write (addElementUnordered)
         client.setMode(Mode.BACKUP)
-                .addElementUnordered(key, keyHint, List.of(Payload.of(bytes("item2"))), OWNER_CLIENT_ID)
+                .addElementUnordered(key, keyHint, List.of(Variant.ofBytes(bytes("item2"))), OWNER_CLIENT_ID)
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -1029,7 +1029,7 @@ public class SetOperationsTest extends TestBaseCluster {
     @DisplayName("READ_LOCK: multiple clients can read in parallel on both nodes")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String key = "readLockParallel" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("item1")));
 
         // Create set
         KeyHintData keyHint = client.createSet(key, initialData)
@@ -1092,7 +1092,7 @@ public class SetOperationsTest extends TestBaseCluster {
     @DisplayName("Methods not applicable to set should throw an error")
     void testUnsupportedMethodsForSet() throws ExecutionException, InterruptedException {
         String key = "unsupportedSet" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("item1")));
 
         // Create set
         KeyHintData keyHint = client.createSet(key, initialData)
@@ -1142,7 +1142,7 @@ public class SetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementUnordered with empty list returns 0 on both nodes")
     void testAddElementEmptyList() throws ExecutionException, InterruptedException {
         String key = "addElementEmptyList" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("item1")));
 
         // Create set
         KeyHintData keyHint = client.createSet(key, initialData)
@@ -1224,7 +1224,7 @@ public class SetOperationsTest extends TestBaseCluster {
     @DisplayName("Lock with expired TTL: unlock returns OK on both nodes")
     void testUnlockOnExpiredLock() throws ExecutionException, InterruptedException {
         String key = "unlockExpired" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of(bytes("item1")));
+        List<Payload> initialData = List.of(Variant.ofBytes(bytes("item1")));
 
         // Create set
         KeyHintData keyHint = client.createSet(key, initialData)

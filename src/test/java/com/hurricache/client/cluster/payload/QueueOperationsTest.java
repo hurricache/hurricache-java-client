@@ -45,7 +45,7 @@ public class QueueOperationsTest extends TestBaseCluster {
         Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head) on backup
-        Payload popped = client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
+        Payload popped = client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message on backup
@@ -53,7 +53,7 @@ public class QueueOperationsTest extends TestBaseCluster {
         Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data) on backup
-        boolean removed = client.setMode(Mode.BACKUP).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.BACKUP).deleteHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist on backup
@@ -87,7 +87,7 @@ public class QueueOperationsTest extends TestBaseCluster {
         Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head) on master
-        Payload popped = client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
+        Payload popped = client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message on master
@@ -95,7 +95,7 @@ public class QueueOperationsTest extends TestBaseCluster {
         Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data) on master
-        boolean removed = client.setMode(Mode.MASTER).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.MASTER).deleteHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist on master
@@ -121,9 +121,9 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .get();
 
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertArrayEquals(initial, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
-        Assertions.assertArrayEquals(first, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
-        Assertions.assertArrayEquals(second, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(initial, client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(first, client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(second, client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get().bytesValue());
     }
 
     @Test
@@ -144,9 +144,9 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .get();
 
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertArrayEquals(initial, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
-        Assertions.assertArrayEquals(first, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
-        Assertions.assertArrayEquals(second, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(initial, client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(first, client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(second, client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get().bytesValue());
     }
 
     @Test

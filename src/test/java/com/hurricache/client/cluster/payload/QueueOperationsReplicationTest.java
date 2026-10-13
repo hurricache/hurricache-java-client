@@ -44,7 +44,7 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head)
-        Payload popped = client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
+        Payload popped = client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message
@@ -52,7 +52,7 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data)
-        boolean removed = client.setMode(Mode.BACKUP).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.BACKUP).deleteHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist
@@ -88,7 +88,7 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head)
-        Payload popped = client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
+        Payload popped = client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message
@@ -96,7 +96,7 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data)
-        boolean removed = client.setMode(Mode.MASTER).removeHead(qKey, keyHint).get();
+        boolean removed = client.setMode(Mode.MASTER).deleteHead(qKey, keyHint).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist
@@ -125,11 +125,11 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         byte[] three = createLargePayload(VALUE_SIZE);
         client.addElementToTail(qKey, keyHint, List.of(Payload.of(three))).get();
 
-        Assertions.assertArrayEquals(zero, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(zero, client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(one, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(one, client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(two, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(two, client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get().bytesValue());
     }
 
     @Test
@@ -150,11 +150,11 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         byte[] three = createLargePayload(VALUE_SIZE);
         client.addElementToTail(qKey, keyHint, List.of(Payload.of(three))).get();
 
-        Assertions.assertArrayEquals(zero, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(zero, client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(one, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(one, client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(two, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(two, client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get().bytesValue());
     }
 
     @Test

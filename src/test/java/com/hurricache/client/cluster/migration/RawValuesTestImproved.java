@@ -4,6 +4,7 @@ import com.hurricache.client.cluster.AdvancedTest;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +32,7 @@ public class RawValuesTestImproved extends AdvancedTest {
             }
         }, (pair, goodCounter) -> {
             Pair<String, String> p = (Pair<String, String>) pair;
-            client.createKeyValue(p.first, p.second.getBytes(StandardCharsets.UTF_8)).thenAccept(keyhint -> {
+            client.createKeyValue(p.first, Variant.ofBytes(p.second.getBytes())))).thenAccept(keyhint -> {
                 keyValueMap.put(p.first, Pair.of(p.second, keyhint));
                 goodCounter.incrementAndGet();
             });
@@ -51,7 +52,7 @@ public class RawValuesTestImproved extends AdvancedTest {
                 (entry, badCounter) -> {
                     Pair<String, Pair<String, KeyHintData>> p = (Pair<String, Pair<String, KeyHintData>>) entry;
                     client.getValue(p.first, p.second.second).thenAccept(res -> {
-                        if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
+                        if (p.second.first.equals(new String(res.bytesValue(), StandardCharsets.UTF_8))) {
                             reducedGood.incrementAndGet();
                         } else {
                             badCounter.incrementAndGet();
@@ -73,7 +74,7 @@ public class RawValuesTestImproved extends AdvancedTest {
                 (entry, badCounter) -> {
                     Pair<String, Pair<String, KeyHintData>> p = (Pair<String, Pair<String, KeyHintData>>) entry;
                     client.getValue(p.first, p.second.second).thenAccept(res -> {
-                        if (p.second.first.equals(new String(res, StandardCharsets.UTF_8))) {
+                        if (p.second.first.equals(new String(res.bytesValue(), StandardCharsets.UTF_8))) {
                             growingGood.incrementAndGet();
                         } else {
                             badCounter.incrementAndGet();

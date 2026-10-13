@@ -205,7 +205,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
         CompletableFuture<Void> producer = CompletableFuture.runAsync(() -> {
             for (int i = 0; i < itemCount; i++) {
                 try {
-                    client.addElementToTail(key, hint, List.of(Payload.of(("val-" + i).getBytes()))).get();
+                    client.addElementToTail(key, hint, List.of(Variant.ofBytes(("val-" + i).getBytes()))).get();
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -216,7 +216,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
             int emptyReads = 0;
             while (poppedCount.get() < itemCount && emptyReads < 50) {
                 try {
-                    Payload item = client.getAndRemoveFront(key, hint).get();
+                    Payload item = client.getAndDeleteHead(key, hint).get();
                     if (item != null) {
                         poppedCount.incrementAndGet();
                         emptyReads = 0;

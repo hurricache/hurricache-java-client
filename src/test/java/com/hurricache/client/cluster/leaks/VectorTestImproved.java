@@ -18,12 +18,12 @@ public class VectorTestImproved extends AdvancedTest {
     void createVectorValueLoopLeakTest1() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getHead(k, v.second).get();
+                Variant data = client.getHead(k, v.second).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
@@ -51,12 +51,12 @@ public class VectorTestImproved extends AdvancedTest {
     void createVectorValueLoopLeakTest2() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getAndRemoveFront(k, v.second).get();
+                Variant data = client.getAndDeleteHead(k, v.second).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
@@ -84,12 +84,12 @@ public class VectorTestImproved extends AdvancedTest {
     void createVectorValueLoopLeakTest3() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getAndRemoveElementAtPosition(client.serializeKey(k), v.second, 0).get();
+                Variant data = client.getAndDeleteElementAtPosition(client.serializeKey(k), v.second, 0).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
@@ -117,12 +117,12 @@ public class VectorTestImproved extends AdvancedTest {
     void createListValueLoopLeakTest4() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getAndRemoveTail(client.serializeKey(k), v.second).get();
+                Variant data = client.getAndDeleteTail(client.serializeKey(k), v.second).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }

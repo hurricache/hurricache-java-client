@@ -44,7 +44,7 @@ public class LargeContainerStrictContentTest extends TestBase {
         Thread.sleep(1000);
         List<Payload> actualPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            Payload popped = client.getAndRemoveFront(key, hint, 0, TIMEOUT).get();
+            Payload popped = client.getAndDeleteHead(key, hint, 0, TIMEOUT).get();
             if (popped == null) {
                 break;
             }
@@ -186,19 +186,19 @@ public class LargeContainerStrictContentTest extends TestBase {
     @DisplayName("Map: strict verification of all keys and their corresponding values")
     void testCreateLargeMapStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
-        Map<Payload, Payload> expectedMap = new LinkedHashMap<>();
+        Map<Payload, Variant> expectedMap = new LinkedHashMap<>();
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] subKey = ("map_key_" + i).getBytes(StandardCharsets.UTF_8);
             byte[] value = createDeterministicPayload(i, PAYLOAD_SIZE);
-            expectedMap.put(Payload.of(subKey), Payload.of(value));
+            expectedMap.put(Variant.ofBytes(subKey), Variant.ofBytes(value));
         }
 
         CompletableFuture<KeyHintData> future = client.createMap(key, null, expectedMap, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
 
-        Map<Payload, Payload> actualMap = client.streamMap(key, hint, 0, TIMEOUT).get();
+        Map<Payload, Variant> actualMap = client.streamMap(key, hint, 0, TIMEOUT).get();
         assertEquals(LARGE_ELEMENT_COUNT, actualMap.size());
 
         for (Map.Entry<Payload, Payload> entry : expectedMap.entrySet()) {
@@ -215,19 +215,19 @@ public class LargeContainerStrictContentTest extends TestBase {
     @DisplayName("OrderedMap: strict verification of weights, keys and values")
     void testCreateLargeOrderedMapStrict() throws ExecutionException, InterruptedException {
         byte[] key = generateRandomKey();
-        Map<OrderedPayload, Payload> expectedMap = new LinkedHashMap<>();
+        Map<OrderedPayload, Variant> expectedMap = new LinkedHashMap<>();
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] subKey = ("ord_map_key_" + i).getBytes(StandardCharsets.UTF_8);
             byte[] value = createDeterministicPayload(i, PAYLOAD_SIZE);
-            expectedMap.put(OrderedPayload.of(subKey, (long) i), Payload.of(value));
+            expectedMap.put(OrderedVariant.ofBytes(subKey, (long) i), Variant.ofBytes(value));
         }
 
         CompletableFuture<KeyHintData> future = client.createOrderedMap(key, null, expectedMap, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
         Thread.sleep(1000);
-        Map<OrderedPayload, Payload> actualMap = client.streamOrderedMap(key, hint, 0, null).get();
+        Map<OrderedPayload, Variant> actualMap = client.streamOrderedMap(key, hint, 0, null).get();
         assertEquals(LARGE_ELEMENT_COUNT, actualMap.size());
 
         for (Map.Entry<OrderedPayload, Payload> entry : expectedMap.entrySet()) {
@@ -256,7 +256,7 @@ public class LargeContainerStrictContentTest extends TestBase {
     private List<Payload> generateDeterministicPayloadList(int count) {
         List<Payload> payloads = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            payloads.add(Payload.of(createDeterministicPayload(i, PAYLOAD_SIZE)));
+            payloads.add(Variant.ofBytes(createDeterministicPayload(i, PAYLOAD_SIZE)));
         }
         return payloads;
     }

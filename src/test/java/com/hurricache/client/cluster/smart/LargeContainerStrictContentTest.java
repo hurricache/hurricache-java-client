@@ -60,7 +60,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         List<Payload> actualPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             Payload popped = client.setMode(Mode.MASTER)
-                    .getAndRemoveFront(bytes(key), hint).get();
+                    .getAndDeleteHead(bytes(key), hint).get();
             if (popped == null || popped.bytesValue().length == 0) {
                 break;
             }
@@ -274,12 +274,12 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     @DisplayName("Map: strict verification of all keys and their corresponding values with replication")
     void testCreateLargeMapStrict() throws ExecutionException, InterruptedException {
         String key = "strict_map_" + UUID.randomUUID();
-        Map<Payload, Payload> expectedMap = new LinkedHashMap<>();
+        Map<Payload, Variant> expectedMap = new LinkedHashMap<>();
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] subKey = ("map_key_" + i).getBytes(StandardCharsets.UTF_8);
             byte[] value = createDeterministicPayload(i, PAYLOAD_SIZE);
-            expectedMap.put(Payload.of(subKey), Payload.of(value));
+            expectedMap.put(Variant.ofBytes(subKey), Variant.ofBytes(value));
         }
 
         // Create WITHOUT setMode
@@ -290,7 +290,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         Thread.sleep(1000);
 
         // Verify on MASTER: stream all entries
-        Map<Payload, Payload> masterStream = client.setMode(Mode.MASTER)
+        Map<Payload, Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
@@ -306,7 +306,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
 
         // Replication delay → verify BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupStream = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
@@ -329,12 +329,12 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     @DisplayName("OrderedMap: strict verification of weights, keys and values with replication")
     void testCreateLargeOrderedMapStrict() throws ExecutionException, InterruptedException {
         String key = "strict_orderedmap_" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> expectedMap = new LinkedHashMap<>();
+        Map<OrderedPayload, Variant> expectedMap = new LinkedHashMap<>();
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] subKey = ("ord_map_key_" + i).getBytes(StandardCharsets.UTF_8);
             byte[] value = createDeterministicPayload(i, PAYLOAD_SIZE);
-            expectedMap.put(OrderedPayload.of(subKey, (long) i), Payload.of(value));
+            expectedMap.put(OrderedVariant.ofBytes(subKey, (long) i), Variant.ofBytes(value));
         }
 
         // Create WITHOUT setMode
@@ -345,7 +345,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         Thread.sleep(1000);
 
         // Verify on MASTER: stream all entries
-        Map<OrderedPayload, Payload> masterStream = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
@@ -361,7 +361,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
 
         // Replication delay → verify BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> backupStream = client.setMode(Mode.BACKUP)
+        Map<OrderedPayload, Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
@@ -392,7 +392,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     private List<Payload> generateDeterministicPayloadList(int count) {
         List<Payload> payloads = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            payloads.add(Payload.of(createDeterministicPayload(i, PAYLOAD_SIZE)));
+            payloads.add(Variant.ofBytes(createDeterministicPayload(i, PAYLOAD_SIZE)));
         }
         return payloads;
     }

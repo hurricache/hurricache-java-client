@@ -45,7 +45,7 @@ public class VectorOperationsTest extends TestBase {
 
         Assertions.assertNotNull(client.createVector(key, List.of()).get());
 
-        List<Payload> streamed = client.streamVector(key).get();
+        List<Variant> streamed = client.streamVector(key).get();
 
         assertNotNull(streamed);
         Assertions.assertEquals(0, streamed.size());
@@ -77,16 +77,16 @@ public class VectorOperationsTest extends TestBase {
     @DisplayName("createVector: create large vector with chunking")
     void testCreateLargeVectorWithChunking() throws ExecutionException, InterruptedException {
         byte[] key = ("largeVectorKey" + UUID.randomUUID()).getBytes(StandardCharsets.UTF_8);
-        List<Payload> payloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
+        List<Variant> payloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            payloads.add(Payload.of(createLargePayload(PAYLOAD_SIZE)));
+            payloads.add(Variant.ofBytes(createLargePayload(PAYLOAD_SIZE)));
         }
 
         CompletableFuture<KeyHintData> future = client.createVector(key, null, payloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
 
-        List<Payload> streamed = client.streamVector(key, hint, 0, TIMEOUT).get();
+        List<Variant> streamed = client.streamVector(key, hint, 0, TIMEOUT).get();
         Assertions.assertEquals(LARGE_ELEMENT_COUNT, streamed.size());
     }
 
@@ -127,7 +127,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload removed = client.getAndDeleteHead(key).get();
+        Variant removed = client.getAndDeleteHead(key).get();
         assertNotNull(removed);
         Assertions.assertEquals("first", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
@@ -150,11 +150,11 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload removed = client.getAndDeleteHead(key).get();
+        Variant removed = client.getAndDeleteHead(key).get();
         assertNotNull(removed);
         Assertions.assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
-        List<Payload> remaining = client.streamVector(key).get();
+        List<Variant> remaining = client.streamVector(key).get();
         Assertions.assertEquals(0, remaining.size());
     }
 
@@ -172,7 +172,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("tail".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload head = client.getHead(key).get();
+        Variant head = client.getHead(key).get();
 
         assertNotNull(head);
         Assertions.assertEquals("head", new String(head.bytesValue(), StandardCharsets.UTF_8));
@@ -196,7 +196,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload front = client.getHead(key).get();
+        Variant front = client.getHead(key).get();
         assertNotNull(front);
         Assertions.assertEquals("only", new String(front.bytesValue(), StandardCharsets.UTF_8));
     }
@@ -216,7 +216,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("last".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload tail = client.getTail(key).get();
+        Variant tail = client.getTail(key).get();
         assertNotNull(tail);
         Assertions.assertEquals("last", new String(tail.bytesValue(), StandardCharsets.UTF_8));
     }
@@ -230,8 +230,8 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload head = client.getHead(key).get();
-        Payload tail = client.getTail(key).get();
+        Variant head = client.getHead(key).get();
+        Variant tail = client.getTail(key).get();
 
         assertNotNull(head);
         assertNotNull(tail);
@@ -254,7 +254,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("last".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload removed = client.getAndDeleteTail(key).get();
+        Variant removed = client.getAndDeleteTail(key).get();
         assertNotNull(removed);
         Assertions.assertEquals("last", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
@@ -277,11 +277,11 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload removed = client.getAndDeleteTail(key).get();
+        Variant removed = client.getAndDeleteTail(key).get();
         assertNotNull(removed);
         Assertions.assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
-        List<Payload> remaining = client.streamVector(key).get();
+        List<Variant> remaining = client.streamVector(key).get();
         Assertions.assertEquals(0, remaining.size());
     }
 
@@ -300,9 +300,9 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("pos2".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload pos0 = client.getElementAtPosition(key, 0).get();
-        Payload pos1 = client.getElementAtPosition(key, 1).get();
-        Payload pos2 = client.getElementAtPosition(key, 2).get();
+        Variant pos0 = client.getElementAtPosition(key, 0).get();
+        Variant pos1 = client.getElementAtPosition(key, 1).get();
+        Variant pos2 = client.getElementAtPosition(key, 2).get();
 
         assertNotNull(pos0);
         assertNotNull(pos1);
@@ -322,7 +322,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload pos0 = client.getElementAtPosition(key, 0).get();
+        Variant pos0 = client.getElementAtPosition(key, 0).get();
         assertNotNull(pos0);
         Assertions.assertEquals("first", new String(pos0.bytesValue(), StandardCharsets.UTF_8));
     }
@@ -337,7 +337,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload last = client.getElementAtPosition(key, 1).get();
+        Variant last = client.getElementAtPosition(key, 1).get();
         assertNotNull(last);
         Assertions.assertEquals("second", new String(last.bytesValue(), StandardCharsets.UTF_8));
     }
@@ -357,7 +357,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("c".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload removed = client.getAndDeleteElementAtPosition(key, null, 1).get();
+        Variant removed = client.getAndDeleteElementAtPosition(key, null, 1).get();
         assertNotNull(removed);
         Assertions.assertEquals("b", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
@@ -382,7 +382,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Payload removed = client.getAndDeleteElementAtPosition(key, null, 0).get();
+        Variant removed = client.getAndDeleteElementAtPosition(key, null, 0).get();
         assertNotNull(removed);
         Assertions.assertEquals("first", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
@@ -465,8 +465,8 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("2".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        Boolean removed = client.deleteElementAtPosition(key, null, 1, 1).get();
-        assertTrue(removed);
+        Integer removed = client.deleteElementAtPosition(key, null, 1, 1).get();
+        assertTrue(removed == 1);
 
         List<String> remaining = client.streamVector(key).get()
                 .stream()
@@ -608,7 +608,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("5".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        List<Payload> range = client.streamElementInRangeUnordered(key, null, ContainerType.VECTOR, 2, 4).get();
+        List<Variant> range = client.streamElementInRangeUnordered(key, null, ContainerType.VECTOR, 2, 4).get();
         assertNotNull(range);
         Assertions.assertEquals(3, range.size());
         Assertions.assertEquals("2", new String(range.get(0).bytesValue(), StandardCharsets.UTF_8));
@@ -629,7 +629,7 @@ public class VectorOperationsTest extends TestBase {
                 Variant.ofBytes("4".getBytes(StandardCharsets.UTF_8))
         )).get();
 
-        List<Payload> range = client.streamElementInRangeUnordered(key, null, ContainerType.VECTOR, 0, 4).get();
+        List<Variant> range = client.streamElementInRangeUnordered(key, null, ContainerType.VECTOR, 0, 4).get();
         assertNotNull(range);
         Assertions.assertEquals(5, range.size());
     }
@@ -680,21 +680,21 @@ public class VectorOperationsTest extends TestBase {
     @DisplayName("createVector: strict verification of order and values of a large vector")
     void testCreateLargeVectorStrictContent() throws ExecutionException, InterruptedException {
         byte[] key = ("strictLargeVector" + UUID.randomUUID()).getBytes(StandardCharsets.UTF_8);
-        List<Payload> expectedPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
+        List<Variant> expectedPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] payload = new byte[PAYLOAD_SIZE];
             byte headerMarker = (byte) (i % 127);
             for (int j = 0; j < PAYLOAD_SIZE; j++) {
                 payload[j] = (byte) ((j + headerMarker) % 256);
             }
-            expectedPayloads.add(Payload.of(payload));
+            expectedPayloads.add(Variant.ofBytes(payload));
         }
 
         CompletableFuture<KeyHintData> future = client.createVector(key, null, expectedPayloads, getTestTtl(), 0, TIMEOUT);
         KeyHintData hint = future.get();
         assertNotNull(hint);
 
-        List<Payload> actualPayloads = client.streamVector(key, hint, 0, TIMEOUT).get();
+        List<Variant> actualPayloads = client.streamVector(key, hint, 0, TIMEOUT).get();
         Assertions.assertEquals(LARGE_ELEMENT_COUNT, actualPayloads.size());
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
@@ -866,7 +866,7 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Reading works
-        Payload readData = client.getHead(key).get();
+        Variant readData = client.getHead(key).get();
         assertNotNull(readData);
 
         // Writer cannot add an element
@@ -893,7 +893,7 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads
-        Payload readData = client.getHead(key, ownerId).get();
+        Variant readData = client.getHead(key, ownerId).get();
         assertNotNull(readData);
 
         // Owner writes
@@ -926,11 +926,11 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads
-        Payload readData = client.getHead(key).get();
+        Variant readData = client.getHead(key).get();
         assertNotNull(readData);
 
         // Others read in parallel
-        Payload otherReadData = client.getHead(key, otherReaderId).get();
+        Variant otherReadData = client.getHead(key, otherReaderId).get();
         assertNotNull(otherReadData);
 
         // Nobody can write (neither owner nor others)
@@ -957,7 +957,7 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads
-        Payload readData = client.getHead(key, ownerId).get();
+        Variant readData = client.getHead(key, ownerId).get();
         assertNotNull(readData);
 
         // Owner writes
@@ -990,13 +990,13 @@ public class VectorOperationsTest extends TestBase {
         Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // Owner reads - works
-        Payload readData = client.getHead(key, ownerId).get();
+        Variant readData = client.getHead(key, ownerId).get();
         assertNotNull(readData);
 
-        Payload tailData = client.getTail(key, ownerId).get();
+        Variant tailData = client.getTail(key, ownerId).get();
         assertNotNull(tailData);
 
-        List<Payload> streamData = client.streamVector(key, ownerId).get();
+        List<Variant> streamData = client.streamVector(key, ownerId).get();
         assertNotNull(streamData);
 
         // Owner writes - works
@@ -1302,15 +1302,15 @@ public class VectorOperationsTest extends TestBase {
     @DisplayName("removeFromContainer removes element by value and returns removed count")
     void testRemoveFromContainer() throws ExecutionException, InterruptedException {
         String vecKey = "vector_remove"+UUID.randomUUID();
-        List<Payload> initialData = List.of(Variant.ofBytes( "item1".getBytes(StandardCharsets.UTF_8)), Variant.ofBytes( "item2".getBytes(StandardCharsets.UTF_8)), Variant.ofBytes( "item3".getBytes(StandardCharsets.UTF_8)));
+        List<Variant> initialData = List.of(Variant.ofBytes( "item1".getBytes(StandardCharsets.UTF_8)), Variant.ofBytes( "item2".getBytes(StandardCharsets.UTF_8)), Variant.ofBytes( "item3".getBytes(StandardCharsets.UTF_8)));
 
         KeyHintData hint = client.createVector(vecKey, initialData).get();
         assertNotNull(hint);
 
-        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, "item1".getBytes(StandardCharsets.UTF_8)).get();
+        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8))).get();
         assertEquals(1, removed, "1 element should be removed");
 
-        List<Payload> result = client.streamVector(vecKey, hint).get();
+        List<Variant> result = client.streamVector(vecKey, hint).get();
         assertEquals(2, result.size(), "Ordered set must contain 2 elements");
     }
 
@@ -1320,7 +1320,7 @@ public class VectorOperationsTest extends TestBase {
         String vecKey = "vector_remove_multi"+UUID.randomUUID();
 
 
-        List<Payload> initialData = List.of(
+        List<Variant> initialData = List.of(
                 Variant.ofBytes( "item1".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes( "item1".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes( "item1".getBytes(StandardCharsets.UTF_8)),
@@ -1333,7 +1333,7 @@ public class VectorOperationsTest extends TestBase {
         Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, "item1".getBytes(StandardCharsets.UTF_8)).get();
         assertEquals(3, removed, "3 elements with the same key must be removed");
 
-        List<Payload> result = client.streamVector(vecKey, hint).get();
+        List<Variant> result = client.streamVector(vecKey, hint).get();
         assertEquals(1, result.size(), "Ordered set must contain 1 element");
         assertEquals("item3", new String(result.get(0).bytesValue()));
     }
@@ -1342,7 +1342,7 @@ public class VectorOperationsTest extends TestBase {
     @DisplayName("removeFromContainer returns 0 if element does not exist")
     void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
         String vecKey = "vector_remove_nonexistent"+UUID.randomUUID();
-        List<Payload> initialData = List.of(
+        List<Variant> initialData = List.of(
                 Variant.ofBytes( "item1".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes( "item2".getBytes(StandardCharsets.UTF_8))
         );

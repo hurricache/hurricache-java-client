@@ -47,24 +47,24 @@ public class DataStabilityTest extends TestBaseCluster {
     // HELPER: Generate payloads
     // =========================================================================
 
-    private List<Payload> generatePayloads(int count) {
-        var payloads = new ArrayList<Payload>(count);
+    private List<Variant> generatePayloads(int count) {
+        var payloads = new ArrayList<Variant>(count);
         for (int i = 0; i < count; i++) {
             payloads.add(Payload.of(("elem_" + i).getBytes(StandardCharsets.UTF_8)));
         }
         return payloads;
     }
 
-    private Map<Payload, Payload> generateMapEntries(int count) {
-        var entries = new LinkedHashMap<Payload, Payload>();
+    private Map<Payload, Variant> generateMapEntries(int count) {
+        var entries = new LinkedHashMap<Payload, Variant>();
         for (int i = 0; i < count; i++) {
             entries.put(Payload.of(("k_" + i).getBytes()), Payload.of(("v_" + i).getBytes()));
         }
         return entries;
     }
 
-    private Map<OrderedPayload, Payload> generateOrderedMapEntries(int count) {
-        var entries = new LinkedHashMap<OrderedPayload, Payload>();
+    private Map<OrderedPayload, Variant> generateOrderedMapEntries(int count) {
+        var entries = new LinkedHashMap<OrderedPayload, Variant>();
         for (int i = 0; i < count; i++) {
             entries.put(OrderedPayload.of((long) i, ("k_" + i).getBytes()), Payload.of(("v_" + i).getBytes()));
         }
@@ -166,14 +166,14 @@ public class DataStabilityTest extends TestBaseCluster {
                             }
                         }
                         case "vector" -> {
-                            List<Payload> result = client.streamVector(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            List<Variant> result = client.streamVector(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("VECTOR " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));
                             }
                         }
                         case "set" -> {
-                            List<Payload> result = client.streamSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            List<Variant> result = client.streamSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("SET " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));
@@ -187,14 +187,14 @@ public class DataStabilityTest extends TestBaseCluster {
                             }
                         }
                         case "omap" -> {
-                            Map<OrderedPayload, Payload> result = client.streamOrderedMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            Map<OrderedPayload, Variant> result = client.streamOrderedMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("OMAP " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));
                             }
                         }
                         case "map" -> {
-                            Map<Payload, Payload> result = client.streamMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            Map<Payload, Variant> result = client.streamMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("MAP " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));

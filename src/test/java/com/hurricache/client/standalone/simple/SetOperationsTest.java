@@ -48,7 +48,7 @@ public class SetOperationsTest extends TestBase {
 
 
 
-    private Payload p(String val) {
+    private Variant p(String val) {
         return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -79,7 +79,7 @@ public class SetOperationsTest extends TestBase {
     @DisplayName("Create Set with initial data")
     void testCreateSetWithInitialData() throws ExecutionException, InterruptedException {
         String setKey = baseKey + "_initial";
-        List<Payload> initialData = List.of(
+        List<Variant> initialData = List.of(
             p("item1"),
             p("item2"),
             p("item3")
@@ -90,7 +90,7 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        List<Payload> result = client.streamSet(setKey, hint).get();
+        List<Variant> result = client.streamSet(setKey, hint).get();
         assertNotNull(result);
         assertEquals(3, result.size(), "Set should contain 3 elements");
         

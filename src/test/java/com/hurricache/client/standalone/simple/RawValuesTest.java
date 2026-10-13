@@ -2,6 +2,7 @@ package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -33,7 +34,7 @@ public class RawValuesTest extends TestBase {
     void testSetTtlOnScalar() throws ExecutionException, InterruptedException {
         String testKey = "scalar_ttl_set" + UUID.randomUUID();
         String testValue = "scalar_ttl_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Set TTL to 100ms
         Boolean setResult = client.setTtl(testKey, null, 100, OWNER_CLIENT_ID).get();
@@ -49,7 +50,7 @@ public class RawValuesTest extends TestBase {
     void testGetTtlAfterSet() throws ExecutionException, InterruptedException {
         String testKey = "scalar_ttl_get" + UUID.randomUUID();
         String testValue = "scalar_ttl_get_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Set TTL to 5000ms
         client.setTtl(testKey, null, 5000, OWNER_CLIENT_ID).get();
@@ -63,7 +64,7 @@ public class RawValuesTest extends TestBase {
     void testTtlExpiration() throws ExecutionException, InterruptedException {
         String testKey = "scalar_ttl_expire" + UUID.randomUUID();
         String testValue = "scalar_ttl_expire_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Set TTL to 100ms
         client.setTtl(testKey, null, 100, OWNER_CLIENT_ID).get();
@@ -89,32 +90,34 @@ public class RawValuesTest extends TestBase {
     void singleCreateValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
-        KeyHintData KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] bytes = client.getValue(testKey).get();
+        KeyHintData KeyHint = client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
+        Variant bytes = client.getValue(testKey).get();
         // Key doesn't exist yet, will throw NOT_FOUND
+        Assertions.assertNotNull(bytes);
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
     }
 
     @Test
     void singleCreateAndGet() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey" + UUID.randomUUID();
         String testValue = "singleCreateValueValue" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
         Thread.sleep(150);
-        byte[] bytes = client.getValue(testKey).get();
+        Variant bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(bytes);
-        Assertions.assertEquals(testValue, new String(bytes));
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
     }
 
     @Test
     void singleCreateExistValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue" + UUID.randomUUID();
         String testValue = "singleCreateExistValue123" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
         Thread.sleep(150);
-        byte[] bytes = client.getValue(testKey).get();
+        Variant bytes = client.getValue(testKey).get();
         Boolean isExist = client.existKey(testKey).get();
         Assertions.assertNotNull(bytes);
-        Assertions.assertEquals(testValue, new String(bytes));
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
         Assertions.assertTrue(isExist);
     }
 
@@ -122,11 +125,11 @@ public class RawValuesTest extends TestBase {
     void singleCreateGetAndDeleteValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
         String testValue = "singleCreateGetAndDeleteValue" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
         Thread.sleep(100);
-        byte[] bytes = client.getAndDeleteValue(testKey).get();
+        Variant bytes = client.getAndDeleteValue(testKey).get();
         Assertions.assertNotNull(bytes);
-        Assertions.assertEquals(testValue, new String(bytes));
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
         try {
             client.getAndDeleteValue(testKey).get();
         } catch (ExecutionException e) {
@@ -162,25 +165,25 @@ public class RawValuesTest extends TestBase {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
         String testValueUpdate = "singleCreateUpdateValueValue123" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
         Thread.sleep(150);
-        byte[] bytes = client.getValue(testKey).get();
+        Variant bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(bytes);
-        Assertions.assertEquals(testValue, new String(bytes));
-        client.updateKeyValue(testKey, testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
-        byte[] newVal = client.getValue(testKey).get();
-        Assertions.assertEquals(testValueUpdate, new String(newVal));
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
+        client.updateKeyValue(testKey, Variant.ofBytes(testValueUpdate.getBytes(StandardCharsets.UTF_8))).get();
+        Variant newVal = client.getValue(testKey).get();
+        Assertions.assertEquals(testValueUpdate, new String(newVal.bytesValue()));
     }
 
     @Test
     void singleCreateDelete() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
         Thread.sleep(150);
-        byte[] bytes = client.getValue(testKey).get();
+        Variant bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(bytes);
-        Assertions.assertEquals(testValue, new String(bytes));
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
         Boolean b = client.remove(testKey).get();
         Assertions.assertTrue(b);
     }
@@ -189,26 +192,26 @@ public class RawValuesTest extends TestBase {
     void singleCreateGetDelete() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
         Thread.sleep(150);
-        byte[] bytes = client.getValue(testKey).get();
+        Variant bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(bytes);
-        Assertions.assertEquals(testValue, new String(bytes));
-        byte[] bytes1 = client.getAndDeleteValue(testKey).get();
-        Assertions.assertEquals(testValue, new String(bytes1));
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
+        Variant bytes1 = client.getAndDeleteValue(testKey).get();
+        Assertions.assertEquals(testValue, new String(bytes1.bytesValue()));
     }
 
     @Test
     void singleCreateGetDeleteNoKeyHint() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateUpdateValue" + UUID.randomUUID();
         String testValue = "singleCreateUpdateValueValue" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
         Thread.sleep(150);
-        byte[] bytes = client.getValue(testKey).get();
+        Variant bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(bytes);
-        Assertions.assertEquals(testValue, new String(bytes));
-        byte[] bytes1 = client.getAndDeleteValue(testKey).get();
-        Assertions.assertEquals(testValue, new String(bytes1));
+        Assertions.assertEquals(testValue, new String(bytes.bytesValue()));
+        Variant bytes1 = client.getAndDeleteValue(testKey).get();
+        Assertions.assertEquals(testValue, new String(bytes1.bytesValue()));
         Thread.sleep(150);
         assertThrows(ExecutionException.class, () -> {
             client.getValue(testKey).get();
@@ -223,18 +226,18 @@ public class RawValuesTest extends TestBase {
     void testReadLockAllowsParallelReads() throws ExecutionException, InterruptedException {
         String testKey = "scalar_read_lock" + UUID.randomUUID();
         String testValue = "scalar_read_lock_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets READ_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        byte[] val = client.getValue(testKey, OWNER_CLIENT_ID).get();
+        Variant val = client.getValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can also read in parallel
-        byte[] valIntruder = client.getValue(testKey, INTRUDER_CLIENT_ID).get();
+        Variant valIntruder = client.getValue(testKey, INTRUDER_CLIENT_ID).get();
         assertNotNull(valIntruder);
 
         // Unlock
@@ -246,7 +249,7 @@ public class RawValuesTest extends TestBase {
     void testReadLockBlocksWrites() throws ExecutionException, InterruptedException {
         String testKey = "scalar_read_lock_write" + UUID.randomUUID();
         String testValue = "scalar_read_lock_write_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets READ_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
@@ -254,7 +257,7 @@ public class RawValuesTest extends TestBase {
 
         // Intruder cannot write (updateKeyValue)
         try {
-            client.updateKeyValue(testKey, "new_value".getBytes(StandardCharsets.UTF_8), INTRUDER_CLIENT_ID).get();
+            client.updateKeyValue(testKey, Variant.ofBytes("new_value".getBytes(StandardCharsets.UTF_8)), INTRUDER_CLIENT_ID).get();
             Assertions.fail("updateKeyValue should throw an error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -269,22 +272,22 @@ public class RawValuesTest extends TestBase {
     void testWriteLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String testKey = "scalar_write_lock" + UUID.randomUUID();
         String testValue = "scalar_write_lock_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        byte[] val = client.getValue(testKey, OWNER_CLIENT_ID).get();
+        Variant val = client.getValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Owner can write
-        client.updateKeyValue(testKey, "updated_value".getBytes(StandardCharsets.UTF_8), OWNER_CLIENT_ID).get();
+        client.updateKeyValue(testKey, Variant.ofBytes("updated_value".getBytes(StandardCharsets.UTF_8)), OWNER_CLIENT_ID).get();
 
         // Intruder cannot write (mock server may not emulate locks for getValue)
         try {
-            client.updateKeyValue(testKey, "intruder_value".getBytes(StandardCharsets.UTF_8), INTRUDER_CLIENT_ID).get();
+            client.updateKeyValue(testKey, Variant.ofBytes("intruder_value".getBytes(StandardCharsets.UTF_8)), INTRUDER_CLIENT_ID).get();
             Assertions.fail("updateKeyValue should throw an error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -300,22 +303,22 @@ public class RawValuesTest extends TestBase {
     void testGlobalLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String testKey = "scalar_global_lock" + UUID.randomUUID();
         String testValue = "scalar_global_lock_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets GLOBAL_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        byte[] val = client.getValue(testKey, OWNER_CLIENT_ID).get();
+        Variant val = client.getValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Owner can write
-        client.updateKeyValue(testKey, "global_updated".getBytes(StandardCharsets.UTF_8), OWNER_CLIENT_ID).get();
+        client.updateKeyValue(testKey, Variant.ofBytes("global_updated".getBytes(StandardCharsets.UTF_8)), OWNER_CLIENT_ID).get();
 
         // Intruder cannot write (mock server may not emulate locks for getValue)
         try {
-            client.updateKeyValue(testKey, "intruder_global".getBytes(StandardCharsets.UTF_8), INTRUDER_CLIENT_ID).get();
+            client.updateKeyValue(testKey, Variant.ofBytes("intruder_global".getBytes(StandardCharsets.UTF_8)), INTRUDER_CLIENT_ID).get();
             Assertions.fail("updateKeyValue should throw an error");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -331,7 +334,7 @@ public class RawValuesTest extends TestBase {
     void testIntruderCannotGetWriteLock() throws ExecutionException, InterruptedException {
         String testKey = "scalar_write_lock_denied" + UUID.randomUUID();
         String testValue = "scalar_write_lock_denied_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
@@ -349,7 +352,7 @@ public class RawValuesTest extends TestBase {
     void testIntruderCannotUnlock() throws ExecutionException, InterruptedException {
         String testKey = "scalar_unlock_denied" + UUID.randomUUID();
         String testValue = "scalar_unlock_denied_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets WRITE_LOCK
         client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
@@ -367,7 +370,7 @@ public class RawValuesTest extends TestBase {
     void testLockThenRemove() throws ExecutionException, InterruptedException {
         String testKey = "scalar_lock_remove" + UUID.randomUUID();
         String testValue = "scalar_lock_remove_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
@@ -391,16 +394,16 @@ public class RawValuesTest extends TestBase {
     void testLockThenGetAndDeleteValue() throws ExecutionException, InterruptedException {
         String testKey = "scalar_lock_getdelete" + UUID.randomUUID();
         String testValue = "scalar_lock_getdelete_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can getAndDeleteValue
-        byte[] deleted = client.getAndDeleteValue(testKey, OWNER_CLIENT_ID).get();
+        Variant deleted = client.getAndDeleteValue(testKey, OWNER_CLIENT_ID).get();
         assertNotNull(deleted);
-        assertEquals(testValue, new String(deleted));
+        assertEquals(testValue, new String(deleted.bytesValue()));
 
         // unlockObject of deleted key returns NOT_FOUND
         try {
@@ -416,7 +419,7 @@ public class RawValuesTest extends TestBase {
     void testLockThenExistKey() throws ExecutionException, InterruptedException {
         String testKey = "scalar_lock_exist" + UUID.randomUUID();
         String testValue = "scalar_lock_exist_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets WRITE_LOCK
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
@@ -435,7 +438,7 @@ public class RawValuesTest extends TestBase {
     void testMultipleReadLocksOnScalar() throws ExecutionException, InterruptedException {
         String testKey = "scalar_multi_read" + UUID.randomUUID();
         String testValue = "scalar_multi_read_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // First client gets READ_LOCK
         LockStatus lock1 = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
@@ -464,7 +467,7 @@ public class RawValuesTest extends TestBase {
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String testKey = "scalar_write_lock_exp" + UUID.randomUUID();
         String testValue = "scalar_write_lock_exp_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets WRITE_LOCK for 2 seconds
         LockStatus lock = client.lockObject(testKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
@@ -485,7 +488,7 @@ public class RawValuesTest extends TestBase {
     void testReadLockExpiration() throws ExecutionException, InterruptedException {
         String testKey = "scalar_read_lock_exp" + UUID.randomUUID();
         String testValue = "scalar_read_lock_exp_value" + UUID.randomUUID();
-        client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
+        client.createKeyValue(testKey, Variant.ofBytes(testValue.getBytes())).get();
 
         // Owner gets READ_LOCK for 2 seconds
         LockStatus lock = client.lockObject(testKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();

@@ -75,24 +75,24 @@ public class ChaosClusterTest extends TestBaseCluster {
     // HELPER: Generate payloads
     // =========================================================================
 
-    private List<Payload> generatePayloads(Random random, int count) {
-        var payloads = new ArrayList<Payload>(count);
+    private List<Variant> generatePayloads(Random random, int count) {
+        var payloads = new ArrayList<Variant>(count);
         for (int i = 0; i < count; i++) {
             payloads.add(Payload.of(("elem_" + random.nextInt(100_000)).getBytes(StandardCharsets.UTF_8)));
         }
         return payloads;
     }
 
-    private Map<Payload, Payload> generateMapEntries(Random random, int count) {
-        var entries = new LinkedHashMap<Payload, Payload>();
+    private Map<Payload, Variant> generateMapEntries(Random random, int count) {
+        var entries = new LinkedHashMap<Payload, Variant>();
         for (int i = 0; i < count; i++) {
             entries.put(Payload.of(("k_" + random.nextInt(1_000_000)).getBytes()), Payload.of(("v_" + random.nextInt(1_000_000)).getBytes()));
         }
         return entries;
     }
 
-    private Map<OrderedPayload, Payload> generateOrderedMapEntries(Random random, int count) {
-        var entries = new LinkedHashMap<OrderedPayload, Payload>();
+    private Map<OrderedPayload, Variant> generateOrderedMapEntries(Random random, int count) {
+        var entries = new LinkedHashMap<OrderedPayload, Variant>();
         for (int i = 0; i < count; i++) {
             entries.put(OrderedPayload.of((long) random.nextInt(1_000_000), ("k_" + random.nextInt(1_000_000)).getBytes()), Payload.of(("v_" + random.nextInt(1_000_000)).getBytes()));
         }
@@ -239,7 +239,7 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "queue-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.getAndRemoveFront(key, null, clientId, Duration.ofSeconds(5)).join();
+                    c.getAndDeleteHead(key, null, clientId, Duration.ofSeconds(5)).join();
                 }
             },
             new ChaosOperation() {

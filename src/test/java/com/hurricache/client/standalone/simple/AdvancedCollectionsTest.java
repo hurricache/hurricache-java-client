@@ -66,7 +66,7 @@ public class AdvancedCollectionsTest extends TestBase {
             client.addElementToTail(key, null, List.of(Variant.ofBytes(String.valueOf(i).getBytes(StandardCharsets.UTF_8)))).get();
         }
 
-        Boolean statusList = client.deleteElementAtPosition(key, null, 0, 2).get();
+        Integer statusList = client.deleteElementAtPosition(key, null, 0, 2).get();
         Assertions.assertTrue(statusList);
     }
 

@@ -46,7 +46,7 @@ public class HashMapOperationsTest extends TestBase {
     }
 
 
-    private Payload p(String val) {
+    private Variant p(String val) {
         return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -62,7 +62,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("Methods not applicable to MAP should throw an error")
     void testUnsupportedMethodsForMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_unsupported";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -78,7 +78,7 @@ public class HashMapOperationsTest extends TestBase {
 
         // getAndRemoveElementAtPosition — not applicable to MAP
         try {
-            client.getAndRemoveElementAtPosition(mapKey, null, 0).get();
+            client.getAndDeleteElementAtPosition(mapKey, null, 0).get();
             fail("getAndRemoveElementAtPosition should throw an error for MAP");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -121,7 +121,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("READ_LOCK for 2s: after expiration another client can read")
     void testReadLockExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -143,7 +143,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("WRITE_LOCK for 2s: after expiration another client can acquire WRITE_LOCK")
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_write_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -166,7 +166,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("GLOBAL for 2s: after expiration another client can acquire WRITE_LOCK")
     void testGlobalLockExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_global_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -189,7 +189,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("Any lock for 2s: after expiration new lock OK for another client")
     void testLockExpirationAllowsNewLock() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_lock_exp_any";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -216,7 +216,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("READ_LOCK: multiple clients can read in parallel")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -243,7 +243,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("WRITE_LOCK: only owner reads and writes, others blocked")
     void testWriteLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_write_lock";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -277,7 +277,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("GLOBAL: only owner can do any operations, all others are blocked")
     void testGlobalLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_global_lock";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -309,7 +309,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("unlockObject: only owner can unlock")
     void testUnlockByOwnerOnly() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_unlock_owner";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -330,7 +330,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("READ_LOCK: read OK, but write is denied")
     void testReadLockBlocksWrites() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock_writes";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -358,7 +358,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("setTtl sets TTL on container")
     void testSetTtl() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_set";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -371,7 +371,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("getTtl gets container TTL")
     void testGetTtl() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_get";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -387,7 +387,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("After TTL expiration getContainerValue returns NOT_FOUND")
     void testTtlExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_expire";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -410,7 +410,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("getAndRemoveContainerValue extracts and removes element")
     void testGetAndRemoveContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_remove";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -420,7 +420,7 @@ public class HashMapOperationsTest extends TestBase {
         assertNotNull(removedValue);
         assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
 
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey).get();
         assertEquals(1, result.size(), "1 element remains");
         assertFalse(result.containsKey(p("k1")));
     }
@@ -429,7 +429,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("getAndRemoveContainerValue for non-existent key returns NOT_FOUND")
     void testGetAndRemoveContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_remove_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -450,7 +450,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("getContainerValue gets value by key")
     void testGetContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_val";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -465,7 +465,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("getContainerValue for non-existent key returns NOT_FOUND")
     void testGetContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_val_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -482,7 +482,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("updateContainerValue updates value and returns old one")
     void testUpdateContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_update";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("old_value")
         );
         client.createMap(mapKey, initialData).get();
@@ -500,7 +500,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("updateContainerValue for non-existent key returns NOT_FOUND")
     void testUpdateContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_update_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -531,7 +531,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("getSize for map with elements returns correct count")
     void testGetSizeWithElements() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_size_with";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2"),
                 p("k3"), p("v3")
@@ -550,7 +550,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("remove deletes existing container")
     void testRemoveExistingContainer() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_cont";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -589,13 +589,13 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("removeElementAtPosition not supported for MAP - returns error")
     void testRemoveElementAtPositionNotSupported() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_pos";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
 
         try {
-            client.removeElementAtPosition(bytes(mapKey), null, 0, 0).get();
+            client.deleteElementAtPosition(bytes(mapKey), null, 0, 0).get();
             fail("removeElementAtPosition should throw an error for MAP");;
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -611,7 +611,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("containsContainerKey checks existing key")
     void testContainsContainerKeyExists() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_contains_exist";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -625,7 +625,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("containsContainerKey checks non-existent key")
     void testContainsContainerKeyNotExists() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_contains_notexist";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -642,19 +642,19 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("removeFromContainer with ContainerType.MAP removes by key and value")
     void testRemoveFromContainerWithType() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_type";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
         client.createMap(mapKey, initialData).get();
 
-        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
-        List<Payload> values = List.of(Payload.of(p("v1").bytesValue()));
+        List<Payload> keys = List.of(Variant.ofBytes(p("k1").bytesValue()));
+        List<Payload> values = List.of(Variant.ofBytes(p("v1").bytesValue()));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.MAP, keys, values).get();
         assertEquals(1, removed, "1 element should be removed");;
 
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey).get();
         assertEquals(1, result.size());
         assertFalse(result.containsKey(p("k1")));
     }
@@ -663,19 +663,19 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("removeFromContainer with ContainerType.MAP removes by key even if value does not match")
     void testRemoveFromContainerWithTypeByWrongValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_type";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
         client.createMap(mapKey, initialData).get();
 
-        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
-        List<Payload> values = List.of(Payload.of(p("wrong_value").bytesValue()));
+        List<Payload> keys = List.of(Variant.ofBytes(p("k1").bytesValue()));
+        List<Payload> values = List.of(Variant.ofBytes(p("wrong_value").bytesValue()));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.MAP, keys, values).get();
         assertEquals(0, removed, "Element removed by key");;
 
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey).get();
         assertEquals(2, result.size(), "1 element remains");
     }
 
@@ -687,7 +687,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("removeFromContainer removes element by key and returns 1")
     void testRemoveFromContainerByKey() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_key";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2"),
                 p("k3"), p("v3")
@@ -697,7 +697,7 @@ public class HashMapOperationsTest extends TestBase {
         Integer removed = client.removeFromContainer(bytes(mapKey), null, p("k2").bytesValue()).get();
         assertEquals(1, removed, "1 element should be removed");;
 
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey).get();
         assertEquals(2, result.size(), "2 elements remain");;
         assertFalse(result.containsKey(p("k2")));
     }
@@ -706,7 +706,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("removeFromContainer returns 0 for non-existent key")
     void testRemoveFromContainerByKeyNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_key_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         client.createMap(mapKey, initialData).get();
@@ -741,7 +741,7 @@ public class HashMapOperationsTest extends TestBase {
         Integer added = client.addElementHashMap(bytes(mapKey), null, keys, values, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertEquals(3, added, "3 elements should be added");;
 
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey).get();
         assertEquals(3, result.size());
         assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.bytesValue()))));
         assertTrue(result.entrySet().stream().anyMatch(e -> "k2".equals(str(e.getKey())) && "v2".equals(str(e.bytesValue()))));
@@ -766,7 +766,7 @@ public class HashMapOperationsTest extends TestBase {
         Integer added2 = client.addElementHashMap(bytes(mapKey), null, keys2, values2, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertEquals(0, added2, "Duplicate key should not be added");;
 
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey).get();
         assertEquals(2, result.size(), "Should have 2 elements in total");;
     }
 
@@ -779,7 +779,7 @@ public class HashMapOperationsTest extends TestBase {
         Integer added = client.addElementHashMap(bytes(mapKey), null, List.of(), List.of(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertEquals(0, added, "Adding empty list should return 0");;
 
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey).get();
         assertEquals(0, result.size());
     }
 
@@ -795,7 +795,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(mapKey, Map.of()).get();
         assertNotNull(hint);
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(0, result.size(), "streamMap of empty map should return empty map");;
     }
@@ -804,7 +804,7 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("streamMap returns all container content")
     void testStreamMapWithData() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_stream_data";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("elem1"), p("val1"),
                 p("elem2"), p("val2"),
                 p("elem3"), p("val3"),
@@ -815,7 +815,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(mapKey, initialData).get();
         assertNotNull(hint);
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(5, result.size(), "streamMap should return all 5 elements");;
     }
@@ -824,14 +824,14 @@ public class HashMapOperationsTest extends TestBase {
     @DisplayName("streamMap with explicit clientId")
     void testStreamMapWithClientId() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_stream_cid";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
 
         KeyHintData hint = client.createMap(mapKey, initialData).get();
         assertNotNull(hint);
 
-        Map<Payload, Payload> result = client.streamMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+        Map<Payload, Variant> result = client.streamMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
         assertEquals(1, result.size());
         assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.bytesValue()))));
@@ -849,7 +849,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(mapKey, Map.of()).get();
         assertNotNull(hint, "KeyHint should be created");
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(0, result.size(), "Empty map should return empty map");;
     }
@@ -859,7 +859,7 @@ public class HashMapOperationsTest extends TestBase {
     void testCreateMapWithInitialData() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_initial";
 
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2"),
                 p("k3"), p("v3")
@@ -868,7 +868,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(mapKey, initialData).get();
         assertNotNull(hint, "KeyHint should be created");
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(3, result.size(), "Map should contain 3 elements");
         // Check via stream since streamMap returns new Payload objects
@@ -882,7 +882,7 @@ public class HashMapOperationsTest extends TestBase {
     void testCreateMapWithLargeDataChunking() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_large";
         int elementCount = 1500;
-        Map<Payload, Payload> largeData = new java.util.HashMap<>();
+        Map<Payload, Variant> largeData = new java.util.HashMap<>();
 
         for (int i = 0; i < elementCount; i++) {
             largeData.put(p("key_" + i), p("value_" + i + "_" + UUID.randomUUID()));
@@ -891,7 +891,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(mapKey, largeData).get();
         assertNotNull(hint, "KeyHint should be created");
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(elementCount, result.size(), "Map should contain " + elementCount + " elements");;
     }

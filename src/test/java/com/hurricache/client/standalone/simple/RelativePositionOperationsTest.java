@@ -1,7 +1,6 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
-import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -20,16 +19,16 @@ public class RelativePositionOperationsTest extends TestBase {
     @DisplayName("addElementToPositionBefore: Create on Master, insert before pivot on Backup")
     void testAddElementToPositionBeforeCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String key = "relativeBeforeMaster" + UUID.randomUUID();
-        Payload pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
-        Payload item1 = Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8));
-        Payload item2 = Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8));
+        Variant pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
+        Variant item1 = Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8));
+        Variant item2 = Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8));
 
         Assertions.assertNotNull(client.createList(key, List.of(pivot)).get());
         Thread.sleep(500);
 
         Integer success = client.addElementToPositionBefore(key, List.of(item1, item2), pivot).get();
 
-        Assertions.assertTrue(success == 2, "Insertion before pivot should return true");
+        Assertions.assertEquals(2, (int) success, "Insertion before pivot should return true");
 
         List<String> results = client.streamList(key).get()
                 .stream()
@@ -46,16 +45,16 @@ public class RelativePositionOperationsTest extends TestBase {
     @DisplayName("addElementToPositionBefore: Create on Backup, insert before pivot on Master")
     void testAddElementToPositionBeforeCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String key = "relativeBeforeBackup" + UUID.randomUUID();
-        Payload head = Variant.ofBytes("head".getBytes(StandardCharsets.UTF_8));
-        Payload pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
-        Payload inserted = Variant.ofBytes("inserted".getBytes(StandardCharsets.UTF_8));
+        Variant head = Variant.ofBytes("head".getBytes(StandardCharsets.UTF_8));
+        Variant pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
+        Variant inserted = Variant.ofBytes("inserted".getBytes(StandardCharsets.UTF_8));
 
         Assertions.assertNotNull(client.createVector(key, List.of(head, pivot)).get());
         Thread.sleep(500);
 
         Integer success = client.addElementToPositionBefore(key, List.of(inserted), pivot).get();
 
-        Assertions.assertTrue(success == 1);
+        Assertions.assertEquals(1, (int) success);
 
         List<String> results = client.streamVector(key).get()
                 .stream()
@@ -72,17 +71,17 @@ public class RelativePositionOperationsTest extends TestBase {
     @DisplayName("addElementToPositionAfter: Create on Master, insert after pivot on Backup")
     void testAddElementToPositionAfterCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         String key = "relativeAfterMaster" + UUID.randomUUID();
-        Payload pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
-        Payload tail = Variant.ofBytes("tail".getBytes(StandardCharsets.UTF_8));
-        Payload item1 = Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8));
-        Payload item2 = Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8));
+        Variant pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
+        Variant tail = Variant.ofBytes("tail".getBytes(StandardCharsets.UTF_8));
+        Variant item1 = Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8));
+        Variant item2 = Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8));
 
         Assertions.assertNotNull(client.createList(key, List.of(pivot, tail)).get());
         Thread.sleep(500);
 
         Integer success = client.addElementToPositionAfter(key, List.of(item1, item2), pivot).get();
 
-        Assertions.assertTrue(success == 2, "Insertion after pivot should return true");
+        Assertions.assertEquals(2, (int) success, "Insertion after pivot should return true");
 
         List<String> results = client.streamList(key).get()
                 .stream()
@@ -100,15 +99,15 @@ public class RelativePositionOperationsTest extends TestBase {
     @DisplayName("addElementToPositionAfter: Create on Backup, insert after pivot on Master")
     void testAddElementToPositionAfterCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         String key = "relativeAfterBackup" + UUID.randomUUID();
-        Payload pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
-        Payload inserted = Variant.ofBytes("inserted".getBytes(StandardCharsets.UTF_8));
+        Variant pivot = Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8));
+        Variant inserted = Variant.ofBytes("inserted".getBytes(StandardCharsets.UTF_8));
 
         Assertions.assertNotNull(client.createVector(key, List.of(pivot)).get());
         Thread.sleep(500);
 
         Integer success = client.addElementToPositionAfter(key, List.of(inserted), pivot).get();
 
-        Assertions.assertTrue(success == 1);
+        Assertions.assertEquals(1, (int) success);
 
         List<String> results = client.streamVector(key).get()
                 .stream()
@@ -124,9 +123,9 @@ public class RelativePositionOperationsTest extends TestBase {
     @DisplayName("Non-existent pivot should throw StatusRuntimeException NOT_FOUND without altering collection")
     void testMissingPivotReturnsFalse() throws ExecutionException, InterruptedException {
         String key = "missingPivotKey" + UUID.randomUUID();
-        Payload pivot = Variant.ofBytes("existing_pivot".getBytes(StandardCharsets.UTF_8));
-        Payload missingPivot = Variant.ofBytes("non_existent_pivot".getBytes(StandardCharsets.UTF_8));
-        Payload item = Variant.ofBytes("newItem".getBytes(StandardCharsets.UTF_8));
+        Variant pivot = Variant.ofBytes("existing_pivot".getBytes(StandardCharsets.UTF_8));
+        Variant missingPivot = Variant.ofBytes("non_existent_pivot".getBytes(StandardCharsets.UTF_8));
+        Variant item = Variant.ofBytes("newItem".getBytes(StandardCharsets.UTF_8));
 
         Assertions.assertNotNull(client.createList(key, List.of(pivot)).get());
         Thread.sleep(150);
@@ -147,7 +146,7 @@ public class RelativePositionOperationsTest extends TestBase {
         StatusRuntimeException causeAfter = (StatusRuntimeException) exAfter.getCause();
         Assertions.assertEquals(Status.Code.NOT_FOUND, causeAfter.getStatus().getCode());
 
-        List<Payload> current = client.streamList(key).get();
+        List<Variant> current = client.streamList(key).get();
         Assertions.assertEquals(1, current.size());
         Assertions.assertEquals("existing_pivot", new String(current.get(0).bytesValue(), StandardCharsets.UTF_8));
     }

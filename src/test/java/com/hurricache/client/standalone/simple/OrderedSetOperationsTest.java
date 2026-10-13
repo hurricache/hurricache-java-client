@@ -394,7 +394,7 @@ public class OrderedSetOperationsTest extends TestBase {
         assertNotNull(hint);
 
         // Remove elements with weights from 20 to 40 inclusively
-        Boolean removed = client.removeElementAtPosition(setKey, hint, 20, 40).get();
+        Boolean removed = client.deleteElementAtPosition(setKey, hint, 20, 40).get();
         assertTrue(removed, "Elements must be removed");
 
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
@@ -417,7 +417,7 @@ public class OrderedSetOperationsTest extends TestBase {
         assertNotNull(hint);
 
         // Remove element with weight 20 (minWeight = maxWeight = 20)
-        Boolean removed = client.removeElementAtPosition(setKey, hint, 20, 20).get();
+        Boolean removed = client.deleteElementAtPosition(setKey, hint, 20, 20).get();
         assertTrue(removed, "Element must be removed");
 
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
@@ -729,7 +729,7 @@ public class OrderedSetOperationsTest extends TestBase {
         assertNotNull(hint);
 
         try {
-            client.getAndRemoveElementAtPosition(setKey, hint, 100).get();
+            client.getAndDeleteElementAtPosition(setKey, hint, 100).get();
             fail("getAndRemoveElementAtPosition must throw NOT_FOUND for non-existent weight");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -880,7 +880,7 @@ public class OrderedSetOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
 
-        Boolean removed = client.removeElementAtPosition(setKey, hint, 20, 30).get();
+        Boolean removed = client.deleteElementAtPosition(setKey, hint, 20, 30).get();
         assertTrue(removed, "Elements must be removed");
 
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();

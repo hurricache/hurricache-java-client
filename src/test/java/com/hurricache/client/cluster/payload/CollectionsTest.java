@@ -3,7 +3,6 @@ package com.hurricache.client.cluster.payload;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import io.grpc.Status;
@@ -11,7 +10,6 @@ import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -28,21 +26,21 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on master
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createVector(listKey, List.of(Payload.of(zero)))
+                .createVector(listKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         byte[] one = createLargePayload(VALUE_SIZE);
-        client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint, List.of(Payload.of(one))).get();
+        client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Position
         byte[] posVal = client.setMode(Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get().bytesValue();
         Assertions.assertArrayEquals(one, posVal);
 
         // Remove Head
-        Boolean headRemoved = client.setMode(Mode.BACKUP).removeHead(listKey, keyHint).get();
-        Assertions.assertTrue(headRemoved);
+        Integer headRemoved = client.setMode(Mode.BACKUP).deleteHead(listKey, keyHint).get();
+        Assertions.assertEquals(1, (int) headRemoved);
     }
 
     @Test
@@ -51,21 +49,21 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on backup
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(listKey, List.of(Payload.of(zero)))
+                .createVector(listKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         byte[] one = createLargePayload(VALUE_SIZE);
-        client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint, List.of(Payload.of(one))).get();
+        client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Position
         byte[] posVal = client.setMode(Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get().bytesValue();
         Assertions.assertArrayEquals(one, posVal);
 
         // Remove Head
-        Boolean headRemoved = client.setMode(Mode.MASTER).removeHead(listKey, keyHint).get();
-        Assertions.assertTrue(headRemoved);
+        Integer headRemoved = client.setMode(Mode.MASTER).deleteHead(listKey, keyHint).get();
+        Assertions.assertEquals(1, (int) headRemoved);
     }
 
     @Test
@@ -74,7 +72,7 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on master
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createList(rangeKey, List.of(Payload.of(zero)))
+                .createList(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -82,11 +80,11 @@ public class CollectionsTest extends TestBaseCluster {
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
             if (i == 2) item3 = item;
-            client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(Payload.of(item))).get();
+            client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
 
         // Get elements from index 2 to 5
-        List<Payload> rangeData = client.setMode(Mode.BACKUP)
+        List<Variant> rangeData = client.setMode(Mode.BACKUP)
                 .streamElementInRangeUnordered(rangeKey, keyHint, ContainerType.LIST, 2, 5)
                 .get();
 
@@ -101,7 +99,7 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on backup
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createList(rangeKey, List.of(Payload.of(zero)))
+                .createList(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -109,11 +107,11 @@ public class CollectionsTest extends TestBaseCluster {
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
             if (i == 2) item3 = item;
-            client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(Payload.of(item))).get();
+            client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
 
         // Get elements from index 2 to 5
-        List<Payload> rangeData = client.setMode(Mode.MASTER)
+        List<Variant> rangeData = client.setMode(Mode.MASTER)
                 .streamElementInRangeUnordered(rangeKey, keyHint, ContainerType.LIST, 2, 5)
                 .get();
 
@@ -128,7 +126,7 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on master
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createVector(rangeKey, List.of(Payload.of(zero)))
+                .createVector(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -136,11 +134,11 @@ public class CollectionsTest extends TestBaseCluster {
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
             if (i == 2) item3 = item;
-            client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(Payload.of(item))).get();
+            client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
 
         // Get elements from index 2 to 5
-        List<Payload> rangeData = client.setMode(Mode.BACKUP)
+        List<Variant> rangeData = client.setMode(Mode.BACKUP)
                 .streamElementInRangeUnordered(rangeKey, keyHint, ContainerType.VECTOR, 2, 5)
                 .get();
 
@@ -155,7 +153,7 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on backup
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(rangeKey, List.of(Payload.of(zero)))
+                .createVector(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -163,11 +161,11 @@ public class CollectionsTest extends TestBaseCluster {
         for (int i = 1; i < 10; i++) {
             byte[] item = createLargePayload(VALUE_SIZE);
             if (i == 2) item3 = item;
-            client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(Payload.of(item))).get();
+            client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
 
         // Get elements from index 2 to 5
-        List<Payload> rangeData = client.setMode(Mode.MASTER)
+        List<Variant> rangeData = client.setMode(Mode.MASTER)
                 .streamElementInRangeUnordered(rangeKey, keyHint, ContainerType.VECTOR, 2, 5)
                 .get();
 
@@ -184,14 +182,14 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Create List with first element on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createList(key, List.of(Payload.of(val1)))
+                .createList(key, List.of(Variant.ofBytes(val1)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add second element on backup
-        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Payload.of(val2))).get();
+        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Variant.ofBytes(val2))).get();
 
-        List<Payload> results = client.setMode(Mode.BACKUP).streamList(key, keyHint).get();
+        List<Variant> results = client.setMode(Mode.BACKUP).streamList(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(val1, results.get(0).bytesValue());
@@ -206,14 +204,14 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Create List with first element on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createList(key, List.of(Payload.of(val1)))
+                .createList(key, List.of(Variant.ofBytes(val1)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add second element on master
-        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Payload.of(val2))).get();
+        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Variant.ofBytes(val2))).get();
 
-        List<Payload> results = client.setMode(Mode.MASTER).streamList(key, keyHint).get();
+        List<Variant> results = client.setMode(Mode.MASTER).streamList(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(val1, results.get(0).bytesValue());
@@ -226,15 +224,15 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on master
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createVector(key, List.of(Payload.of(zero)))
+                .createVector(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
         byte[] one = createLargePayload(VALUE_SIZE);
-        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Payload.of(one))).get();
+        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
-        List<Payload> results = client.setMode(Mode.BACKUP).streamVector(key, keyHint).get();
+        List<Variant> results = client.setMode(Mode.BACKUP).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(zero, results.get(0).bytesValue());
@@ -246,15 +244,15 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on backup
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(key, List.of(Payload.of(zero)))
+                .createVector(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
         byte[] one = createLargePayload(VALUE_SIZE);
-        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Payload.of(one))).get();
+        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
-        List<Payload> results = client.setMode(Mode.MASTER).streamVector(key, keyHint).get();
+        List<Variant> results = client.setMode(Mode.MASTER).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
         Assertions.assertArrayEquals(zero, results.get(0).bytesValue());
@@ -266,20 +264,20 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on master
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createList(key, List.of(Payload.of(zero)))
+                .createList(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
         byte[] one = createLargePayload(VALUE_SIZE);
-        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Payload.of(one))).get();
+        client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Head/Front
-        Payload head = client.setMode(Mode.BACKUP).getHead(key, keyHint).get();
+        Variant head = client.setMode(Mode.BACKUP).getHead(key, keyHint).get();
         Assertions.assertArrayEquals(zero, head.bytesValue());
 
         // Get Tail
-        Payload tail = client.setMode(Mode.BACKUP).getTail(key, keyHint).get();
+        Variant tail = client.setMode(Mode.BACKUP).getTail(key, keyHint).get();
         Assertions.assertArrayEquals(one, tail.bytesValue());
     }
 
@@ -289,20 +287,20 @@ public class CollectionsTest extends TestBaseCluster {
         // Create on backup
         byte[] zero = createLargePayload(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createList(key, List.of(Payload.of(zero)))
+                .createList(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
         byte[] one = createLargePayload(VALUE_SIZE);
-        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Payload.of(one))).get();
+        client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Head/Front
-        Payload head = client.setMode(Mode.MASTER).getHead(key, keyHint).get();
+        Variant head = client.setMode(Mode.MASTER).getHead(key, keyHint).get();
         Assertions.assertArrayEquals(zero, head.bytesValue());
 
         // Get Tail
-        Payload tail = client.setMode(Mode.MASTER).getTail(key, keyHint).get();
+        Variant tail = client.setMode(Mode.MASTER).getTail(key, keyHint).get();
         Assertions.assertArrayEquals(one, tail.bytesValue());
     }
 
@@ -310,16 +308,16 @@ public class CollectionsTest extends TestBaseCluster {
     void testAtomicRemoval() throws ExecutionException, InterruptedException {
         byte[] key = createLargePayload(KEY_SIZE);
         byte[] head = createLargePayload(VALUE_SIZE);
-        KeyHintData keyHint = client.createList(key, List.of(Payload.of(head))).get();
+        KeyHintData keyHint = client.createList(key, List.of(Variant.ofBytes(head))).get();
         byte[] tail = createLargePayload(VALUE_SIZE);
-        client.addElementToTail(key, keyHint, List.of(Payload.of(tail))).get();
+        client.addElementToTail(key, keyHint, List.of(Variant.ofBytes(tail))).get();
 
         // Remove Front
-        Payload removedHead = client.getAndRemoveFront(key, keyHint).get();
+        Variant removedHead = client.getAndDeleteHead(key, keyHint).get();
         Assertions.assertArrayEquals(head, removedHead.bytesValue());
 
         // Verify tail is now head
-        Payload newHead = client.getHead(key, keyHint).get();
+        Variant newHead = client.getHead(key, keyHint).get();
         Assertions.assertArrayEquals(tail, newHead.bytesValue());
     }
 
@@ -327,26 +325,26 @@ public class CollectionsTest extends TestBaseCluster {
     void testPositionalOperationsVector() throws ExecutionException, InterruptedException {
         byte[] key = createLargePayload(KEY_SIZE);
         byte[] init = createLargePayload(VALUE_SIZE);
-        KeyHintData keyHint = client.createVector(key, List.of(Payload.of(init))).get();
+        KeyHintData keyHint = client.createVector(key, List.of(Variant.ofBytes(init))).get();
         byte[] zero = createLargePayload(VALUE_SIZE);
         byte[] one = createLargePayload(VALUE_SIZE);
         client.addElementToTail(key, keyHint,
-                                Arrays.asList(Payload.of(zero), Payload.of(one))).get();
+                                Arrays.asList(Variant.ofBytes(zero), Variant.ofBytes(one))).get();
 
         // Get At Position 1
-        Payload pos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Variant pos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(zero, pos1.bytesValue());
 
         // Remove At Position 1
-        Payload removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
+        Variant removed = client.getAndDeleteElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(zero, removed.bytesValue());
 
-        List<Payload> results = client.streamVector(key, keyHint).get();
+        List<Variant> results = client.streamVector(key, keyHint).get();
 
         System.out.println(results);
 
         // Verify Shift
-        Payload newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Variant newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(one, newPos1.bytesValue());
     }
 
@@ -354,25 +352,25 @@ public class CollectionsTest extends TestBaseCluster {
     void testPositionalOperationsList() throws ExecutionException, InterruptedException {
         byte[] key = createLargePayload(KEY_SIZE);
         byte[] zero = createLargePayload(VALUE_SIZE);
-        KeyHintData keyHint = client.createList(key, List.of(Payload.of(zero))).get();
+        KeyHintData keyHint = client.createList(key, List.of(Variant.ofBytes(zero))).get();
         byte[] one = createLargePayload(VALUE_SIZE);
         byte[] two = createLargePayload(VALUE_SIZE);
         client.addElementToTail(key, keyHint,
-                                Arrays.asList(Payload.of(one), Payload.of(two))).get();
+                                Arrays.asList(Variant.ofBytes(one), Variant.ofBytes(two))).get();
 
         // Get At Position 1
-        Payload pos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Variant pos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(one, pos1.bytesValue());
 
         // Remove At Position 1
-        Payload removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
+        Variant removed = client.getAndDeleteElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(one, removed.bytesValue());
 
-        List<Payload> results = client.streamList(key, keyHint).get();
+        List<Variant> results = client.streamList(key, keyHint).get();
 
         System.out.println(results);
         // Verify Shift
-        Payload newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
+        Variant newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
         Assertions.assertArrayEquals(two, newPos1.bytesValue());
     }
 

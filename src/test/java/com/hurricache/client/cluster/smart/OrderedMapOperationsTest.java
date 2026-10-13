@@ -80,7 +80,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("Create ordered map with data, verify replication to backup")
     void testCreateOrderedMapWithData() throws ExecutionException, InterruptedException {
         String key = "orderedMapWithData" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3")
@@ -149,7 +149,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         String key = "largeOrderedMap" + UUID.randomUUID();
         int elementCount = 1500;
 
-        Map<OrderedPayload, Payload> payloads = new java.util.LinkedHashMap<>();
+        Map<OrderedPayload, Variant> payloads = new java.util.LinkedHashMap<>();
         for (int i = 0; i < elementCount; i++) {
             payloads.put(op((long) i, "key_" + i), p("value_" + i));
         }
@@ -207,7 +207,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("addElementOrderedMap on master, verify replication to backup")
     void testAddElementOrderedMapOnMaster() throws ExecutionException, InterruptedException {
         String key = "addElementMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -275,7 +275,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("addElementOrderedMap on backup, verify replication to master")
     void testAddElementOrderedMapOnBackup() throws ExecutionException, InterruptedException {
         String key = "addElementBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -347,7 +347,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("updateContainerValue on master, verify replication to backup")
     void testUpdateContainerValueOnMaster() throws ExecutionException, InterruptedException {
         String key = "updateContainerValueOnMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -394,7 +394,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("updateContainerValue on backup, verify replication to master")
     void testUpdateContainerValueOnBackup() throws ExecutionException, InterruptedException {
         String key = "updateContainerValueOnBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -441,7 +441,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("updateContainerValue for non-existent key returns NOT_FOUND")
     void testUpdateContainerValueNotFound() throws ExecutionException, InterruptedException {
         String key = "updateContainerValueNotFound" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -483,7 +483,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("containsContainerKey on master, verify key exists on both nodes")
     void testContainsContainerKeyOnMaster() throws ExecutionException, InterruptedException {
         String key = "containsKeyMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -524,7 +524,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("containsContainerKey on backup, verify key exists on both nodes")
     void testContainsContainerKeyOnBackup() throws ExecutionException, InterruptedException {
         String key = "containsKeyBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -557,7 +557,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer on master, verify replication to backup")
     void testRemoveFromContainerOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3")
@@ -616,7 +616,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer on backup, verify replication to master")
     void testRemoveFromContainerOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3")
@@ -679,7 +679,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition on master, verify replication to backup")
     void testRemoveElementAtPositionOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3"),
@@ -705,7 +705,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // removeElementAtPosition on MASTER (remove weights 2-3)
         client.setMode(Mode.MASTER)
-                .removeElementAtPosition(bytes(key), keyHint, 2L, 3L)
+                .deleteElementAtPosition(bytes(key), keyHint, 2L, 3L)
                 .get();
 
         // Verify on MASTER: getSize returns 2
@@ -738,7 +738,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition on backup, verify replication to master")
     void testRemoveElementAtPositionOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3"),
@@ -764,7 +764,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // removeElementAtPosition on BACKUP (remove weights 2-3)
         client.setMode(Mode.BACKUP)
-                .removeElementAtPosition(bytes(key), keyHint, 2L, 3L)
+                .deleteElementAtPosition(bytes(key), keyHint, 2L, 3L)
                 .get();
 
         // Verify on BACKUP: getSize returns 2
@@ -801,7 +801,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedMap on master, verify replication to backup")
     void testStreamElementInRangeOnMaster() throws ExecutionException, InterruptedException {
         String key = "streamElementInRangeMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3"),
@@ -815,7 +815,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // streamElementInRangeOrderedMap on MASTER (weights 1-2)
-        Map<OrderedPayload, Payload> streamResult = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> streamResult = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 1L, 2L, false, OWNER_CLIENT_ID)
                 .get();
         assertEquals(2, streamResult.size());
@@ -824,7 +824,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: streamElementInRangeOrderedMap returns same elements (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> backupStream = client.setMode(Mode.BACKUP)
+        Map<OrderedPayload, Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 1L, 2L, false, OWNER_CLIENT_ID)
                 .get();
         assertEquals(2, backupStream.size());
@@ -836,7 +836,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedMap on backup, verify replication to master")
     void testStreamElementInRangeOnBackup() throws ExecutionException, InterruptedException {
         String key = "streamElementInRangeBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3"),
@@ -850,7 +850,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // streamElementInRangeOrderedMap on BACKUP (weights 3-4)
-        Map<OrderedPayload, Payload> streamResult = client.setMode(Mode.BACKUP)
+        Map<OrderedPayload, Variant> streamResult = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 3L, 4L, false, OWNER_CLIENT_ID)
                 .get();
         assertEquals(2, streamResult.size());
@@ -859,7 +859,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: streamElementInRangeOrderedMap returns same elements (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> masterStream = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 3L, 4L, false, OWNER_CLIENT_ID)
                 .get();
         assertEquals(2, masterStream.size());
@@ -875,7 +875,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveContainerValue on master, verify replication to backup")
     void testGetAndRemoveContainerValueOnMaster() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -934,7 +934,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveContainerValue on backup, verify replication to master")
     void testGetAndRemoveContainerValueOnBackup() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -997,7 +997,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("remove container on master, verify replication to backup")
     void testRemoveContainerOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeContainerMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -1065,7 +1065,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("remove container on backup, verify replication to master")
     void testRemoveContainerOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeContainerBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2")
         );
@@ -1137,7 +1137,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("getSize on master, verify replication to backup")
     void testGetSizeOnMaster() throws ExecutionException, InterruptedException {
         String key = "getSizeMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3")
@@ -1167,7 +1167,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("getSize on backup, verify replication to master")
     void testGetSizeOnBackup() throws ExecutionException, InterruptedException {
         String key = "getSizeBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3")
@@ -1201,7 +1201,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("setTtl on master, verify getTtl on both nodes")
     void testSetTtlOnMaster() throws ExecutionException, InterruptedException {
         String key = "setTtlOnMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1238,7 +1238,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("setTtl on backup, verify getTtl on both nodes")
     void testSetTtlOnBackup() throws ExecutionException, InterruptedException {
         String key = "setTtlOnBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1279,7 +1279,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("TTL expiration: set short TTL on master, verify both nodes expire")
     void testTtlExpirationOnMaster() throws ExecutionException, InterruptedException {
         String key = "ttlExpOnMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1343,7 +1343,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("TTL expiration: set short TTL on backup, verify both nodes expire")
     void testTtlExpirationOnBackup() throws ExecutionException, InterruptedException {
         String key = "ttlExpOnBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1411,7 +1411,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject on master, verify lock replicates to backup")
     void testLockObjectOnMaster() throws ExecutionException, InterruptedException {
         String key = "lockOnMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1451,7 +1451,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject on backup, verify lock replicates to master")
     void testLockObjectOnBackup() throws ExecutionException, InterruptedException {
         String key = "lockOnBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1495,7 +1495,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("Lock expiration: set short TTL lock on master, verify both nodes expire")
     void testLockExpirationOnMaster() throws ExecutionException, InterruptedException {
         String key = "lockExpOnMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1545,7 +1545,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("Lock expiration: set short TTL lock on backup, verify both nodes expire")
     void testLockExpirationOnBackup() throws ExecutionException, InterruptedException {
         String key = "lockExpOnBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1599,7 +1599,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("INTRUDER cannot unlock when WRITE_LOCK is held by owner")
     void testIntruderCannotUnlock() throws ExecutionException, InterruptedException {
         String key = "intruderUnlock" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1656,7 +1656,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("After lock expiration container is accessible on both nodes")
     void testLockExpirationAccess() throws ExecutionException, InterruptedException {
         String key = "lockExpAccess" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1706,7 +1706,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("READ_LOCK is exclusive: second READ_LOCK fails with CANT_LOCK, but both can read")
     void testMultipleReadLocks() throws ExecutionException, InterruptedException {
         String key = "multiReadLock" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1772,7 +1772,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("After READ_LOCK expiration intruder can get WRITE_LOCK")
     void testReadLockExpirationToWrite() throws ExecutionException, InterruptedException {
         String key = "readLockExpWrite" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1826,7 +1826,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject gets READ_LOCK for ordered map on master - intruder can read but not write")
     void testReadLockOrderedMap() throws ExecutionException, InterruptedException {
         String key = "readLockOrderedMap" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -1844,14 +1844,14 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: owner can read
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> result = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> result = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
                 .get();
         assertEquals(1, result.size());
 
         // Verify on BACKUP: intruder CAN read (READ_LOCK allows multiple readers)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<OrderedPayload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupResult);
@@ -1877,7 +1877,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition includes endPos in range (tail included)")
     void testRemoveElementAtPositionEndIncluded() throws ExecutionException, InterruptedException {
         String key = "removePosEndIncluded" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(10L, "k1"), p("v1"),
                 op(20L, "k2"), p("v2"),
                 op(30L, "k3"), p("v3"),
@@ -1903,7 +1903,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // removeElementAtPosition on MASTER (remove weights 20-30, includes k2@20 and k3@30)
         client.setMode(Mode.MASTER)
-                .removeElementAtPosition(bytes(key), keyHint, 20L, 30L)
+                .deleteElementAtPosition(bytes(key), keyHint, 20L, 30L)
                 .get();
 
         // Verify on MASTER: getSize returns 2
@@ -1942,7 +1942,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition works when boundaries match")
     void testRemoveElementAtPositionSamePos() throws ExecutionException, InterruptedException {
         String key = "removePosSame" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(10L, "k1"), p("v1"),
                 op(20L, "k2"), p("v2"),
                 op(30L, "k3"), p("v3")
@@ -1962,7 +1962,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // removeElementAtPosition on MASTER (remove weight 20 only, minWeight = maxWeight = 20)
         client.setMode(Mode.MASTER)
-                .removeElementAtPosition(bytes(key), keyHint, 20L, 20L)
+                .deleteElementAtPosition(bytes(key), keyHint, 20L, 20L)
                 .get();
 
         // Verify on MASTER: getSize returns 2
@@ -1999,7 +1999,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedMap outside range returns empty on both nodes")
     void testStreamElementInRangeOrderedMapNoMatch() throws ExecutionException, InterruptedException {
         String key = "streamNoMatch" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(10L, "k1"), p("v1"),
                 op(20L, "k2"), p("v2"),
                 op(30L, "k3"), p("v3")
@@ -2012,7 +2012,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // streamElementInRangeOrderedMap on MASTER (weights 100-200, does not exist)
-        Map<OrderedPayload, Payload> streamResult = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> streamResult = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 100L, 200L, false, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(streamResult);
@@ -2020,7 +2020,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: streamElementInRangeOrderedMap also returns empty (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> backupStream = client.setMode(Mode.BACKUP)
+        Map<OrderedPayload, Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 100L, 200L, false, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupStream);
@@ -2035,7 +2035,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedMap reverse=true returns in reverse order on both nodes")
     void testStreamElementInRangeOrderedMapReverse() throws ExecutionException, InterruptedException {
         String key = "streamReverse" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(10L, "k1"), p("v1"),
                 op(20L, "k2"), p("v2"),
                 op(30L, "k3"), p("v3"),
@@ -2050,7 +2050,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // streamElementInRangeOrderedMap on MASTER (weights 20-40, reverse)
-        Map<OrderedPayload, Payload> streamResult = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> streamResult = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 20L, 40L, true, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(streamResult);
@@ -2058,7 +2058,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: streamElementInRangeOrderedMap returns same elements (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> backupStream = client.setMode(Mode.BACKUP)
+        Map<OrderedPayload, Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 20L, 40L, true, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupStream);
@@ -2078,7 +2078,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("Methods not applicable to ORDERED MAP should throw an error")
     void testUnsupportedMethodsForOrderedMap() throws ExecutionException, InterruptedException {
         String key = "unsupportedOrderedMap" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -2102,7 +2102,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // getAndRemoveElementAtPosition - not applicable to ORDERED MAP
         try {
             client.setMode(Mode.MASTER)
-                    .getAndRemoveElementAtPosition(bytes(key), keyHint, 0)
+                    .getAndDeleteElementAtPosition(bytes(key), keyHint, 0)
                     .get();
             fail("getAndRemoveElementAtPosition should throw an error for ORDERED MAP");
         } catch (ExecutionException e) {
@@ -2141,7 +2141,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("After WRITE_LOCK expiration intruder can get lock on both nodes")
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String key = "writeLockExp" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -2197,7 +2197,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("INTRUDER cannot acquire WRITE_LOCK when WRITE_LOCK exists on both nodes")
     void testWriteLockIntruderDenied() throws ExecutionException, InterruptedException {
         String key = "writeLockDenied" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -2247,7 +2247,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("lockObject gets WRITE_LOCK for ordered map on both nodes")
     void testWriteLockOrderedMap() throws ExecutionException, InterruptedException {
         String key = "writeLockOrderedMap" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1")
         );
 
@@ -2265,7 +2265,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: owner can read
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> result = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> result = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
                 .get();
         assertEquals(1, result.size());
@@ -2290,7 +2290,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     @DisplayName("streamOrderedMap with explicit clientId on both nodes")
     void testStreamOrderedMapWithClientId() throws ExecutionException, InterruptedException {
         String key = "streamWithClientId" + UUID.randomUUID();
-        Map<OrderedPayload, Payload> initialData = Map.of(
+        Map<OrderedPayload, Variant> initialData = Map.of(
                 op(1L, "k1"), p("v1"),
                 op(2L, "k2"), p("v2"),
                 op(3L, "k3"), p("v3")
@@ -2303,7 +2303,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // streamOrderedMap with explicit clientId on MASTER
-        Map<OrderedPayload, Payload> result = client.setMode(Mode.MASTER)
+        Map<OrderedPayload, Variant> result = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(result);
@@ -2314,7 +2314,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: streamOrderedMap returns same elements (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<OrderedPayload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<OrderedPayload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedMap(bytes(key), keyHint, 0L, Long.MAX_VALUE, false, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupResult);

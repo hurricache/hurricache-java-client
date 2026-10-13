@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +31,7 @@ public class RawValuesTest extends TestBaseCluster {
             for (int i = 0; i < NUM_OF_KEYS; ++i) {
                 String key = createRandomString(KEY_SIZE);
                 String value = createRandomString(VALUE_SIZE);
-                client.createKeyValue(key, value.getBytes()).thenAccept(keyhint -> {
+                client.createKeyValue(key, Variant.ofBytes(value.getBytes())))).thenAccept(keyhint -> {
                     keyValueMap.put(key, Pair.of(value, keyhint));
                     latch.countDown();
                     count.incrementAndGet();
@@ -116,7 +117,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, Variant.ofBytes(value.getBytes())))).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -145,7 +146,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, Variant.ofBytes(value.getBytes())))).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -173,7 +174,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, Variant.ofBytes(value.getBytes())))).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -219,7 +220,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.createKeyValue(key, Variant.ofBytes(value.getBytes())))).get();
             client.setTtl(client.serializeKey(key), keyHint, TTL).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }

@@ -124,7 +124,7 @@ public class ListOperationsTest extends TestBaseCluster {
 
         List<Payload> largePayloads = new ArrayList<>(elementCount);
         for (int i = 0; i < elementCount; i++) {
-            largePayloads.add(Payload.of(createLargePayload(payloadSize)));
+            largePayloads.add(Variant.ofBytes(createLargePayload(payloadSize)));
         }
 
         // Create large list
@@ -226,7 +226,7 @@ public class ListOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: getAndRemoveFront returns "head"
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveFront(key, keyHint)
+                .getAndDeleteHead(key, keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("head", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -256,7 +256,7 @@ public class ListOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: getAndRemoveFront returns "middle"
         Payload removedMaster = client.setMode(Mode.MASTER)
-                .getAndRemoveFront(key, keyHint)
+                .getAndDeleteHead(key, keyHint)
                 .get();
         assertNotNull(removedMaster);
         assertEquals("middle", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
@@ -475,7 +475,7 @@ public class ListOperationsTest extends TestBaseCluster {
         String key = "streamRangeTest" + UUID.randomUUID();
         List<Payload> initialData = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            initialData.add(Payload.of(String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
+            initialData.add(Variant.ofBytes(String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
         }
 
         // Create list
@@ -542,7 +542,7 @@ public class ListOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: getAndRemoveTail returns "tail"
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveTail(key, keyHint)
+                .getAndDeleteTail(key, keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("tail", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -571,7 +571,7 @@ public class ListOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: getAndRemoveTail returns "middle"
         Payload removedMaster = client.setMode(Mode.MASTER)
-                .getAndRemoveTail(key, keyHint)
+                .getAndDeleteTail(key, keyHint)
                 .get();
         assertNotNull(removedMaster);
         assertEquals("middle", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
@@ -611,9 +611,9 @@ public class ListOperationsTest extends TestBaseCluster {
 
         Thread.sleep(500); // replication wait
 
-        // Write on BACKUP: getAndRemoveElementAtPosition(key, 1) returns "pos1"
+        // Write on BACKUP: getAndDeleteElementAtPosition(key, 1) returns "pos1"
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveElementAtPosition(key, keyHint, 1)
+                .getAndDeleteElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(removed);
         assertEquals("pos1", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -640,9 +640,9 @@ public class ListOperationsTest extends TestBaseCluster {
                 .get();
         assertEquals(2, masterStream.size());
 
-        // Write on MASTER: getAndRemoveElementAtPosition(key, 0) returns "pos0"
+        // Write on MASTER: getAndDeleteElementAtPosition(key, 0) returns "pos0"
         Payload removedMaster = client.setMode(Mode.MASTER)
-                .getAndRemoveElementAtPosition(key, keyHint, 0)
+                .getAndDeleteElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(removedMaster);
         assertEquals("pos0", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
@@ -747,9 +747,9 @@ public class ListOperationsTest extends TestBaseCluster {
 
         Thread.sleep(500); // replication wait
 
-        // Write on BACKUP: removeElementAtPosition(key, 1)
+        // Write on BACKUP: deleteElementAtPosition(key, 1)
         Boolean removed = client.setMode(Mode.BACKUP)
-                .removeElementAtPosition(key, keyHint, 1)
+                .deleteElementAtPosition(key, keyHint, 1)
                 .get();
         assertTrue(removed);
 
@@ -769,9 +769,9 @@ public class ListOperationsTest extends TestBaseCluster {
                 .get();
         assertEquals(3, masterStream.size());
 
-        // Write on MASTER: removeElementAtPosition(key, 0, 1) - removes range [0, 1]
+        // Write on MASTER: deleteElementAtPosition(key, 0, 1) - removes range [0, 1]
         Boolean rangeRemoved = client.setMode(Mode.MASTER)
-                .removeElementAtPosition(key, keyHint, 0, 1)
+                .deleteElementAtPosition(key, keyHint, 0, 1)
                 .get();
         assertTrue(rangeRemoved);
 
@@ -1607,7 +1607,7 @@ public class ListOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: getAndRemoveFront
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveFront(key, keyHint)
+                .getAndDeleteHead(key, keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -1700,7 +1700,7 @@ public class ListOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: getAndRemoveTail
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveTail(key, keyHint)
+                .getAndDeleteTail(key, keyHint)
                 .get();
         assertNotNull(removed);
         assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -1798,9 +1798,9 @@ public class ListOperationsTest extends TestBaseCluster {
 
         Thread.sleep(500); // replication wait
 
-        // Write on BACKUP: getAndRemoveElementAtPosition(key, 0)
+        // Write on BACKUP: getAndDeleteElementAtPosition(key, 0)
         Payload removed = client.setMode(Mode.BACKUP)
-                .getAndRemoveElementAtPosition(key, keyHint, 0)
+                .getAndDeleteElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(removed);
         assertEquals("first", new String(removed.bytesValue(), StandardCharsets.UTF_8));
@@ -1953,7 +1953,7 @@ public class ListOperationsTest extends TestBaseCluster {
         // Create list with 5 elements
         List<Payload> initialData = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
-            initialData.add(Payload.of(String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
+            initialData.add(Variant.ofBytes(String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
         }
         KeyHintData keyHint = client.createList(key, initialData)
                 .get();
@@ -1985,7 +1985,7 @@ public class ListOperationsTest extends TestBaseCluster {
         String key = "getAndRemoveFrontMissing" + UUID.randomUUID();
 
         try {
-            client.getAndRemoveFront(key).get();
+            client.getAndDeleteHead(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -2002,7 +2002,7 @@ public class ListOperationsTest extends TestBaseCluster {
         String key = "getAndRemoveTailMissing" + UUID.randomUUID();
 
         try {
-            client.getAndRemoveTail(key).get();
+            client.getAndDeleteTail(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -2036,7 +2036,7 @@ public class ListOperationsTest extends TestBaseCluster {
         String key = "getAndRemoveElementAtPositionMissing" + UUID.randomUUID();
 
         try {
-            client.getAndRemoveElementAtPosition(key, null, 0).get();
+            client.getAndDeleteElementAtPosition(key, null, 0).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -2071,7 +2071,7 @@ public class ListOperationsTest extends TestBaseCluster {
         String key = "removeElementAtPositionMissing" + UUID.randomUUID();
 
         try {
-            client.removeElementAtPosition(key, null, 0, 1).get();
+            client.deleteElementAtPosition(key, null, 0, 1).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();

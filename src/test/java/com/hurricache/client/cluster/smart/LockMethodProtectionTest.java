@@ -41,7 +41,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_global_unary_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -77,7 +77,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_global_unary_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -189,7 +189,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_read_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -225,7 +225,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_read_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -265,7 +265,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_compat_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -303,7 +303,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_compat_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -345,7 +345,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_read_exp_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -377,7 +377,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_write_exp_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
         assertNotNull(hint);
 
         // Small object replication wait

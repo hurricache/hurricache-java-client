@@ -36,7 +36,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         String listKey = "headPosKeyCluster" + UUID.randomUUID();
 
         // Create list with middle element
-        KeyHintData hint = client.createList(listKey, List.of(Payload.of(bytes("Middle"))))
+        KeyHintData hint = client.createList(listKey, List.of(Variant.ofBytes(bytes("Middle"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -54,7 +54,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // addElementToHead on MASTER
         client.setMode(Mode.MASTER)
-                .addElementToHead(bytes(listKey), hint, List.of(Payload.of(bytes("Head"))))
+                .addElementToHead(bytes(listKey), hint, List.of(Variant.ofBytes(bytes("Head"))))
                 .get();
 
         // Verify on MASTER: getHead returns Head
@@ -72,7 +72,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // addElementToPosition on MASTER
         client.setMode(Mode.MASTER)
-                .addElementToPosition(listKey, List.of(Payload.of(bytes("NewPos1"))), 1, 0)
+                .addElementToPosition(listKey, List.of(Variant.ofBytes(bytes("NewPos1"))), 1, 0)
                 .get();
 
         // Verify on MASTER: getElementAtPosition(1) returns NewPos1
@@ -101,7 +101,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         String vecKey = "removePosKeyCluster" + UUID.randomUUID();
 
         // Create vector with initial element
-        KeyHintData hint = client.createVector(vecKey, List.of(Payload.of(bytes("0"))))
+        KeyHintData hint = client.createVector(vecKey, List.of(Variant.ofBytes(bytes("0"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -109,8 +109,8 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToTail on MASTER
         client.setMode(Mode.MASTER)
                 .addElementToTail(bytes(vecKey), hint, Arrays.asList(
-                        Payload.of(bytes("1")),
-                        Payload.of(bytes("2"))))
+                        Variant.ofBytes(bytes("1")),
+                        Variant.ofBytes(bytes("2"))))
                 .get();
 
         // Verify on MASTER: 3 elements
@@ -128,7 +128,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // removeTail on MASTER (removes "2")
         client.setMode(Mode.MASTER)
-                .removeTail(bytes(vecKey), hint)
+                .deleteTail(bytes(vecKey), hint)
                 .get();
 
         // Verify on MASTER: getTail returns "1"
@@ -144,9 +144,9 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
                 .get();
         assertEquals("1", new String(backupTailAfter.bytesValue(), StandardCharsets.UTF_8));
 
-        // removeElementAtPosition(0, 0) on MASTER (removes "0")
+        // deleteElementAtPosition(0, 0) on MASTER (removes "0")
         client.setMode(Mode.MASTER)
-                .removeElementAtPosition(bytes(vecKey), hint, 0L, 0L)
+                .deleteElementAtPosition(bytes(vecKey), hint, 0L, 0L)
                 .get();
 
         // Verify on MASTER: getElementAtPosition(0) returns "1"
@@ -175,7 +175,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         String key = "boolRangeKeyCluster" + UUID.randomUUID();
 
         // Create vector with initial element
-        KeyHintData hint = client.createVector(key, List.of(Payload.of(bytes("0"))))
+        KeyHintData hint = client.createVector(key, List.of(Variant.ofBytes(bytes("0"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -183,7 +183,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToTail on MASTER
         for (int i = 1; i < 5; i++) {
             client.setMode(Mode.MASTER)
-                    .addElementToTail(bytes(key), hint, List.of(Payload.of(bytes(String.valueOf(i)))))
+                    .addElementToTail(bytes(key), hint, List.of(Variant.ofBytes(bytes(String.valueOf(i)))))
                     .get();
         }
 
@@ -200,9 +200,9 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
                 .get();
         assertEquals("4", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
-        // removeElementAtPosition(0, 2) on MASTER (removes positions 0-2: "0", "1", "2")
+        // deleteElementAtPosition(0, 2) on MASTER (removes positions 0-2: "0", "1", "2")
         Boolean removed = client.setMode(Mode.MASTER)
-                .removeElementAtPosition(bytes(key), hint, 0L, 2L)
+                .deleteElementAtPosition(bytes(key), hint, 0L, 2L)
                 .get();
         assertTrue(removed);
 
@@ -232,7 +232,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         String qKey = "strictQueueCluster" + UUID.randomUUID();
 
         // Create queue
-        KeyHintData hint = client.createQueue(qKey, List.of(Payload.of(bytes("q1"))))
+        KeyHintData hint = client.createQueue(qKey, List.of(Variant.ofBytes(bytes("q1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -251,7 +251,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToPosition on MASTER should fail for Queue
         try {
             client.setMode(Mode.MASTER)
-                    .addElementToPosition(qKey, List.of(Payload.of(bytes("fail"))), 1, 0)
+                    .addElementToPosition(qKey, List.of(Variant.ofBytes(bytes("fail"))), 1, 0)
                     .get();
             fail("addElementToPosition should throw an error for Queue");
         } catch (ExecutionException e) {
@@ -262,7 +262,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToPosition on BACKUP should also fail
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementToPosition(qKey, List.of(Payload.of(bytes("fail"))), 1, 0)
+                    .addElementToPosition(qKey, List.of(Variant.ofBytes(bytes("fail"))), 1, 0)
                     .get();
             fail("addElementToPosition should throw an error for Queue");
         } catch (ExecutionException e) {

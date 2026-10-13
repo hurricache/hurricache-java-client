@@ -3,6 +3,7 @@ package com.hurricache.client.standalone.simple;
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import org.junit.jupiter.api.Assertions;
@@ -93,7 +94,7 @@ public class HurriCacheClientMissingTests extends TestBase {
     @DisplayName("Bounds: Access to collection elements by incorrect index")
     void testOutOfBoundsPosition() throws Exception {
         String key = "list:bounds:test" + UUID.randomUUID();
-        List<Payload> initial = List.of(Payload.of("elem1".getBytes()));
+        List<Payload> initial = List.of(Variant.ofBytes("elem1".getBytes()));
         KeyHintData hint = client.createList(key, initial, DEFAULT_CLIENT_ID).get();
 
         assertThrows(ExecutionException.class, () -> {
@@ -200,7 +201,7 @@ public class HurriCacheClientMissingTests extends TestBase {
         CompletableFuture<Void> producer = CompletableFuture.runAsync(() -> {
             for (int i = 0; i < itemCount; i++) {
                 try {
-                    client.addElementToTail(key, hint, List.of(Payload.of(("val-" + i).getBytes()))).get();
+                    client.addElementToTail(key, hint, List.of(Variant.ofBytes(("val-" + i).getBytes()))).get();
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -211,7 +212,7 @@ public class HurriCacheClientMissingTests extends TestBase {
             int emptyReads = 0;
             while (poppedCount.get() < itemCount && emptyReads < 50) {
                 try {
-                    Payload item = client.getAndRemoveFront(key, hint).get();
+                    Payload item = client.getAndDeleteHead(key, hint).get();
                     if (item != null) {
                         poppedCount.incrementAndGet();
                         emptyReads = 0;

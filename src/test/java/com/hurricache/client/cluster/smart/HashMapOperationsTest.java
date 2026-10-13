@@ -70,13 +70,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         Thread.sleep(REPLICATION_DELAY_MS);
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(0, result.size(), "Empty map should return empty map");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertNotNull(backupResult);
         assertEquals(0, backupResult.size());
@@ -87,7 +87,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     void testCreateMapWithInitialData() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_initial";
 
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2"),
                 p("k3"), p("v3")
@@ -98,13 +98,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         Thread.sleep(REPLICATION_DELAY_MS);
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(3, result.size(), "Map should contain 3 elements");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertNotNull(backupResult);
         assertEquals(3, backupResult.size());
@@ -117,7 +117,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     void testCreateMapWithLargeDataChunking() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_large";
         int elementCount = 1500;
-        Map<Payload, Payload> largeData = new java.util.HashMap<>();
+        Map<Payload, Variant> largeData = new java.util.HashMap<>();
 
         for (int i = 0; i < elementCount; i++) {
             largeData.put(p("key_" + i), p("value_" + i + "_" + UUID.randomUUID()));
@@ -129,13 +129,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
         // Large object - wait ~1s for replication
         Thread.sleep(1000);
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(elementCount, result.size(), "Map should contain " + elementCount + " elements");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertNotNull(backupResult);
         assertEquals(elementCount, backupResult.size());
@@ -153,13 +153,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
         KeyHintData hint = client.createMap(mapKey, Map.of()).get();
         assertNotNull(hint);
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(0, result.size(), "streamMap of empty map should return empty map");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertNotNull(backupResult);
         assertEquals(0, backupResult.size());
@@ -169,7 +169,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("streamMap returns all container content on master, verify replication to backup")
     void testStreamMapWithData() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_stream_data";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("elem1"), p("val1"),
                 p("elem2"), p("val2"),
                 p("elem3"), p("val3"),
@@ -182,13 +182,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         Thread.sleep(REPLICATION_DELAY_MS);
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(5, result.size(), "streamMap should return all 5 elements");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertNotNull(backupResult);
         assertEquals(5, backupResult.size());
@@ -198,20 +198,20 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("streamMap with explicit clientId on master, verify replication to backup")
     void testStreamMapWithClientId() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_stream_cid";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
 
         KeyHintData hint = client.createMap(mapKey, initialData).get();
         assertNotNull(hint);
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> result = client.streamMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+        Map<Payload, Variant> result = client.streamMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
         assertEquals(1, result.size());
 
         // Verify on BACKUP
 
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertNotNull(backupResult);
         assertEquals(1, backupResult.size());
@@ -237,12 +237,12 @@ public class HashMapOperationsTest extends TestBaseCluster {
         assertEquals(3, added);
 
         // Verify on MASTER (no delay needed)
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertEquals(3, result.size());
 
         // Verify on BACKUP (delay needed)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(3, backupResult.size());
 
@@ -253,13 +253,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
                 .addElementHashMap(mapKey, hint, keys2, values2, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
 
         // Verify on BACKUP
-        Map<Payload, Payload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(4, backupAfterWrite.size());
 
         // Verify on MASTER (delay needed)
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> masterAfterWrite = client.setMode(Mode.MASTER)
+        Map<Payload, Variant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamMap(mapKey, hint).get();
         assertEquals(4, masterAfterWrite.size());
     }
@@ -288,7 +288,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(2, backupResult.size());
     }
@@ -307,7 +307,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(0, backupResult.size());
     }
@@ -320,7 +320,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer removes element by key on master, verify replication to backup")
     void testRemoveFromContainerByKey() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_key";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2"),
                 p("k3"), p("v3")
@@ -335,13 +335,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
         assertEquals(1, removed, "1 element should be removed");
 
         // Verify on MASTER
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertEquals(2, result.size(), "2 elements remain");
         assertFalse(result.containsKey(p("k2")));
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(2, backupResult.size());
         assertFalse(backupResult.containsKey(p("k2")));
@@ -351,7 +351,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer returns 0 for non-existent key on master, verify on backup")
     void testRemoveFromContainerByKeyNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_key_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -365,7 +365,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(1, backupResult.size());
     }
@@ -385,7 +385,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(0, backupResult.size());
     }
@@ -398,7 +398,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer with ContainerType.MAP removes by key and value on master, verify on backup")
     void testRemoveFromContainerWithType() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_type";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -407,20 +407,20 @@ public class HashMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Write on MASTER
-        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
-        List<Payload> values = List.of(Payload.of(p("v1").bytesValue()));
+        List<Payload> keys = List.of(Variant.ofBytes(p("k1").bytesValue()));
+        List<Payload> values = List.of(Variant.ofBytes(p("v1").bytesValue()));
         Integer removed = client.setMode(Mode.MASTER)
                 .removeFromContainer(bytes(mapKey), hint, ContainerType.MAP, keys, values).get();
         assertEquals(1, removed, "1 element should be removed");
 
         // Verify on MASTER
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertEquals(1, result.size());
         assertFalse(result.containsKey(p("k1")));
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(1, backupResult.size());
     }
@@ -429,7 +429,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer with ContainerType.MAP removes by key even if value does not match on master, verify on backup")
     void testRemoveFromContainerWithTypeByWrongValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_type_wv";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -438,19 +438,19 @@ public class HashMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Write on MASTER
-        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
-        List<Payload> values = List.of(Payload.of(p("wrong_value").bytesValue()));
+        List<Payload> keys = List.of(Variant.ofBytes(p("k1").bytesValue()));
+        List<Payload> values = List.of(Variant.ofBytes(p("wrong_value").bytesValue()));
         Integer removed = client.setMode(Mode.MASTER)
                 .removeFromContainer(bytes(mapKey), hint, ContainerType.MAP, keys, values).get();
         assertEquals(0, removed, "Element removed by key");
 
         // Verify on MASTER
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertEquals(2, result.size(), "2 elements remain");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(2, backupResult.size());
     }
@@ -463,7 +463,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("containsContainerKey checks existing key on master, verify on backup")
     void testContainsContainerKeyExists() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_contains_exist";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -487,7 +487,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("containsContainerKey checks non-existent key on master, verify on backup")
     void testContainsContainerKeyNotExists() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_contains_notexist";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -514,7 +514,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("remove deletes existing container on master, verify NOT_FOUND on both nodes")
     void testRemoveExistingContainer() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_remove_cont";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -589,7 +589,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("getSize for map with elements on master, verify on backup")
     void testGetSizeWithElements() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_size_with";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2"),
                 p("k3"), p("v3")
@@ -618,7 +618,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("updateContainerValue updates value on master, verify replication to backup")
     void testUpdateContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_update";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("old_value")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -648,7 +648,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("updateContainerValue for non-existent key returns NOT_FOUND on master")
     void testUpdateContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_update_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -669,7 +669,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("getContainerValue gets value by key on master, verify on backup")
     void testGetContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_val";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -699,7 +699,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveContainerValue extracts and removes element on master, verify on backup")
     void testGetAndRemoveContainerValue() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_remove";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1"),
                 p("k2"), p("v2")
         );
@@ -714,13 +714,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
         assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
 
         // Verify on MASTER
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
+        Map<Payload, Variant> result = client.streamMap(mapKey, hint).get();
         assertEquals(1, result.size(), "1 element remains");
         assertFalse(result.containsKey(p("k1")));
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(1, backupResult.size());
         assertFalse(backupResult.containsKey(p("k1")));
@@ -730,7 +730,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveContainerValue for non-existent key returns NOT_FOUND on master")
     void testGetAndRemoveContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_remove_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -755,7 +755,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("getContainerValue for non-existent key returns NOT_FOUND on master")
     void testGetContainerValueNotFound() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_get_val_nf";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -780,7 +780,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("setTtl sets TTL on master, verify getTtl on both nodes")
     void testSetTtl() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_set";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -804,7 +804,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("getTtl gets container TTL on master, verify on backup")
     void testGetTtl() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_get";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -833,7 +833,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("After TTL expiration getContainerValue returns NOT_FOUND on master and backup")
     void testTtlExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_ttl_expire";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -877,7 +877,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("READ_LOCK: multiple clients can read in parallel on master, verify on backup")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -917,7 +917,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("WRITE_LOCK: only owner reads and writes on master, others denied, verify on backup")
     void testWriteLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_write_lock";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -953,7 +953,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint,OWNER_CLIENT_ID).get();
         assertEquals(2, backupResult.size());
 
@@ -965,7 +965,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("GLOBAL: only owner can do any operations on master, all others blocked, verify on backup")
     void testGlobalLockExclusiveAccess() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_global_lock";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -999,7 +999,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint,OWNER_CLIENT_ID).get();
         assertEquals(1, backupResult.size());
 
@@ -1011,7 +1011,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("unlockObject: only owner can unlock on master, verify on backup")
     void testUnlockByOwnerOnly() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_unlock_owner";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -1035,7 +1035,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(1, backupResult.size());
     }
@@ -1044,7 +1044,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("READ_LOCK: read OK, but write is denied on master, verify on backup")
     void testReadLockBlocksWrites() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock_writes";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -1069,7 +1069,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint).get();
         assertEquals(1, backupResult.size());
 
@@ -1084,7 +1084,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("READ_LOCK for 2s: after expiration another client can read on master and backup")
     void testReadLockExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_read_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -1117,7 +1117,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("WRITE_LOCK for 2s: after expiration another client can acquire WRITE_LOCK on master and backup")
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_write_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -1139,7 +1139,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint,INTRUDER_CLIENT_ID).get();
         assertEquals(1, backupResult.size());
 
@@ -1150,7 +1150,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("GLOBAL for 2s: after expiration another client can acquire WRITE_LOCK on master and backup")
     void testGlobalLockExpiration() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_global_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -1172,7 +1172,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint, INTRUDER_CLIENT_ID).get();
         assertEquals(1, backupResult.size());
 
@@ -1183,7 +1183,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("Any lock for 2s: after expiration new lock OK for another client on master and backup")
     void testLockExpirationAllowsNewLock() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_lock_exp_any";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -1205,7 +1205,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
-        Map<Payload, Payload> backupResult = client.setMode(Mode.BACKUP)
+        Map<Payload, Variant> backupResult = client.setMode(Mode.BACKUP)
                 .streamMap(mapKey, hint, INTRUDER_CLIENT_ID).get();
         assertEquals(1, backupResult.size());
 
@@ -1220,7 +1220,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("Methods not applicable to MAP should throw an error on master")
     void testUnsupportedMethodsForMap() throws ExecutionException, InterruptedException {
         String mapKey = baseKey + "_unsupported";
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
         KeyHintData hint = client.createMap(mapKey, initialData).get();
@@ -1240,7 +1240,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         // getAndRemoveElementAtPosition — not applicable to MAP
         try {
             client.setMode(Mode.MASTER)
-                    .getAndRemoveElementAtPosition(mapKey, hint, 0).get();
+                    .getAndDeleteElementAtPosition(mapKey, hint, 0).get();
             fail("getAndRemoveElementAtPosition should throw an error for MAP");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -1276,7 +1276,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition throws INTERNAL for MAP on both nodes")
     void testRemoveElementAtPositionNotSupported() throws ExecutionException, InterruptedException {
         String mapKey = "removePosNotSupported" + UUID.randomUUID();
-        Map<Payload, Payload> initialData = Map.of(
+        Map<Payload, Variant> initialData = Map.of(
                 p("k1"), p("v1")
         );
 
@@ -1289,7 +1289,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         // removeElementAtPosition on MASTER should fail
         try {
             client.setMode(Mode.MASTER)
-                    .removeElementAtPosition(bytes(mapKey), hint, 0, 0)
+                    .deleteElementAtPosition(bytes(mapKey), hint, 0, 0)
                     .get();
             fail("removeElementAtPosition should throw an error for MAP");
         } catch (ExecutionException e) {
@@ -1300,7 +1300,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         // removeElementAtPosition on BACKUP should also fail
         try {
             client.setMode(Mode.BACKUP)
-                    .removeElementAtPosition(bytes(mapKey), hint, 0, 0)
+                    .deleteElementAtPosition(bytes(mapKey), hint, 0, 0)
                     .get();
             fail("removeElementAtPosition should throw an error for MAP");
         } catch (ExecutionException e) {

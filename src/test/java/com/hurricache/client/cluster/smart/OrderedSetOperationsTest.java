@@ -65,9 +65,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testCreateOrderedSetWithData() throws ExecutionException, InterruptedException {
         String key = "orderedSetWithData" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(1L, bytes("1")),
-                OrderedPayload.of(2L, bytes("2")),
-                OrderedPayload.of(3L, bytes("3"))
+                OrderedVariant.ofBytes(1L, bytes("1")),
+                OrderedVariant.ofBytes(2L, bytes("2")),
+                OrderedVariant.ofBytes(3L, bytes("3"))
         );
 
         // Create ordered set
@@ -100,7 +100,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementWithWeight
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(4L, bytes("4"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(4L, bytes("4"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -130,7 +130,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         List<OrderedPayload> payloads = new ArrayList<>(elementCount);
         for (int i = 0; i < elementCount; i++) {
-            payloads.add(OrderedPayload.of(i, ("large_item_" + i + "_" + UUID.randomUUID()).getBytes(
+            payloads.add(OrderedVariant.ofBytes(i, ("large_item_" + i + "_" + UUID.randomUUID()).getBytes(
                     StandardCharsets.UTF_8)));
         }
 
@@ -168,9 +168,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testStreamOrderedSet() throws ExecutionException, InterruptedException {
         String key = "streamOrderedSetTest" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(1L, bytes("elem1")),
-                OrderedPayload.of(2L, bytes("elem2")),
-                OrderedPayload.of(3L, bytes("elem3"))
+                OrderedVariant.ofBytes(1L, bytes("elem1")),
+                OrderedVariant.ofBytes(2L, bytes("elem2")),
+                OrderedVariant.ofBytes(3L, bytes("elem3"))
         );
 
         // Create ordered set
@@ -195,7 +195,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementWithWeight
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(4L, bytes("elem4"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(4L, bytes("elem4"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -216,7 +216,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(5L, bytes("elem5"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(5L, bytes("elem5"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -242,7 +242,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementWithWeight on master, verify replication and write on backup")
     void testAddElementWithWeight() throws ExecutionException, InterruptedException {
         String key = "addElementWithWeightTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("1")));
+        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -253,8 +253,8 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Write on BACKUP: addElementWithWeight
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementWithWeight(key, keyHint, List.of(
-                        OrderedPayload.of(2L, bytes("2")),
-                        OrderedPayload.of(3L, bytes("3"))
+                        OrderedVariant.ofBytes(2L, bytes("2")),
+                        OrderedVariant.ofBytes(3L, bytes("3"))
                 ))
                 .get();
         assertNotNull(added);
@@ -281,7 +281,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(4L, bytes("4"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(4L, bytes("4"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -305,7 +305,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementWithWeight allows duplicates (same keys with different weights)")
     void testAddElementWithWeightAllowsDuplicates() throws ExecutionException, InterruptedException {
         String key = "addElementWithWeightDup" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("1")));
+        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -316,8 +316,8 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Write on BACKUP: add duplicates
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementWithWeight(key, keyHint, List.of(
-                        OrderedPayload.of(2L, bytes("1")),
-                        OrderedPayload.of(3L, bytes("1"))
+                        OrderedVariant.ofBytes(2L, bytes("1")),
+                        OrderedVariant.ofBytes(3L, bytes("1"))
                 ))
                 .get();
         assertEquals(2, added, "2 elements should be added (duplicates allowed)");
@@ -343,7 +343,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementWithWeight with empty list returns 0")
     void testAddElementWithWeightEmptyList() throws ExecutionException, InterruptedException {
         String key = "addElementWithWeightEmpty" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("1")));
+        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -393,11 +393,11 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOrderedSet() throws ExecutionException, InterruptedException {
         String key = "streamRangeOrderedTest" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3")),
-                OrderedPayload.of(40L, bytes("4")),
-                OrderedPayload.of(50L, bytes("5"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3")),
+                OrderedVariant.ofBytes(40L, bytes("4")),
+                OrderedVariant.ofBytes(50L, bytes("5"))
         );
 
         // Create ordered set
@@ -422,7 +422,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementWithWeight
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(60L, bytes("6"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(60L, bytes("6"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -443,7 +443,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(70L, bytes("7"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(70L, bytes("7"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -468,11 +468,11 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOrderedSetReverse() throws ExecutionException, InterruptedException {
         String key = "streamRangeOrderedReverse" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3")),
-                OrderedPayload.of(40L, bytes("4")),
-                OrderedPayload.of(50L, bytes("5"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3")),
+                OrderedVariant.ofBytes(40L, bytes("4")),
+                OrderedVariant.ofBytes(50L, bytes("5"))
         );
 
         // Create ordered set
@@ -499,7 +499,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementWithWeight
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(60L, bytes("6"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(60L, bytes("6"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -520,7 +520,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(70L, bytes("7"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(70L, bytes("7"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -545,9 +545,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOrderedSetNoMatch() throws ExecutionException, InterruptedException {
         String key = "streamRangeOrderedNoMatch" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3"))
         );
 
         // Create ordered set
@@ -572,7 +572,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementWithWeight
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(4L, bytes("4"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(4L, bytes("4"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -593,7 +593,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(5L, bytes("5"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(5L, bytes("5"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -620,9 +620,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testRemoveFromContainer() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerTest" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(1L, bytes("1")),
-                OrderedPayload.of(2L, bytes("2")),
-                OrderedPayload.of(3L, bytes("3"))
+                OrderedVariant.ofBytes(1L, bytes("1")),
+                OrderedVariant.ofBytes(2L, bytes("2")),
+                OrderedVariant.ofBytes(3L, bytes("3"))
         );
 
         // Create ordered set
@@ -633,7 +633,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: removeFromContainer
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
                 .get();
         assertEquals(1, removed, "1 element should be removed");
 
@@ -655,7 +655,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: removeFromContainer
         Integer removedMaster = client.setMode(Mode.MASTER)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(2L, bytes("2")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(2L, bytes("2")).bytesValue())
                 .get();
         assertEquals(1, removedMaster);
 
@@ -681,10 +681,10 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testRemoveFromContainerMultipleDuplicates() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerMulti" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(1L, bytes("1")),
-                OrderedPayload.of(2L, bytes("1")),
-                OrderedPayload.of(3L, bytes("1")),
-                OrderedPayload.of(4L, bytes("2"))
+                OrderedVariant.ofBytes(1L, bytes("1")),
+                OrderedVariant.ofBytes(2L, bytes("1")),
+                OrderedVariant.ofBytes(3L, bytes("1")),
+                OrderedVariant.ofBytes(4L, bytes("2"))
         );
 
         // Create ordered set
@@ -707,7 +707,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: remove all "item1" (3 items)
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
                 .get();
         assertEquals(3, removed, "3 elements with the same key must be removed");
 
@@ -733,8 +733,8 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerNonExist" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(1L, bytes("1")),
-                OrderedPayload.of(2L, bytes("2"))
+                OrderedVariant.ofBytes(1L, bytes("1")),
+                OrderedVariant.ofBytes(2L, bytes("2"))
         );
 
         // Create ordered set
@@ -757,7 +757,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: removeFromContainer non-existent
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).bytesValue())
                 .get();
         assertEquals(0, removed, "0 elements should be removed (element not found)");
 
@@ -785,8 +785,8 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testContainsContainerKey() throws ExecutionException, InterruptedException {
         String key = "containsContainerKeyTest" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(1L, bytes("1")),
-                OrderedPayload.of(2L, bytes("2"))
+                OrderedVariant.ofBytes(1L, bytes("1")),
+                OrderedVariant.ofBytes(2L, bytes("2"))
         );
 
         // Create ordered set
@@ -797,19 +797,19 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for existing element
         Boolean masterExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
                 .get();
         assertTrue(masterExists);
 
         // Verify on BACKUP: containsContainerKey for existing element
         Boolean backupExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
                 .get();
         assertTrue(backupExists);
 
         // Verify on BACKUP: containsContainerKey for non-existing element
         Boolean notExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).bytesValue())
                 .get();
         assertFalse(notExists, "Element nonexistent must not exist");
 
@@ -817,20 +817,20 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for non-existing element
         Boolean masterNotExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).bytesValue())
                 .get();
         assertFalse(masterNotExists, "Element nonexistent must not exist");
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(3L, bytes("3"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(3L, bytes("3"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: containsContainerKey for new element
         Boolean newExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(3L, bytes("3")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(3L, bytes("3")).bytesValue())
                 .get();
         assertTrue(newExists);
 
@@ -838,20 +838,20 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: containsContainerKey for new element
         Boolean backupNewExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(3L, bytes("3")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(3L, bytes("3")).bytesValue())
                 .get();
         assertTrue(backupNewExists);
 
         // Write on BACKUP: addElementWithWeight
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(4L, bytes("4"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(4L, bytes("4"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: containsContainerKey for new element
         Boolean backupNewExists2 = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(4L, bytes("4")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(4L, bytes("4")).bytesValue())
                 .get();
         assertTrue(backupNewExists2);
 
@@ -859,7 +859,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for new element
         Boolean masterNewExists2 = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(4L, bytes("4")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(4L, bytes("4")).bytesValue())
                 .get();
         assertTrue(masterNewExists2);
     }
@@ -871,11 +871,11 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionTest" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3")),
-                OrderedPayload.of(40L, bytes("4")),
-                OrderedPayload.of(50L, bytes("5"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3")),
+                OrderedVariant.ofBytes(40L, bytes("4")),
+                OrderedVariant.ofBytes(50L, bytes("5"))
         );
 
         // Create ordered set
@@ -884,9 +884,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
-        // Write on BACKUP: removeElementAtPosition(key, 20, 40)
+        // Write on BACKUP: deleteElementAtPosition(key, 20, 40)
         Boolean removed = client.setMode(Mode.BACKUP)
-                .removeElementAtPosition(key, keyHint, 20, 40)
+                .deleteElementAtPosition(key, keyHint, 20, 40)
                 .get();
         assertTrue(removed, "Elements must be removed");
 
@@ -908,9 +908,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .get();
         assertEquals(2, masterStream.size());
 
-        // Write on MASTER: removeElementAtPosition(key, 10, 10)
+        // Write on MASTER: deleteElementAtPosition(key, 10, 10)
         Boolean rangeRemoved = client.setMode(Mode.MASTER)
-                .removeElementAtPosition(key, keyHint, 10, 10)
+                .deleteElementAtPosition(key, keyHint, 10, 10)
                 .get();
         assertTrue(rangeRemoved);
 
@@ -937,9 +937,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPositionSamePos() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionSame" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3"))
         );
 
         // Create ordered set
@@ -960,9 +960,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .get();
         assertEquals(3, backupStream.size());
 
-        // Write on BACKUP: removeElementAtPosition(key, 20, 20)
+        // Write on BACKUP: deleteElementAtPosition(key, 20, 20)
         Boolean removed = client.setMode(Mode.BACKUP)
-                .removeElementAtPosition(key, keyHint, 20, 20)
+                .deleteElementAtPosition(key, keyHint, 20, 20)
                 .get();
         assertTrue(removed, "Element must be removed");
 
@@ -986,9 +986,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         assertEquals(10L, masterAfterWrite.get(0).getOrder());
         assertEquals(30L, masterAfterWrite.get(1).getOrder());
 
-        // Write on MASTER: removeElementAtPosition(key, 10, 10)
+        // Write on MASTER: deleteElementAtPosition(key, 10, 10)
         Boolean rangeRemoved = client.setMode(Mode.MASTER)
-                .removeElementAtPosition(key, keyHint, 10, 10)
+                .deleteElementAtPosition(key, keyHint, 10, 10)
                 .get();
         assertTrue(rangeRemoved);
 
@@ -1019,7 +1019,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         String key = "setTtlOrderedSetTest" + UUID.randomUUID();
 
         // Create ordered set
-        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedPayload.of(1L, bytes("1"))))
+        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1086,7 +1086,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key,
-                        List.of(OrderedPayload.of(1L, bytes("1"))))
+                        List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1154,7 +1154,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Create ordered set (always on master, KeyHint works on both nodes)
         KeyHintData keyHint = client.createOrderedSet(key,
-                        List.of(OrderedPayload.of(1L, bytes("1"))))
+                        List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1223,7 +1223,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         String key = "readLockOrderedSetTest" + UUID.randomUUID();
 
         // Create ordered set
-        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedPayload.of(1L, bytes("1"))))
+        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1281,7 +1281,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Client 2 tries to write (should fail with PERMISSION_DENIED) on BACKUP
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(2L, bytes("2"))), INTRUDER_CLIENT_ID)
+                    .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(2L, bytes("2"))), INTRUDER_CLIENT_ID)
                     .get();
             fail("Expected PERMISSION_DENIED for write with READ_LOCK");
         } catch (ExecutionException e) {
@@ -1294,7 +1294,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Client 2 tries to write on MASTER (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.MASTER)
-                    .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(3L, bytes("3"))), INTRUDER_CLIENT_ID)
+                    .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(3L, bytes("3"))), INTRUDER_CLIENT_ID)
                     .get();
             fail("Expected PERMISSION_DENIED for write with READ_LOCK on master");
         } catch (ExecutionException e) {
@@ -1357,7 +1357,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         String key = "writeLockOrderedSetTest" + UUID.randomUUID();
 
         // Create ordered set
-        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedPayload.of(1L, bytes("1"))))
+        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1386,7 +1386,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: owner can write (addElementWithWeight)
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(2L, bytes("2"))), OWNER_CLIENT_ID)
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(2L, bytes("2"))), OWNER_CLIENT_ID)
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -1425,7 +1425,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Intruder tries to write (should fail with PERMISSION_DENIED) on BACKUP
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(3L, bytes("3"))), INTRUDER_CLIENT_ID)
+                    .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(3L, bytes("3"))), INTRUDER_CLIENT_ID)
                     .get();
             fail("Expected PERMISSION_DENIED for write with WRITE_LOCK");
         } catch (ExecutionException e) {
@@ -1438,7 +1438,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Intruder tries to write on MASTER (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.MASTER)
-                    .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(4L, bytes("4"))), INTRUDER_CLIENT_ID)
+                    .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(4L, bytes("4"))), INTRUDER_CLIENT_ID)
                     .get();
             fail("Expected PERMISSION_DENIED for write with WRITE_LOCK on master");
         } catch (ExecutionException e) {
@@ -1503,7 +1503,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         String key = "globalLockOrderedSetTest" + UUID.randomUUID();
 
         // Create ordered set
-        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedPayload.of(1L, bytes("1"))))
+        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1571,7 +1571,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Intruder tries to write (should fail with PERMISSION_DENIED) on BACKUP
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(2L, bytes("2"))))
+                    .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(2L, bytes("2"))))
                     .get();
             fail("Expected PERMISSION_DENIED for write with GLOBAL_LOCK");
         } catch (ExecutionException e) {
@@ -1584,7 +1584,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Intruder tries to write on MASTER (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.MASTER)
-                    .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(3L, bytes("3"))))
+                    .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(3L, bytes("3"))))
                     .get();
             fail("Expected PERMISSION_DENIED for write with GLOBAL_LOCK on master");
         } catch (ExecutionException e) {
@@ -1648,7 +1648,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         String key = "unlockOwnerOrderedSetTest" + UUID.randomUUID();
 
         // Create ordered set
-        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedPayload.of(1L, bytes("1"))))
+        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1732,7 +1732,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         String key = "lockExpirationOrderedSetMaster" + UUID.randomUUID();
 
         // Create ordered set
-        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedPayload.of(1L, bytes("1"))))
+        KeyHintData keyHint = client.createOrderedSet(key, List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1761,7 +1761,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: owner can write (addElementWithWeight)
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(2L, bytes("2"))), OWNER_CLIENT_ID)
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(2L, bytes("2"))), OWNER_CLIENT_ID)
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -1811,7 +1811,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Create ordered set on BACKUP
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createOrderedSet(key, List.of(OrderedPayload.of(1L, bytes("1"))))
+                .createOrderedSet(key, List.of(OrderedVariant.ofBytes(1L, bytes("1"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
@@ -1840,7 +1840,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: owner can write (addElementWithWeight)
         client.setMode(Mode.BACKUP)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(2L, bytes("2"))), OWNER_CLIENT_ID)
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(2L, bytes("2"))), OWNER_CLIENT_ID)
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -1892,11 +1892,11 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testGetElementWithWeight() throws ExecutionException, InterruptedException {
         String key = "getElementWithWeightTest" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3")),
-                OrderedPayload.of(40L, bytes("4")),
-                OrderedPayload.of(50L, bytes("5"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3")),
+                OrderedVariant.ofBytes(40L, bytes("4")),
+                OrderedVariant.ofBytes(50L, bytes("5"))
         );
 
         // Create ordered set
@@ -1932,7 +1932,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
-                .addElementWithWeight(key, keyHint, List.of(OrderedPayload.of(60L, bytes("6"))))
+                .addElementWithWeight(key, keyHint, List.of(OrderedVariant.ofBytes(60L, bytes("6"))))
                 .get();
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -1959,10 +1959,10 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testGetElementWithWeightMultipleSameWeight() throws ExecutionException, InterruptedException {
         String key = "getElementWithWeightMulti" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(20L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(20L, bytes("3")),
-                OrderedPayload.of(40L, bytes("4"))
+                OrderedVariant.ofBytes(20L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(20L, bytes("3")),
+                OrderedVariant.ofBytes(40L, bytes("4"))
         );
 
         // Create ordered set
@@ -2007,9 +2007,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testGetElementAtPositionNotFound() throws ExecutionException, InterruptedException {
         String key = "getElementAtPositionNotFound" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3"))
         );
 
         // Create ordered set
@@ -2062,9 +2062,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testGetAndRemoveElementWithWeight() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveElementWithWeightTest" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2")),
-                OrderedPayload.of(30L, bytes("3"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2")),
+                OrderedVariant.ofBytes(30L, bytes("3"))
         );
 
         // Create ordered set
@@ -2125,8 +2125,8 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testGetAndRemoveElementAtPositionNotFound() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveElementAtPositionNotFound" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("1")),
-                OrderedPayload.of(20L, bytes("2"))
+                OrderedVariant.ofBytes(10L, bytes("1")),
+                OrderedVariant.ofBytes(20L, bytes("2"))
         );
 
         // Create ordered set
@@ -2149,10 +2149,10 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         assertNotNull(backupStream);
         assertEquals(2, backupStream.size());
 
-        // Read on BACKUP: getAndRemoveElementAtPosition(key, 100) should fail
+        // Read on BACKUP: getAndDeleteElementAtPosition(key, 100) should fail
         try {
             client.setMode(Mode.BACKUP)
-                    .getAndRemoveElementAtPosition(key, keyHint, 100)
+                    .getAndDeleteElementAtPosition(key, keyHint, 100)
                     .get();
             fail("getAndRemoveElementAtPosition must throw NOT_FOUND for non-existent weight");
         } catch (ExecutionException e) {
@@ -2165,7 +2165,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         // Verify on MASTER: also fails
         try {
             client.setMode(Mode.MASTER)
-                    .getAndRemoveElementAtPosition(key, keyHint, 100)
+                    .getAndDeleteElementAtPosition(key, keyHint, 100)
                     .get();
             fail("getAndRemoveElementAtPosition must throw NOT_FOUND for non-existent weight");
         } catch (ExecutionException e) {
@@ -2182,7 +2182,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("READ_LOCK: multiple clients can read concurrently on both nodes")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String key = "readLockParallel" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("item1")));
+        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -2246,9 +2246,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testGetElementWithWeightReplication() throws ExecutionException, InterruptedException {
         String key = "getElementWithWeightRep" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("item1")),
-                OrderedPayload.of(20L, bytes("item2")),
-                OrderedPayload.of(30L, bytes("item3"))
+                OrderedVariant.ofBytes(10L, bytes("item1")),
+                OrderedVariant.ofBytes(20L, bytes("item2")),
+                OrderedVariant.ofBytes(30L, bytes("item3"))
         );
 
         // Create ordered set
@@ -2281,7 +2281,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("Methods not applicable to ordered set must throw errors")
     void testUnsupportedMethodsForOrderedSet() throws ExecutionException, InterruptedException {
         String key = "unsupportedOrderedSet" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("item1")));
+        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -2321,9 +2321,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOrderedSetEndWeightIncluded() throws ExecutionException, InterruptedException {
         String key = "rangeEndIncluded" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("item1")),
-                OrderedPayload.of(20L, bytes("item2")),
-                OrderedPayload.of(30L, bytes("item3"))
+                OrderedVariant.ofBytes(10L, bytes("item1")),
+                OrderedVariant.ofBytes(20L, bytes("item2")),
+                OrderedVariant.ofBytes(30L, bytes("item3"))
         );
 
         // Create ordered set
@@ -2359,9 +2359,9 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOrderedSetStartWeightIncluded() throws ExecutionException, InterruptedException {
         String key = "rangeStartIncluded" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("item1")),
-                OrderedPayload.of(20L, bytes("item2")),
-                OrderedPayload.of(30L, bytes("item3"))
+                OrderedVariant.ofBytes(10L, bytes("item1")),
+                OrderedVariant.ofBytes(20L, bytes("item2")),
+                OrderedVariant.ofBytes(30L, bytes("item3"))
         );
 
         // Create ordered set
@@ -2397,10 +2397,10 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPositionEndPosIncluded() throws ExecutionException, InterruptedException {
         String key = "removePosEndIncluded" + UUID.randomUUID();
         List<OrderedPayload> initialData = List.of(
-                OrderedPayload.of(10L, bytes("item1")),
-                OrderedPayload.of(20L, bytes("item2")),
-                OrderedPayload.of(30L, bytes("item3")),
-                OrderedPayload.of(40L, bytes("item4"))
+                OrderedVariant.ofBytes(10L, bytes("item1")),
+                OrderedVariant.ofBytes(20L, bytes("item2")),
+                OrderedVariant.ofBytes(30L, bytes("item3")),
+                OrderedVariant.ofBytes(40L, bytes("item4"))
         );
 
         // Create ordered set
@@ -2422,7 +2422,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // removeElementAtPosition on MASTER (20-30, includes both 20 and 30)
         Boolean removed = client.setMode(Mode.MASTER)
-                .removeElementAtPosition(key, keyHint, 20, 30)
+                .deleteElementAtPosition(key, keyHint, 20, 30)
                 .get();
         assertTrue(removed);
 
@@ -2452,7 +2452,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("WRITE_LOCK expires after duration, intruder can acquire on both nodes")
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String key = "writeLockExp" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedPayload.of(1L, bytes("item1")));
+        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)

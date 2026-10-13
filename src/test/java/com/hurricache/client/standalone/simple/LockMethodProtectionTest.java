@@ -93,7 +93,7 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Master")
     void testReadLockProtectionCreateOnMaster() throws Exception {
         String testKey1 = testKey + UUID.randomUUID();
-        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Assertions.assertNotNull(client.createKeyValue(testKey1, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get());
         Thread.sleep(150);
 
         client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
@@ -107,7 +107,7 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Backup")
     void testReadLockProtectionCreateOnBackup() throws Exception {
         String testKey1 = testKey + UUID.randomUUID();
-        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Assertions.assertNotNull(client.createKeyValue(testKey1, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get());
         Thread.sleep(150);
 
         client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
@@ -121,7 +121,7 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("Compatibility: Cannot acquire WRITE if READ exists, cannot acquire another READ - Create on Master")
     void testLockCompatibilityCreateOnMaster() throws Exception {
         String testKey1 = testKey + UUID.randomUUID();
-        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Assertions.assertNotNull(client.createKeyValue(testKey1, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get());
         Thread.sleep(150);
 
         client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
@@ -148,7 +148,7 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("Compatibility: Cannot acquire WRITE if READ exists, cannot acquire another READ - Create on Backup")
     void testLockCompatibilityCreateOnBackup() throws Exception {
         String testKey1 = testKey + UUID.randomUUID();
-        Assertions.assertNotNull(client.createKeyValue(testKey1, "initial_value".getBytes(StandardCharsets.UTF_8)).get());
+        Assertions.assertNotNull(client.createKeyValue(testKey1, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get());
         Thread.sleep(150);
 
         client.lockObject(testKey1, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
