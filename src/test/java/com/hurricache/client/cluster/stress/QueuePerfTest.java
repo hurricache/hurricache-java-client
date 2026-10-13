@@ -44,7 +44,7 @@ public class QueuePerfTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncSmartClient("192.168.0.123", 51000, 0, Duration.ofSeconds(5)) {
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }

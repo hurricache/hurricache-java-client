@@ -361,22 +361,60 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 return CompletableFuture.completedFuture(result);
             }
 
+            // =========================================================================
+            // 1. ОБРАБОТКА РЕРОУТИНГА (FAILED_PRECONDITION)
+            // =========================================================================
             if (isReroute(ex)) {
-                String targetRoute = getRerouteTarget(ex);
-                log.atDebug().log("[REROUTE] Redirecting payload to dynamic target: {}", targetRoute);
-                HurriCacheClientInterface directClient = getRoute(routingInfo, targetRoute);
-                return directClient != null
-                       ? action.apply(directClient)
-                       : CompletableFuture.failedFuture(ex);
+                RerouteTargets routes = getRerouteTargets(ex);
+                if (routes != null) {
+                    String currentTarget = currentEndpoint != null ? currentEndpoint.getTarget() : "";
+
+                    String masterTarget = (routes.masterTarget() != null && !routes.masterTarget().equals(currentTarget))
+                                          ? routes.masterTarget() : null;
+                    String backupTarget = (routes.backupTarget() != null && !routes.backupTarget().equals(currentTarget))
+                                          ? routes.backupTarget() : null;
+
+                    HurriCacheClientInterface newMaster = masterTarget != null
+                                                          ? routingInfo.routingTableTarget().computeIfAbsent(masterTarget, this::newFastCacheClient)
+                                                          : null;
+
+                    HurriCacheClientInterface newBackup = backupTarget != null
+                                                          ? routingInfo.routingTableTarget().computeIfAbsent(backupTarget, this::newFastCacheClient)
+                                                          : fallbackEndpoint;
+
+                    log.atDebug().log("[REROUTE] Dynamic redirect from {} -> Master: {}, Backup: {}",
+                                      currentTarget, masterTarget, backupTarget);
+
+                    if (newMaster != null) {
+                        return action.apply(newMaster)
+                                .handle(fallbackGuard(shard, routingInfo, action, newMaster, newBackup))
+                                .thenCompose(Function.identity());
+                    }
+
+                    if (newBackup != null && !newBackup.equals(currentEndpoint)) {
+                        log.atWarn().log("[REROUTE FAILOVER] Master target invalid/dead. Directing straight to Backup: {}",
+                                         newBackup.getTarget());
+                        return action.apply(newBackup)
+                                .handle(fallbackGuard(shard, routingInfo, action, newBackup, null))
+                                .thenCompose(Function.identity());
+                    }
+                }
             }
 
+            // =========================================================================
+            // 2. ОБРАБОТКА НЕДОСТУПНОСТИ НОДЫ (UNAVAILABLE)
+            // =========================================================================
             if (isUnavailable(ex)) {
-                log.atDebug().log("[FAILOVER] Node cluster connection dead: {}", currentEndpoint.getTarget());
+                String deadTarget = currentEndpoint != null ? currentEndpoint.getTarget() : "UNKNOWN";
+                log.atWarn().log("[FAILOVER] Target node is dead: {}. Triggering topology update...", deadTarget);
+
                 scheduledExecutorService.execute(this::init);
 
-                if (fallbackEndpoint != null) {
-                    log.atInfo().log("[FAILOVER] Failing over pipeline execution target to: {}", fallbackEndpoint.getTarget());
-                    return action.apply(fallbackEndpoint);
+                if (fallbackEndpoint != null && !fallbackEndpoint.equals(currentEndpoint)) {
+                    log.atInfo().log("[FAILOVER] Retrying action on backup target: {}", fallbackEndpoint.getTarget());
+                    return action.apply(fallbackEndpoint)
+                            .handle(fallbackGuard(shard, routingInfo, action, fallbackEndpoint, null))
+                            .thenCompose(Function.identity());
                 }
             }
 
@@ -621,12 +659,25 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION;
     }
 
-    private String getRerouteTarget(Throwable ex) {
+    private RerouteTargets getRerouteTargets(Throwable ex) {
         Throwable c = (ex instanceof CompletionException) ? ex.getCause() : ex;
-        if (c instanceof StatusRuntimeException sre
-            && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION
-            && sre.getTrailers() != null) {
-            return sre.getTrailers().get(Metadata.Key.of("x-fastcache-route", Metadata.ASCII_STRING_MARSHALLER));
+        if (c instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION) {
+            String routeData = null;
+
+            if (sre.getTrailers() != null) {
+                routeData = sre.getTrailers().get(Metadata.Key.of("x-fastcache-route", Metadata.ASCII_STRING_MARSHALLER));
+            }
+
+            if (routeData == null || routeData.isBlank()) {
+                routeData = sre.getStatus().getDescription();
+            }
+
+            if (routeData != null && !routeData.isBlank()) {
+                String[] parts = routeData.split(",");
+                String master = parts[0].trim();
+                String backup = (parts.length > 1) ? parts[1].trim() : null;
+                return new RerouteTargets(master, backup);
+            }
         }
         return null;
     }
@@ -1465,4 +1516,6 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
         return chunks;
     }
+
+    private record RerouteTargets(String masterTarget, String backupTarget) {}
 }

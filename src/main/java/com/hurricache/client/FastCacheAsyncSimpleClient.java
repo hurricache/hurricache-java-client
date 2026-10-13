@@ -206,7 +206,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .build();
         getStub(timeout).createKeyValue(req, new CompletableFutureObserver<>(future, keyHintResponse -> {
             KeyHint keyHint = keyHintResponse.getKeyHint();
-            return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash());
+            return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash(), keyHintResponse.getRelayed());
         }));
         return future;
     }
@@ -327,7 +327,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         getStub(timeout).createContainer(builder.build(),
                                          new CompletableFutureObserver<>(createFuture, keyHintResponse -> {
                                              KeyHint keyHint1 = keyHintResponse.getKeyHint();
-                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash());
+                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash(),keyHintResponse.getRelayed());
                                          }));
 
         return createFuture;
@@ -363,7 +363,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         getStub(timeout).createContainer(builder.build(),
                                          new CompletableFutureObserver<>(createFuture, keyHintResponse -> {
                                              KeyHint keyHint1 = keyHintResponse.getKeyHint();
-                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash());
+                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash(),keyHintResponse.getRelayed());
                                          }));
         return createFuture;
     }
@@ -396,7 +396,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         getStub(timeout).createContainer(builder.build(),
                                          new CompletableFutureObserver<>(createFuture, keyHintResponse -> {
                                              KeyHint keyHint1 = keyHintResponse.getKeyHint();
-                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash());
+                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash(),keyHintResponse.getRelayed());
                                          }));
 
         return createFuture;
@@ -435,7 +435,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         getStub(timeout).createContainer(builder.build(),
                                          new CompletableFutureObserver<>(createFuture, keyHintResponse -> {
                                              KeyHint keyHint1 = keyHintResponse.getKeyHint();
-                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash());
+                                             return KeyHintData.of(keyHint1.getStrongHash(), keyHint1.getWeekHash(),keyHintResponse.getRelayed());
                                          }));
         return createFuture;
     }
@@ -994,7 +994,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AtomicCreate req = buildAtomicCreateReq(key, hint, value, ttl, clientId);
         getStub(timeout).atomicCreate(req, new CompletableFutureObserver<>(future, keyHintResponse -> {
             KeyHint keyHint = keyHintResponse.getKeyHint();
-            return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash());
+            return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash(),keyHintResponse.getRelayed());
         }));
         return future;
     }
@@ -1010,7 +1010,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AtomicCreate req = buildAtomicCreateReq(key, hint, value, ttl, clientId);
         getStub(timeout).atomicStore(req, new CompletableFutureObserver<>(future, keyHintResponse -> {
             KeyHint keyHint = keyHintResponse.getKeyHint();
-            return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash());
+            return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeekHash(),keyHintResponse.getRelayed());
         }));
         return future;
     }

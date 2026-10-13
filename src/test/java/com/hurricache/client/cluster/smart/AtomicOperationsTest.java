@@ -794,8 +794,8 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void testReadLockExpirationOnAtomic() throws ExecutionException, InterruptedException {
         String testKey = "readLockExpAtomic" + UUID.randomUUID();
 
-        client.atomicCreate(bytes(testKey), 42L).get();
-
+        KeyHintData keyHint = client.atomicCreate(bytes(testKey), 42L).get();
+        System.out.println("KeyHint: " + keyHint);
         Thread.sleep(150);
 
         LockStatus lock = client
@@ -875,10 +875,10 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void testAtomicCreateDuplicate() throws ExecutionException, InterruptedException {
         String testKey = "atomicCreateDup" + UUID.randomUUID();
 
-        client.atomicCreate(bytes(testKey), 42L).get();
+        KeyHintData keyHint = client.atomicCreate(bytes(testKey), 42L).get();
         Thread.sleep(150);
         try {
-            client.atomicCreate(bytes(testKey), 100L)
+            client.atomicCreate(bytes(testKey),keyHint, 100L)
                     .get();
             Assertions.fail("Expected ExecutionException caused by ALREADY_EXISTS status");
         } catch (Exception e) {
@@ -891,11 +891,11 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void testCreateDifferentTypeOnAtomicKey() throws ExecutionException, InterruptedException {
         String testKey = "createTypeOnAtomic" + UUID.randomUUID();
 
-        client.atomicCreate(bytes(testKey), 42L).get();
+        KeyHintData keyHint = client.atomicCreate(bytes(testKey), 42L).get();
         Thread.sleep(150);
         try {
             client
-                    .createSet(testKey, new ArrayList<>())
+                    .createSet(bytes(testKey),keyHint, new ArrayList<>(), Duration.ofSeconds(30),0,Duration.ZERO)
                     .get();
             Assertions.fail("Expected ExecutionException caused by ALREADY_EXISTS status");
         } catch (Exception e) {
@@ -908,10 +908,13 @@ public class AtomicOperationsTest extends TestBaseCluster {
     void testCreateDifferentTypeOnSetKey() throws ExecutionException, InterruptedException {
         String testKey = "createTypeOnSet" + UUID.randomUUID();
 
-        client.createSet(testKey, new ArrayList<>()).get();
+        KeyHintData keyHint = client.createSet(testKey, new ArrayList<>()).get();
+        if (keyHint.isWasRelayed()){
+            System.err.println("Warning: keyHint was relayed result may be inaccurate");
+        }
         Thread.sleep(500);
         try {
-            client.atomicCreate(bytes(testKey), 42L)
+            client.atomicCreate(bytes(testKey),keyHint, 42L)
                     .get();
             Assertions.fail("Expected ExecutionException caused by ALREADY_EXISTS status");
         } catch (Exception e) {

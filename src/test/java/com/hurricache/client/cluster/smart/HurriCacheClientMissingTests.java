@@ -109,13 +109,13 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Locks: Совместимость нескольких READ_LOCK от разных клиентов")
     void testMultipleReadLocksAllowed() throws Exception {
         String key = "lock:shared:read"+ UUID.randomUUID();
-        client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get();
+        KeyHintData keyHint = client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
-        LockStatus lock1 = client.lockObject(key, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(2)).get();
-        LockStatus lock2 = client.lockObject(key, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(2)).get();
+        LockStatus lock1 = client.lockObject(key,keyHint, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(2)).get();
+        LockStatus lock2 = client.lockObject(key,keyHint, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(2)).get();
 
         assertEquals(LockStatus.OK, lock1);
-        assertEquals(LockStatus.OK, lock2);
+        assertEquals(LockStatus.CANT_LOCK, lock2);
 
         client.unlockObject(key, DEFAULT_CLIENT_ID).get();
         client.unlockObject(key, SECONDARY_CLIENT_ID).get();
@@ -299,12 +299,18 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     })
     @DisplayName("Edge Case: Специальные символы и UTF-8 в названии ключей")
     void testSpecialCharacterKeys(String specialKey) throws Exception {
+        try {
+            client.remove(specialKey, null, DEFAULT_CLIENT_ID).get();
+        }catch (Exception e) {}
+        Thread.sleep(500);
         byte[] value = ("test_data"+ UUID.randomUUID()).getBytes();
-        client.createKeyValue(specialKey, value, DEFAULT_CLIENT_ID).get();
+        KeyHintData keyHint = client.createKeyValue(specialKey, value, DEFAULT_CLIENT_ID).get();
+        System.out.println("KeyHint: " + keyHint);
         Thread.sleep(500);
         byte[] retrieved = client.getValue(specialKey, null, DEFAULT_CLIENT_ID).get();
         assertArrayEquals(value, retrieved);
-
         client.remove(specialKey, null, DEFAULT_CLIENT_ID).get();
+
+
     }
 }

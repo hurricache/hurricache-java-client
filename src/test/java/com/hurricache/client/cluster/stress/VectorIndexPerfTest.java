@@ -36,12 +36,13 @@ public class VectorIndexPerfTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, TIMEOUT) {
+        client = new FastCacheAsyncSmartClient("192.168.0.123", 51000, 0, TIMEOUT) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }
         };
+        client.setMode(Mode.LB_SMART);
     }
 
     @AfterAll

@@ -2,6 +2,7 @@ package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -41,11 +42,12 @@ public class ListIndexPerfTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, TIMEOUT) {
+        client = new FastCacheAsyncSmartClient("192.168.0.123", 51000, 0, TIMEOUT) {
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }
         };
+        client.setMode(Mode.LB_SMART);
     }
 
     @AfterAll
@@ -108,7 +110,7 @@ public class ListIndexPerfTest {
                 Duration.ofMinutes(15)).get();
 
         assertNotNull(vectorHint, "Vector must be created successfully for size: " + vectorSize);
-
+        Thread.sleep(30000); // Ждем секунду,
         // 3. Запуск потоков чтения
         ExecutorService pool = Executors.newFixedThreadPool(READER_THREADS);
         LongAdder readOps = new LongAdder();

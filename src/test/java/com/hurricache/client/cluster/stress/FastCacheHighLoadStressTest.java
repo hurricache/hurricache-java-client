@@ -41,13 +41,13 @@ public class FastCacheHighLoadStressTest {
         executor = Executors.newFixedThreadPool(THREAD_COUNT);
         reporterExecutor = Executors.newSingleThreadScheduledExecutor();
 
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncSmartClient("192.168.0.123", 51000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(10);
             }
         };
-        client.setMode(Mode.MASTER_THAN_BACKUP);
+        client.setMode(Mode.LB_SMART);
 
         while (!client.getReadyFlag()) {
             Thread.sleep(100);

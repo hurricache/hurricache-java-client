@@ -42,7 +42,7 @@ public class FastCacheContainerSegregatedStressTest {
         executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
         // Подключение к реальному серверу fastcache
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncSmartClient("192.168.0.123", 51000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(5);

@@ -2,6 +2,7 @@ package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,12 +33,13 @@ public class AtomicPerfStressTest {
     @BeforeAll
     public static void setup() {
         // Инициализируем Smart-клиент
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000, 0, Duration.ofSeconds(5)) {
+        client = new FastCacheAsyncSmartClient("192.168.0.123", 51000, 0, Duration.ofSeconds(5)) {
             @Override
             public Duration getDefaultTtl() {
                 return Duration.ofMinutes(15);
             }
         };
+        client.setMode(Mode.LB_SMART);
     }
 
     @AfterAll
