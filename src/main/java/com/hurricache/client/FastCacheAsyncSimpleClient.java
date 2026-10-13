@@ -786,7 +786,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     public CompletableFuture<Integer> addElementToPositionAfter(byte[] key,
                                                                 KeyHintData hint,
                                                                 List<Variant> data,
-                                                                Payload pivot,
+                                                                Variant pivot,
                                                                 int clientId,
                                                                 Duration timeout) {
         if (data == null || data.isEmpty()) {
