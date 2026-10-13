@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.*;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;

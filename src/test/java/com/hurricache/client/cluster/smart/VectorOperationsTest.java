@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -58,8 +59,8 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testCreateVectorWithData() throws ExecutionException, InterruptedException {
         String key = "vectorWithData" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -74,8 +75,8 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .get();
         assertNotNull(masterStream);
         assertEquals(2, masterStream.size());
-        assertEquals("first", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(masterStream.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterStream.get(1).bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: streamVector returns [first, second]
         List<Payload> backupStream = client.setMode(Mode.BACKUP)
@@ -83,12 +84,12 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .get();
         assertNotNull(backupStream);
         assertEquals(2, backupStream.size());
-        assertEquals("first", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(backupStream.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(backupStream.get(1).bytesValue(), StandardCharsets.UTF_8));
 
         // Write on BACKUP: addElementToTail
         client.setMode(Mode.BACKUP)
-                .addElementToTail(key, keyHint, List.of(Payload.of("third".getBytes(StandardCharsets.UTF_8))))
+                .addElementToTail(key, keyHint, List.of(Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -98,7 +99,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, backupAfterWrite.size());
-        assertEquals("third", new String(backupAfterWrite.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("third", new String(backupAfterWrite.get(2).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -107,7 +108,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, masterAfterWrite.size());
-        assertEquals("third", new String(masterAfterWrite.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("third", new String(masterAfterWrite.get(2).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -143,10 +144,10 @@ public class VectorOperationsTest extends TestBaseCluster {
         assertEquals(elementCount, backupStream.size(), "Expected " + elementCount + " elements on backup");
 
         // Verify integrity: first and last elements match
-        assertArrayEquals(largePayloads.get(0).getValue(), masterStream.get(0).getValue(), "First element mismatch on master");
-        assertArrayEquals(largePayloads.get(elementCount - 1).getValue(), masterStream.get(elementCount - 1).getValue(), "Last element mismatch on master");
-        assertArrayEquals(largePayloads.get(0).getValue(), backupStream.get(0).getValue(), "First element mismatch on backup");
-        assertArrayEquals(largePayloads.get(elementCount - 1).getValue(), backupStream.get(elementCount - 1).getValue(), "Last element mismatch on backup");
+        assertArrayEquals(largePayloads.get(0).bytesValue(), masterStream.get(0).bytesValue(), "First element mismatch on master");
+        assertArrayEquals(largePayloads.get(elementCount - 1).bytesValue(), masterStream.get(elementCount - 1).bytesValue(), "Last element mismatch on master");
+        assertArrayEquals(largePayloads.get(0).bytesValue(), backupStream.get(0).bytesValue(), "First element mismatch on backup");
+        assertArrayEquals(largePayloads.get(elementCount - 1).bytesValue(), backupStream.get(elementCount - 1).bytesValue(), "Last element mismatch on backup");
     }
 
     // ==================== Section 2: Read Operations ====================
@@ -156,9 +157,9 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testStreamVector() throws ExecutionException, InterruptedException {
         String key = "streamVectorTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("a".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("b".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("c".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("a".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("b".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("c".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -183,7 +184,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementToTail
         client.setMode(Mode.BACKUP)
-                .addElementToTail(key, keyHint, List.of(Payload.of("d".getBytes(StandardCharsets.UTF_8))))
+                .addElementToTail(key, keyHint, List.of(Variant.ofBytes("d".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -208,9 +209,9 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testGetAndRemoveFront() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveFrontTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("head".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("middle".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("tail".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("head".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("middle".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("tail".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -224,7 +225,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveFront(key, keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("head", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("head", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -233,7 +234,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHead);
-        assertEquals("middle", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("middle", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         List<Payload> backupStream = client.setMode(Mode.BACKUP)
                 .streamVector(key, keyHint)
@@ -247,14 +248,14 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
-        assertEquals("middle", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("middle", new String(masterStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: getAndRemoveFront returns "middle"
         Payload removedMaster = client.setMode(Mode.MASTER)
                 .getAndRemoveFront(key, keyHint)
                 .get();
         assertNotNull(removedMaster);
-        assertEquals("middle", new String(removedMaster.getValue(), StandardCharsets.UTF_8));
+        assertEquals("middle", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -263,7 +264,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHead);
-        assertEquals("tail", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("tail", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -272,7 +273,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHeadAfter);
-        assertEquals("tail", new String(backupHeadAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("tail", new String(backupHeadAfter.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -280,8 +281,8 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testGetHead() throws ExecutionException, InterruptedException {
         String key = "getHeadTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -292,7 +293,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementToTail
         client.setMode(Mode.BACKUP)
-                .addElementToTail(key, keyHint, List.of(Payload.of("third".getBytes(StandardCharsets.UTF_8))))
+                .addElementToTail(key, keyHint, List.of(Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -302,7 +303,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHead);
-        assertEquals("first", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -311,11 +312,11 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHead);
-        assertEquals("first", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementToHead
         client.setMode(Mode.MASTER)
-                .addElementToHead(key, keyHint, List.of(Payload.of("zero".getBytes(StandardCharsets.UTF_8))))
+                .addElementToHead(key, keyHint, List.of(Variant.ofBytes("zero".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -325,7 +326,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHeadAfter);
-        assertEquals("zero", new String(masterHeadAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("zero", new String(masterHeadAfter.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -334,7 +335,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHeadAfter);
-        assertEquals("zero", new String(backupHeadAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("zero", new String(backupHeadAfter.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -342,8 +343,8 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testGetTail() throws ExecutionException, InterruptedException {
         String key = "getTailTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -354,7 +355,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementToHead
         client.setMode(Mode.BACKUP)
-                .addElementToHead(key, keyHint, List.of(Payload.of("zero".getBytes(StandardCharsets.UTF_8))))
+                .addElementToHead(key, keyHint, List.of(Variant.ofBytes("zero".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -364,7 +365,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTail);
-        assertEquals("second", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -373,11 +374,11 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTail);
-        assertEquals("second", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementToTail
         client.setMode(Mode.MASTER)
-                .addElementToTail(key, keyHint, List.of(Payload.of("last".getBytes(StandardCharsets.UTF_8))))
+                .addElementToTail(key, keyHint, List.of(Variant.ofBytes("last".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -387,7 +388,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTailAfter);
-        assertEquals("last", new String(masterTailAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("last", new String(masterTailAfter.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -396,7 +397,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTailAfter);
-        assertEquals("last", new String(backupTailAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("last", new String(backupTailAfter.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -404,9 +405,9 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testGetElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "getElementAtPositionTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("pos0".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("pos1".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("pos2".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("pos0".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("pos1".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("pos2".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -420,7 +421,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(pos1);
-        assertEquals("pos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos1", new String(pos1.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -429,7 +430,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(pos0);
-        assertEquals("pos0", new String(pos0.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos0", new String(pos0.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -438,11 +439,11 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(masterPos1);
-        assertEquals("pos1", new String(masterPos1.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos1", new String(masterPos1.bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementToPosition at 2
         client.setMode(Mode.MASTER)
-                .addElementToPosition(key, keyHint, List.of(Payload.of("new".getBytes(StandardCharsets.UTF_8))), 2)
+                .addElementToPosition(key, keyHint, List.of(Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8))), 2)
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -452,7 +453,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 2)
                 .get();
         assertNotNull(masterNew);
-        assertEquals("new", new String(masterNew.getValue(), StandardCharsets.UTF_8));
+        assertEquals("new", new String(masterNew.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -461,7 +462,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 2)
                 .get();
         assertNotNull(backupNew);
-        assertEquals("new", new String(backupNew.getValue(), StandardCharsets.UTF_8));
+        assertEquals("new", new String(backupNew.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -497,7 +498,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: addElementToTail
         client.setMode(Mode.MASTER)
-                .addElementToTail(key, keyHint, List.of(Payload.of("10".getBytes(StandardCharsets.UTF_8))))
+                .addElementToTail(key, keyHint, List.of(Variant.ofBytes("10".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -524,9 +525,9 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testGetAndRemoveTail() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveTailTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("head".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("middle".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("tail".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("head".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("middle".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("tail".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -540,7 +541,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveTail(key, keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("tail", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("tail", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -549,7 +550,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTail);
-        assertEquals("middle", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("middle", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         List<Payload> backupStream = client.setMode(Mode.BACKUP)
                 .streamVector(key, keyHint)
@@ -569,7 +570,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveTail(key, keyHint)
                 .get();
         assertNotNull(removedMaster);
-        assertEquals("middle", new String(removedMaster.getValue(), StandardCharsets.UTF_8));
+        assertEquals("middle", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -578,7 +579,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTail);
-        assertEquals("head", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("head", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -587,7 +588,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTailAfter);
-        assertEquals("head", new String(backupTailAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("head", new String(backupTailAfter.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -595,9 +596,9 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testGetAndRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveElementAtPositionTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("pos0".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("pos1".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("pos2".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("pos0".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("pos1".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("pos2".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -611,7 +612,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(removed);
-        assertEquals("pos1", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos1", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -620,7 +621,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(pos1);
-        assertEquals("pos2", new String(pos1.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos2", new String(pos1.bytesValue(), StandardCharsets.UTF_8));
 
         List<Payload> backupStream = client.setMode(Mode.BACKUP)
                 .streamVector(key, keyHint)
@@ -640,7 +641,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(removedMaster);
-        assertEquals("pos0", new String(removedMaster.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos0", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -649,7 +650,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(masterPos0);
-        assertEquals("pos2", new String(masterPos0.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos2", new String(masterPos0.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -658,7 +659,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(backupPos0);
-        assertEquals("pos2", new String(backupPos0.getValue(), StandardCharsets.UTF_8));
+        assertEquals("pos2", new String(backupPos0.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -666,8 +667,8 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testAddElementToPosition() throws ExecutionException, InterruptedException {
         String key = "addElementToPositionTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("third".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -678,7 +679,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: addElementToPosition at 1
         Integer added = client.setMode(Mode.BACKUP)
-                .addElementToPosition(key, keyHint, List.of(Payload.of("second".getBytes(StandardCharsets.UTF_8))), 1)
+                .addElementToPosition(key, keyHint, List.of(Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))), 1)
                 .get();
         assertNotNull(added);
         assertEquals(1, added);
@@ -690,7 +691,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
-        assertEquals("second", new String(backupStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(backupStream.get(1).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -699,11 +700,11 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
-        assertEquals("second", new String(masterStream.get(1).getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterStream.get(1).bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementToPosition at 0
         client.setMode(Mode.MASTER)
-                .addElementToPosition(key, keyHint, List.of(Payload.of("zero".getBytes(StandardCharsets.UTF_8))), 0)
+                .addElementToPosition(key, keyHint, List.of(Variant.ofBytes("zero".getBytes(StandardCharsets.UTF_8))), 0)
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -713,7 +714,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(4, masterStreamAfter.size());
-        assertEquals("zero", new String(masterStreamAfter.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("zero", new String(masterStreamAfter.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -722,7 +723,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(4, backupStreamAfter.size());
-        assertEquals("zero", new String(backupStreamAfter.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("zero", new String(backupStreamAfter.get(0).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -730,10 +731,10 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("0".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("1".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("2".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("3".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("0".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("1".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("2".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("3".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -777,7 +778,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(1, masterStreamAfter.size());
-        assertEquals("3", new String(masterStreamAfter.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("3", new String(masterStreamAfter.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -786,14 +787,14 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(1, backupStreamAfter.size());
-        assertEquals("3", new String(backupStreamAfter.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("3", new String(backupStreamAfter.get(0).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     @DisplayName("AddElementToPositionBefore on master, verify replication and write on backup")
     void testAddElementToPositionBefore() throws ExecutionException, InterruptedException {
         String key = "addElementToPositionBeforeTest" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of("pivot".getBytes(StandardCharsets.UTF_8)));
+        List<Payload> initialData = List.of(Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8)));
 
         // Create vector
         KeyHintData keyHint = client.createVector(key, initialData)
@@ -805,10 +806,10 @@ public class VectorOperationsTest extends TestBaseCluster {
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementToPositionBefore(key, keyHint,
                         Arrays.asList(
-                                Payload.of("before1".getBytes(StandardCharsets.UTF_8)),
-                                Payload.of("before2".getBytes(StandardCharsets.UTF_8))
+                                Variant.ofBytes("before1".getBytes(StandardCharsets.UTF_8)),
+                                Variant.ofBytes("before2".getBytes(StandardCharsets.UTF_8))
                         ),
-                        Payload.of("pivot".getBytes(StandardCharsets.UTF_8)))
+                        Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8)))
                 .get();
         assertNotNull(added);
         assertEquals(2, added);
@@ -820,7 +821,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
-        assertEquals("before1", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("before1", new String(backupStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -829,13 +830,13 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
-        assertEquals("before1", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("before1", new String(masterStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementToPositionBefore before before1
         client.setMode(Mode.MASTER)
                 .addElementToPositionBefore(key, keyHint,
-                                            List.of(Payload.of("before3".getBytes(StandardCharsets.UTF_8))),
-                        Payload.of("before1".getBytes(StandardCharsets.UTF_8)))
+                                            List.of(Variant.ofBytes("before3".getBytes(StandardCharsets.UTF_8))),
+                        Variant.ofBytes("before1".getBytes(StandardCharsets.UTF_8)))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -845,7 +846,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(4, masterStreamAfter.size());
-        assertEquals("before3", new String(masterStreamAfter.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("before3", new String(masterStreamAfter.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -854,7 +855,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(4, backupStreamAfter.size());
-        assertEquals("before3", new String(backupStreamAfter.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("before3", new String(backupStreamAfter.get(0).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -862,7 +863,7 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testAddElementToPositionAfter() throws ExecutionException, InterruptedException {
         String key = "addElementToPositionAfterTest" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("pivot".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -875,10 +876,10 @@ public class VectorOperationsTest extends TestBaseCluster {
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementToPositionAfter(key, keyHint,
                         Arrays.asList(
-                                Payload.of("after1".getBytes(StandardCharsets.UTF_8)),
-                                Payload.of("after2".getBytes(StandardCharsets.UTF_8))
+                                Variant.ofBytes("after1".getBytes(StandardCharsets.UTF_8)),
+                                Variant.ofBytes("after2".getBytes(StandardCharsets.UTF_8))
                         ),
-                        Payload.of("pivot".getBytes(StandardCharsets.UTF_8)))
+                        Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8)))
                 .get();
         assertNotNull(added);
         assertEquals(2, added);
@@ -890,7 +891,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
-        assertEquals("pivot", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(backupStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -899,13 +900,13 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
-        assertEquals("pivot", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("pivot", new String(masterStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementToPositionAfter after after1
         client.setMode(Mode.MASTER)
                 .addElementToPositionAfter(key, keyHint,
-                        Arrays.asList(Payload.of("after3".getBytes(StandardCharsets.UTF_8))),
-                        Payload.of("after1".getBytes(StandardCharsets.UTF_8)))
+                        Arrays.asList(Variant.ofBytes("after3".getBytes(StandardCharsets.UTF_8))),
+                        Variant.ofBytes("after1".getBytes(StandardCharsets.UTF_8)))
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -915,7 +916,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(4, masterStreamAfter.size());
-        assertEquals("after3", new String(masterStreamAfter.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("after3", new String(masterStreamAfter.get(2).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -924,7 +925,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(4, backupStreamAfter.size());
-        assertEquals("after3", new String(backupStreamAfter.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("after3", new String(backupStreamAfter.get(2).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -933,7 +934,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "removeVectorTest" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -971,7 +972,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         }
 
         // Write on MASTER: create new vector
-        KeyHintData keyHint2 = client.createVector(key, Arrays.asList(Payload.of("data2".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint2 = client.createVector(key, Arrays.asList(Variant.ofBytes("data2".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1017,7 +1018,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "setTtlTest" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1082,7 +1083,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector with 2s TTL
         KeyHintData keyHint = client.createVector(key.getBytes(StandardCharsets.UTF_8),
-                        Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))),
+                        Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))),
                         Duration.ofSeconds(2))
                 .get();
 
@@ -1140,7 +1141,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         // Create vector on BACKUP with 2s TTL
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createVector(key.getBytes(StandardCharsets.UTF_8),
-                        Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))),
+                        Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))),
                         Duration.ofSeconds(2))
                 .get();
 
@@ -1198,7 +1199,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "readLockTest" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1234,7 +1235,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         // Write on BACKUP: client 2 tries to write (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementToTail(key, keyHint, Arrays.asList(Payload.of("fail".getBytes(StandardCharsets.UTF_8))))
+                    .addElementToTail(key, keyHint, Arrays.asList(Variant.ofBytes("fail".getBytes(StandardCharsets.UTF_8))))
                     .get();
             fail("Expected PERMISSION_DENIED for write with READ_LOCK");
         } catch (ExecutionException e) {
@@ -1275,7 +1276,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "writeLockTest" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1290,7 +1291,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: client 1 can write (addElementToTail)
         client.setMode(Mode.BACKUP)
-                .addElementToTail(key, keyHint, Arrays.asList(Payload.of("added".getBytes(StandardCharsets.UTF_8))),1)
+                .addElementToTail(key, keyHint, Arrays.asList(Variant.ofBytes("added".getBytes(StandardCharsets.UTF_8))),1)
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -1315,7 +1316,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         // Write on BACKUP: client 2 tries to write (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementToTail(key, keyHint, Arrays.asList(Payload.of("fail".getBytes(StandardCharsets.UTF_8))),2)
+                    .addElementToTail(key, keyHint, Arrays.asList(Variant.ofBytes("fail".getBytes(StandardCharsets.UTF_8))),2)
                     .get();
             fail("Expected PERMISSION_DENIED for write with WRITE_LOCK");
         } catch (ExecutionException e) {
@@ -1356,7 +1357,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "globalLockTest" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1397,7 +1398,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         // Write on BACKUP: client 2 tries to write (should fail with PERMISSION_DENIED)
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementToTail(key, keyHint, Arrays.asList(Payload.of("fail".getBytes(StandardCharsets.UTF_8))))
+                    .addElementToTail(key, keyHint, Arrays.asList(Variant.ofBytes("fail".getBytes(StandardCharsets.UTF_8))))
                     .get();
             fail("Expected PERMISSION_DENIED for write with GLOBAL_LOCK");
         } catch (ExecutionException e) {
@@ -1438,7 +1439,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "unlockOwnerTest" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1480,7 +1481,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "lockExpirationMaster" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1495,7 +1496,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: client 1 can write (addElementToTail)
         client.setMode(Mode.MASTER)
-                .addElementToTail(key, keyHint, Arrays.asList(Payload.of("added".getBytes(StandardCharsets.UTF_8))), 1)
+                .addElementToTail(key, keyHint, Arrays.asList(Variant.ofBytes("added".getBytes(StandardCharsets.UTF_8))), 1)
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -1537,7 +1538,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector on BACKUP
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(key.getBytes(StandardCharsets.UTF_8), Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+                .createVector(key.getBytes(StandardCharsets.UTF_8), Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1552,7 +1553,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: client 1 can write (addElementToTail)
         client.setMode(Mode.BACKUP)
-                .addElementToTail(key, keyHint, Arrays.asList(Payload.of("added".getBytes(StandardCharsets.UTF_8))), 1)
+                .addElementToTail(key, keyHint, Arrays.asList(Variant.ofBytes("added".getBytes(StandardCharsets.UTF_8))), 1)
                 .get();
 
         Thread.sleep(300); // replication delay
@@ -1595,7 +1596,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "getAndRemoveFrontSingle" + UUID.randomUUID();
 
         // Create vector with single element
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("only".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1605,7 +1606,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveFront(key, keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1632,7 +1633,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "getHeadSingle" + UUID.randomUUID();
 
         // Create vector with single element
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("only".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1642,7 +1643,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(head);
-        assertEquals("only", new String(head.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(head.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1651,7 +1652,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHead);
-        assertEquals("only", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1660,7 +1661,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "getTailSingle" + UUID.randomUUID();
 
         // Create vector with single element
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("only".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1670,7 +1671,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(tail);
-        assertEquals("only", new String(tail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(tail.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1679,7 +1680,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTail);
-        assertEquals("only", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1688,7 +1689,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "getAndRemoveTailSingle" + UUID.randomUUID();
 
         // Create vector with single element
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("only".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -1698,7 +1699,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveTail(key, keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1726,8 +1727,8 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector
         KeyHintData keyHint = client.createVector(key, Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         )).get();
 
         Thread.sleep(500); // replication wait
@@ -1737,7 +1738,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(pos0);
-        assertEquals("first", new String(pos0.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(pos0.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1746,7 +1747,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(masterPos0);
-        assertEquals("first", new String(masterPos0.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(masterPos0.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1756,8 +1757,8 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector
         KeyHintData keyHint = client.createVector(key, Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         )).get();
 
         Thread.sleep(500); // replication wait
@@ -1767,7 +1768,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(last);
-        assertEquals("second", new String(last.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(last.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1776,7 +1777,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(masterLast);
-        assertEquals("second", new String(masterLast.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterLast.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1786,9 +1787,9 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector
         KeyHintData keyHint = client.createVector(key, Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("third".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
         )).get();
 
         Thread.sleep(500); // replication wait
@@ -1798,7 +1799,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .getAndRemoveElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(removed);
-        assertEquals("first", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1807,7 +1808,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
-        assertEquals("second", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(backupStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1816,7 +1817,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
-        assertEquals("second", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterStream.get(0).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1826,15 +1827,15 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector
         KeyHintData keyHint = client.createVector(key, Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         )).get();
 
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: addElementToPosition at position 2 (end)
         Integer added = client.setMode(Mode.BACKUP)
-                .addElementToPosition(key, keyHint, Arrays.asList(Payload.of("last".getBytes(StandardCharsets.UTF_8))), 2)
+                .addElementToPosition(key, keyHint, Arrays.asList(Variant.ofBytes("last".getBytes(StandardCharsets.UTF_8))), 2)
                 .get();
         assertNotNull(added);
         assertEquals(1, added);
@@ -1846,7 +1847,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
-        assertEquals("last", new String(backupStream.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("last", new String(backupStream.get(2).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1855,7 +1856,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
-        assertEquals("last", new String(masterStream.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("last", new String(masterStream.get(2).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1865,8 +1866,8 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector
         KeyHintData keyHint = client.createVector(key, Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("second".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         )).get();
 
         Thread.sleep(500); // replication wait
@@ -1874,8 +1875,8 @@ public class VectorOperationsTest extends TestBaseCluster {
         // Write on BACKUP: addElementToPositionBefore "first"
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementToPositionBefore(key, keyHint,
-                        Arrays.asList(Payload.of("inserted".getBytes(StandardCharsets.UTF_8))),
-                        Payload.of("first".getBytes(StandardCharsets.UTF_8)))
+                        Arrays.asList(Variant.ofBytes("inserted".getBytes(StandardCharsets.UTF_8))),
+                        Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)))
                 .get();
         assertNotNull(added);
         assertEquals(1, added);
@@ -1887,7 +1888,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
-        assertEquals("inserted", new String(backupStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(backupStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1896,7 +1897,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
-        assertEquals("inserted", new String(masterStream.get(0).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(masterStream.get(0).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1906,8 +1907,8 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         // Create vector
         KeyHintData keyHint = client.createVector(key, Arrays.asList(
-                Payload.of("first".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("last".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("last".getBytes(StandardCharsets.UTF_8))
         )).get();
 
         Thread.sleep(500); // replication wait
@@ -1915,8 +1916,8 @@ public class VectorOperationsTest extends TestBaseCluster {
         // Write on BACKUP: addElementToPositionAfter "last"
         Integer added = client.setMode(Mode.BACKUP)
                 .addElementToPositionAfter(key, keyHint,
-                        Arrays.asList(Payload.of("inserted".getBytes(StandardCharsets.UTF_8))),
-                        Payload.of("last".getBytes(StandardCharsets.UTF_8)))
+                        Arrays.asList(Variant.ofBytes("inserted".getBytes(StandardCharsets.UTF_8))),
+                        Variant.ofBytes("last".getBytes(StandardCharsets.UTF_8)))
                 .get();
         assertNotNull(added);
         assertEquals(1, added);
@@ -1928,7 +1929,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
-        assertEquals("inserted", new String(backupStream.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(backupStream.get(2).bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(300); // replication delay
 
@@ -1937,7 +1938,7 @@ public class VectorOperationsTest extends TestBaseCluster {
                 .streamVector(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
-        assertEquals("inserted", new String(masterStream.get(2).getValue(), StandardCharsets.UTF_8));
+        assertEquals("inserted", new String(masterStream.get(2).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -2049,7 +2050,7 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         try {
             client.addElementToPosition(key, null,
-                    List.of(Payload.of("x".getBytes(StandardCharsets.UTF_8))), 0).get();
+                    List.of(Variant.ofBytes("x".getBytes(StandardCharsets.UTF_8))), 0).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -2084,8 +2085,8 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         try {
             client.addElementToPositionBefore(key,
-                    List.of(Payload.of("x".getBytes(StandardCharsets.UTF_8))),
-                    Payload.of("pivot".getBytes(StandardCharsets.UTF_8))).get();
+                    List.of(Variant.ofBytes("x".getBytes(StandardCharsets.UTF_8))),
+                    Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8))).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -2103,8 +2104,8 @@ public class VectorOperationsTest extends TestBaseCluster {
 
         try {
             client.addElementToPositionAfter(key,
-                    List.of(Payload.of("x".getBytes(StandardCharsets.UTF_8))),
-                    Payload.of("pivot".getBytes(StandardCharsets.UTF_8))).get();
+                    List.of(Variant.ofBytes("x".getBytes(StandardCharsets.UTF_8))),
+                    Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8))).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -2276,7 +2277,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "noLockVector" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -2302,7 +2303,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         String key = "cantLockVector" + UUID.randomUUID();
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -2337,7 +2338,7 @@ public class VectorOperationsTest extends TestBaseCluster {
         int ownerId = 13;
 
         // Create vector
-        KeyHintData keyHint = client.createVector(key, Arrays.asList(Payload.of("data".getBytes(StandardCharsets.UTF_8))))
+        KeyHintData keyHint = client.createVector(key, Arrays.asList(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))))
                 .get();
 
         Thread.sleep(500); // replication wait
@@ -2378,9 +2379,9 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testRemoveFromContainer() throws ExecutionException, InterruptedException {
         String vecKey = "vector_remove" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("item2".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("item3".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("item3".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector
@@ -2419,8 +2420,8 @@ public class VectorOperationsTest extends TestBaseCluster {
     void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
         String vecKey = "vector_remove_nonexistent" + UUID.randomUUID();
         List<Payload> initialData = Arrays.asList(
-                Payload.of("item1".getBytes(StandardCharsets.UTF_8)),
-                Payload.of("item2".getBytes(StandardCharsets.UTF_8))
+                Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)),
+                Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8))
         );
 
         // Create vector

@@ -3,6 +3,7 @@ package com.hurricache.client.standalone.simple;
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -48,11 +49,11 @@ public class SetOperationsTest extends TestBase {
 
 
     private Payload p(String val) {
-        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
     private String str(Payload payload) {
-        return new String(payload.getValue(), StandardCharsets.UTF_8);
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
     }
 
     // =========================================================================
@@ -226,7 +227,7 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("item1").getValue()).get();
+        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("item1").bytesValue()).get();
         assertEquals(1, removed, "1 element should be removed");
         
         Thread.sleep(500);
@@ -246,7 +247,7 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").getValue()).get();
+        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").bytesValue()).get();
         assertEquals(0, removed, "0 elements should be removed (element not found)");
         
         Thread.sleep(500);
@@ -271,11 +272,11 @@ public class SetOperationsTest extends TestBase {
         Thread.sleep(500);
         
         // Check existing element
-        Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("item1").getValue()).get();
+        Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("item1").bytesValue()).get();
         assertTrue(exists, "Element item1 should exist");
         
         // Check non-existent element
-        Boolean notExists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").getValue()).get();
+        Boolean notExists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").bytesValue()).get();
         Assertions.assertFalse(notExists, "Element nonexistent should not exist");
     }
 
@@ -523,7 +524,7 @@ public class SetOperationsTest extends TestBase {
         
         // getAndRemoveElementAtPosition - not applicable to set
         try {
-            client.getAndRemoveElementAtPosition(setKey, hint, 0).get();
+            client.getAndDeleteElementAtPosition(setKey, hint, 0).get();
             fail("getAndRemoveElementAtPosition should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -541,7 +542,7 @@ public class SetOperationsTest extends TestBase {
         
         // removeElementAtPosition - not applicable to set
         try {
-            client.removeElementAtPosition(setKey, hint, 0, 0).get();
+            client.deleteElementAtPosition(setKey, hint, 0, 0).get();
             fail("removeElementAtPosition should throw an error for set");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -633,7 +634,7 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").getValue()).get();
+        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").bytesValue()).get();
         assertEquals(0, removed, "Removing non-existent element should return 0");
     }
 
@@ -648,7 +649,7 @@ public class SetOperationsTest extends TestBase {
         
         Thread.sleep(500);
         
-        Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").getValue()).get();
+        Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, p("nonexistent").bytesValue()).get();
         Assertions.assertFalse(exists);
     }
 

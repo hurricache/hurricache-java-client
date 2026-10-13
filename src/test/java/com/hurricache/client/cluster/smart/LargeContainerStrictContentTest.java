@@ -5,6 +5,7 @@ import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.DisplayName;
@@ -60,7 +61,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             Payload popped = client.setMode(Mode.MASTER)
                     .getAndRemoveFront(bytes(key), hint).get();
-            if (popped == null || popped.getValue().length == 0) {
+            if (popped == null || popped.bytesValue().length == 0) {
                 break;
             }
             actualPayloads.add(popped);
@@ -70,8 +71,8 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             assertArrayEquals(
-                    expectedPayloads.get(i).getValue(),
-                    actualPayloads.get(i).getValue(),
+                    expectedPayloads.get(i).bytesValue(),
+                    actualPayloads.get(i).bytesValue(),
                     "Data mismatch error at index: " + i
             );
         }
@@ -104,7 +105,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             Payload actual = client.setMode(Mode.MASTER)
                     .getElementAtPosition(bytes(key), hint, index).get();
             assertNotNull(actual);
-            assertArrayEquals(expectedPayloads.get(index).getValue(), actual.getValue(),
+            assertArrayEquals(expectedPayloads.get(index).bytesValue(), actual.bytesValue(),
                     "Content error at point query position: " + index);
         }
 
@@ -118,7 +119,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             Payload actual = client.setMode(Mode.BACKUP)
                     .getElementAtPosition(bytes(key), hint, index).get();
             assertNotNull(actual);
-            assertArrayEquals(expectedPayloads.get(index).getValue(), actual.getValue(),
+            assertArrayEquals(expectedPayloads.get(index).bytesValue(), actual.bytesValue(),
                     "Content error at BACKUP point query position: " + index);
         }
     }
@@ -146,7 +147,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            assertArrayEquals(expectedPayloads.get(i).getValue(), masterStream.get(i).getValue(),
+            assertArrayEquals(expectedPayloads.get(i).bytesValue(), masterStream.get(i).bytesValue(),
                     "Vector mismatch error at index: " + i);
         }
 
@@ -157,7 +158,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            assertArrayEquals(expectedPayloads.get(i).getValue(), backupStream.get(i).getValue(),
+            assertArrayEquals(expectedPayloads.get(i).bytesValue(), backupStream.get(i).bytesValue(),
                     "Vector mismatch error at BACKUP index: " + i);
         }
     }
@@ -197,11 +198,11 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         Payload last = expectedPayloads.get(LARGE_ELEMENT_COUNT - 1);
 
         assertTrue(client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), hint, first.getValue()).get());
+                .containsContainerKey(bytes(key), hint, first.bytesValue()).get());
         assertTrue(client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), hint, middle.getValue()).get());
+                .containsContainerKey(bytes(key), hint, middle.bytesValue()).get());
         assertTrue(client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), hint, last.getValue()).get());
+                .containsContainerKey(bytes(key), hint, last.bytesValue()).get());
 
         // Replication delay → verify BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
@@ -210,11 +211,11 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(expectedUniqueCount, backupSize);
 
         assertTrue(client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), hint, first.getValue()).get());
+                .containsContainerKey(bytes(key), hint, first.bytesValue()).get());
         assertTrue(client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), hint, middle.getValue()).get());
+                .containsContainerKey(bytes(key), hint, middle.bytesValue()).get());
         assertTrue(client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), hint, last.getValue()).get());
+                .containsContainerKey(bytes(key), hint, last.bytesValue()).get());
     }
 
     // =========================================================================
@@ -248,7 +249,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             OrderedPayload expected = expectedPayloads.get(i);
             OrderedPayload actual = masterStream.get(i);
             assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at step: " + i);
-            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at step: " + i);
+            assertArrayEquals(expected.bytesValue(), actual.bytesValue(), "OrderedSet binary content does not match at step: " + i);
         }
 
         // Replication delay → verify BACKUP
@@ -261,7 +262,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             OrderedPayload expected = expectedPayloads.get(i);
             OrderedPayload actual = backupStream.get(i);
             assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at BACKUP step: " + i);
-            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at BACKUP step: " + i);
+            assertArrayEquals(expected.bytesValue(), actual.bytesValue(), "OrderedSet binary content does not match at BACKUP step: " + i);
         }
     }
 
@@ -294,8 +295,8 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
         for (Map.Entry<Payload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().getValue();
-            byte[] expectedValue = entry.getValue().getValue();
+            byte[] subKey = entry.getKey().bytesValue();
+            byte[] expectedValue = entry.bytesValue().bytesValue();
 
             byte[] actualValue = client.setMode(Mode.MASTER)
                     .getContainerValue(bytes(key), hint, subKey).get();
@@ -310,8 +311,8 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
         for (Map.Entry<Payload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().getValue();
-            byte[] expectedValue = entry.getValue().getValue();
+            byte[] subKey = entry.getKey().bytesValue();
+            byte[] expectedValue = entry.bytesValue().bytesValue();
 
             byte[] actualValue = client.setMode(Mode.BACKUP)
                     .getContainerValue(bytes(key), hint, subKey).get();
@@ -349,8 +350,8 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
         for (Map.Entry<OrderedPayload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().getValue();
-            byte[] expectedValue = entry.getValue().getValue();
+            byte[] subKey = entry.getKey().bytesValue();
+            byte[] expectedValue = entry.bytesValue().bytesValue();
 
             byte[] actualValue = client.setMode(Mode.MASTER)
                     .getContainerValue(bytes(key), hint, subKey).get();
@@ -365,8 +366,8 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
         for (Map.Entry<OrderedPayload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().getValue();
-            byte[] expectedValue = entry.getValue().getValue();
+            byte[] subKey = entry.getKey().bytesValue();
+            byte[] expectedValue = entry.bytesValue().bytesValue();
 
             byte[] actualValue = client.setMode(Mode.BACKUP)
                     .getContainerValue(bytes(key), hint, subKey).get();

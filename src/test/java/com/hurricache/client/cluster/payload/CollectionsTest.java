@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -36,7 +37,7 @@ public class CollectionsTest extends TestBaseCluster {
         client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint, List.of(Payload.of(one))).get();
 
         // Get Position
-        byte[] posVal = client.setMode(Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get().getValue();
+        byte[] posVal = client.setMode(Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get().bytesValue();
         Assertions.assertArrayEquals(one, posVal);
 
         // Remove Head
@@ -59,7 +60,7 @@ public class CollectionsTest extends TestBaseCluster {
         client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint, List.of(Payload.of(one))).get();
 
         // Get Position
-        byte[] posVal = client.setMode(Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get().getValue();
+        byte[] posVal = client.setMode(Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get().bytesValue();
         Assertions.assertArrayEquals(one, posVal);
 
         // Remove Head
@@ -91,7 +92,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4
-        Assertions.assertArrayEquals(item3, rangeData.iterator().next().getValue());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next().bytesValue());
     }
 
     @Test
@@ -118,7 +119,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4
-        Assertions.assertArrayEquals(item3, rangeData.iterator().next().getValue());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next().bytesValue());
     }
 
     @Test
@@ -145,7 +146,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4
-        Assertions.assertArrayEquals(item3, rangeData.iterator().next().getValue());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next().bytesValue());
     }
 
     @Test
@@ -172,7 +173,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4
-        Assertions.assertArrayEquals(item3, rangeData.iterator().next().getValue());
+        Assertions.assertArrayEquals(item3, rangeData.iterator().next().bytesValue());
     }
 
     @Test
@@ -193,8 +194,8 @@ public class CollectionsTest extends TestBaseCluster {
         List<Payload> results = client.setMode(Mode.BACKUP).streamList(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
-        Assertions.assertArrayEquals(val1, results.get(0).getValue());
-        Assertions.assertArrayEquals(val2, results.get(1).getValue());
+        Assertions.assertArrayEquals(val1, results.get(0).bytesValue());
+        Assertions.assertArrayEquals(val2, results.get(1).bytesValue());
     }
 
     @Test
@@ -215,8 +216,8 @@ public class CollectionsTest extends TestBaseCluster {
         List<Payload> results = client.setMode(Mode.MASTER).streamList(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
-        Assertions.assertArrayEquals(val1, results.get(0).getValue());
-        Assertions.assertArrayEquals(val2, results.get(1).getValue());
+        Assertions.assertArrayEquals(val1, results.get(0).bytesValue());
+        Assertions.assertArrayEquals(val2, results.get(1).bytesValue());
     }
 
     @Test
@@ -236,7 +237,7 @@ public class CollectionsTest extends TestBaseCluster {
         List<Payload> results = client.setMode(Mode.BACKUP).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
-        Assertions.assertArrayEquals(zero, results.get(0).getValue());
+        Assertions.assertArrayEquals(zero, results.get(0).bytesValue());
     }
 
     @Test
@@ -256,7 +257,7 @@ public class CollectionsTest extends TestBaseCluster {
         List<Payload> results = client.setMode(Mode.MASTER).streamVector(key, keyHint).get();
 
         Assertions.assertEquals(2, results.size());
-        Assertions.assertArrayEquals(zero, results.get(0).getValue());
+        Assertions.assertArrayEquals(zero, results.get(0).bytesValue());
     }
 
     @Test
@@ -275,11 +276,11 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get Head/Front
         Payload head = client.setMode(Mode.BACKUP).getHead(key, keyHint).get();
-        Assertions.assertArrayEquals(zero, head.getValue());
+        Assertions.assertArrayEquals(zero, head.bytesValue());
 
         // Get Tail
         Payload tail = client.setMode(Mode.BACKUP).getTail(key, keyHint).get();
-        Assertions.assertArrayEquals(one, tail.getValue());
+        Assertions.assertArrayEquals(one, tail.bytesValue());
     }
 
     @Test
@@ -298,11 +299,11 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get Head/Front
         Payload head = client.setMode(Mode.MASTER).getHead(key, keyHint).get();
-        Assertions.assertArrayEquals(zero, head.getValue());
+        Assertions.assertArrayEquals(zero, head.bytesValue());
 
         // Get Tail
         Payload tail = client.setMode(Mode.MASTER).getTail(key, keyHint).get();
-        Assertions.assertArrayEquals(one, tail.getValue());
+        Assertions.assertArrayEquals(one, tail.bytesValue());
     }
 
     @Test
@@ -315,11 +316,11 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Remove Front
         Payload removedHead = client.getAndRemoveFront(key, keyHint).get();
-        Assertions.assertArrayEquals(head, removedHead.getValue());
+        Assertions.assertArrayEquals(head, removedHead.bytesValue());
 
         // Verify tail is now head
         Payload newHead = client.getHead(key, keyHint).get();
-        Assertions.assertArrayEquals(tail, newHead.getValue());
+        Assertions.assertArrayEquals(tail, newHead.bytesValue());
     }
 
     @Test
@@ -334,11 +335,11 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get At Position 1
         Payload pos1 = client.getElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertArrayEquals(zero, pos1.getValue());
+        Assertions.assertArrayEquals(zero, pos1.bytesValue());
 
         // Remove At Position 1
         Payload removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertArrayEquals(zero, removed.getValue());
+        Assertions.assertArrayEquals(zero, removed.bytesValue());
 
         List<Payload> results = client.streamVector(key, keyHint).get();
 
@@ -346,7 +347,7 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Verify Shift
         Payload newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertArrayEquals(one, newPos1.getValue());
+        Assertions.assertArrayEquals(one, newPos1.bytesValue());
     }
 
     @Test
@@ -361,18 +362,18 @@ public class CollectionsTest extends TestBaseCluster {
 
         // Get At Position 1
         Payload pos1 = client.getElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertArrayEquals(one, pos1.getValue());
+        Assertions.assertArrayEquals(one, pos1.bytesValue());
 
         // Remove At Position 1
         Payload removed = client.getAndRemoveElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertArrayEquals(one, removed.getValue());
+        Assertions.assertArrayEquals(one, removed.bytesValue());
 
         List<Payload> results = client.streamList(key, keyHint).get();
 
         System.out.println(results);
         // Verify Shift
         Payload newPos1 = client.getElementAtPosition(key, keyHint, 1).get();
-        Assertions.assertArrayEquals(two, newPos1.getValue());
+        Assertions.assertArrayEquals(two, newPos1.bytesValue());
     }
 
     @Test

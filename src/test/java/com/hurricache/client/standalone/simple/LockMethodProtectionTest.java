@@ -2,6 +2,7 @@ package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -61,13 +62,13 @@ public class LockMethodProtectionTest extends TestBase {
     void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
         String listKey = "global_list" + UUID.randomUUID();
 
-        Assertions.assertNotNull(client.createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId).get());
+        Assertions.assertNotNull(client.createList(listKey, List.of(Variant.ofBytes("item1".getBytes())), ownerId).get());
         Thread.sleep(150);
 
         client.lockObject(listKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         assertPermissionDenied(() -> client.getHead(listKey, intruderId).get());
-        assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Payload.of("item2".getBytes())), intruderId).get());
+        assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Variant.ofBytes("item2".getBytes())), intruderId).get());
     }
 
     @Test
@@ -75,13 +76,13 @@ public class LockMethodProtectionTest extends TestBase {
     void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
         String listKey = "global_list" + UUID.randomUUID();
 
-        Assertions.assertNotNull(client.createList(listKey, List.of(Payload.of("item1".getBytes())), ownerId).get());
+        Assertions.assertNotNull(client.createList(listKey, List.of(Variant.ofBytes("item1".getBytes())), ownerId).get());
         Thread.sleep(150);
 
         client.lockObject(listKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         assertPermissionDenied(() -> client.getHead(listKey, intruderId).get());
-        assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Payload.of("item2".getBytes())), intruderId).get());
+        assertPermissionDenied(() -> client.addElementToTail(listKey, null, Collections.singletonList(Variant.ofBytes("item2".getBytes())), intruderId).get());
     }
 
 

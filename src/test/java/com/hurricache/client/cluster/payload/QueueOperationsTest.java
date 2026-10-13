@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -41,15 +42,15 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // 3. getHead (Peek without removing) on backup
         Payload headData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, headData.getValue());
+        Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head) on backup
         Payload popped = client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, popped.getValue());
+        Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message on backup
         Payload newHeadData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(second, newHeadData.getValue());
+        Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data) on backup
         boolean removed = client.setMode(Mode.BACKUP).removeHead(qKey, keyHint).get();
@@ -57,7 +58,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // 7. Verify Queue is now empty or key doesn't exist on backup
         Payload empty = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
-        Assertions.assertTrue(empty == null || empty.getValue() == null || empty.getValue().length == 0);
+        Assertions.assertTrue(empty == null || empty.bytesValue() == null || empty.bytesValue().length == 0);
     }
 
     @Test
@@ -83,15 +84,15 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // 3. getHead (Peek without removing) on master
         Payload headData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, headData.getValue());
+        Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head) on master
         Payload popped = client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, popped.getValue());
+        Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message on master
         Payload newHeadData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(second, newHeadData.getValue());
+        Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data) on master
         boolean removed = client.setMode(Mode.MASTER).removeHead(qKey, keyHint).get();
@@ -99,7 +100,7 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // 7. Verify Queue is now empty or key doesn't exist on master
         Payload empty = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
-        Assertions.assertTrue(empty == null || empty.getValue() == null || empty.getValue().length == 0);
+        Assertions.assertTrue(empty == null || empty.bytesValue() == null || empty.bytesValue().length == 0);
     }
 
     @Test
@@ -120,9 +121,9 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .get();
 
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertArrayEquals(initial, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().getValue());
-        Assertions.assertArrayEquals(first, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().getValue());
-        Assertions.assertArrayEquals(second, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(initial, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(first, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(second, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
     }
 
     @Test
@@ -143,9 +144,9 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .get();
 
         // FIFO verification: 1 -> 2 -> 3
-        Assertions.assertArrayEquals(initial, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().getValue());
-        Assertions.assertArrayEquals(first, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().getValue());
-        Assertions.assertArrayEquals(second, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(initial, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(first, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
+        Assertions.assertArrayEquals(second, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
     }
 
     @Test

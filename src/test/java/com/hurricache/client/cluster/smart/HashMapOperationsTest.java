@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.smart;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
@@ -48,11 +49,11 @@ public class HashMapOperationsTest extends TestBaseCluster {
     }
 
     private Payload p(String val) {
-        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
     private String str(Payload payload) {
-        return new String(payload.getValue(), StandardCharsets.UTF_8);
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
     }
 
     // =========================================================================
@@ -108,7 +109,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         assertNotNull(backupResult);
         assertEquals(3, backupResult.size());
         assertTrue(backupResult.entrySet().stream()
-                .anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.getValue()))));
+                .anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.bytesValue()))));
     }
 
     @Test
@@ -330,7 +331,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: remove k2
         Integer removed = client.setMode(Mode.MASTER)
-                .removeFromContainer(bytes(mapKey), hint, p("k2").getValue()).get();
+                .removeFromContainer(bytes(mapKey), hint, p("k2").bytesValue()).get();
         assertEquals(1, removed, "1 element should be removed");
 
         // Verify on MASTER
@@ -359,7 +360,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: remove non-existent
         Integer removed = client.setMode(Mode.MASTER)
-                .removeFromContainer(bytes(mapKey), hint, p("nonexistent").getValue()).get();
+                .removeFromContainer(bytes(mapKey), hint, p("nonexistent").bytesValue()).get();
         assertEquals(0, removed, "Nothing removed (element not found)");
 
         // Verify on BACKUP
@@ -379,7 +380,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Write on MASTER
         Integer removed = client.setMode(Mode.MASTER)
-                .removeFromContainer(bytes(mapKey), hint, p("k1").getValue()).get();
+                .removeFromContainer(bytes(mapKey), hint, p("k1").bytesValue()).get();
         assertEquals(0, removed, "Nothing removed from empty container");
 
         // Verify on BACKUP
@@ -406,8 +407,8 @@ public class HashMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Write on MASTER
-        List<Payload> keys = List.of(Payload.of(p("k1").getValue()));
-        List<Payload> values = List.of(Payload.of(p("v1").getValue()));
+        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
+        List<Payload> values = List.of(Payload.of(p("v1").bytesValue()));
         Integer removed = client.setMode(Mode.MASTER)
                 .removeFromContainer(bytes(mapKey), hint, ContainerType.MAP, keys, values).get();
         assertEquals(1, removed, "1 element should be removed");
@@ -437,8 +438,8 @@ public class HashMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Write on MASTER
-        List<Payload> keys = List.of(Payload.of(p("k1").getValue()));
-        List<Payload> values = List.of(Payload.of(p("wrong_value").getValue()));
+        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
+        List<Payload> values = List.of(Payload.of(p("wrong_value").bytesValue()));
         Integer removed = client.setMode(Mode.MASTER)
                 .removeFromContainer(bytes(mapKey), hint, ContainerType.MAP, keys, values).get();
         assertEquals(0, removed, "Element removed by key");
@@ -472,13 +473,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Write on MASTER
         Boolean exists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(mapKey), hint, p("k1").getValue()).get();
+                .containsContainerKey(bytes(mapKey), hint, p("k1").bytesValue()).get();
         assertTrue(exists, "Key k1 should exist");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
         Boolean backupExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(mapKey), hint, p("k1").getValue()).get();
+                .containsContainerKey(bytes(mapKey), hint, p("k1").bytesValue()).get();
         assertTrue(backupExists);
     }
 
@@ -495,13 +496,13 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Write on MASTER
         Boolean notExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(mapKey), hint, p("nonexistent").getValue()).get();
+                .containsContainerKey(bytes(mapKey), hint, p("nonexistent").bytesValue()).get();
         assertFalse(notExists, "Key nonexistent should not exist");
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
         Boolean backupNotExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(mapKey), hint, p("nonexistent").getValue()).get();
+                .containsContainerKey(bytes(mapKey), hint, p("nonexistent").bytesValue()).get();
         assertFalse(backupNotExists);
     }
 
@@ -627,7 +628,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         // Write on MASTER
         byte[] elemKey = bytes("k1");
         byte[] oldValue = client.setMode(Mode.MASTER)
-                .updateContainerValue(bytes(mapKey), hint, elemKey, p("new_value").getValue()).get();
+                .updateContainerValue(bytes(mapKey), hint, elemKey, p("new_value").bytesValue()).get();
         assertNotNull(oldValue, "oldValue should not be null");
         assertEquals("old_value", new String(oldValue, StandardCharsets.UTF_8));
 
@@ -658,7 +659,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         ExecutionException ex = Assertions.assertThrows(
                 ExecutionException.class,
                 () -> client.setMode(Mode.MASTER)
-                        .updateContainerValue(bytes(mapKey), hint, p("nonexistent").getValue(), p("new").getValue()).get()
+                        .updateContainerValue(bytes(mapKey), hint, p("nonexistent").bytesValue(), p("new").bytesValue()).get()
         );
         Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
         assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
@@ -678,14 +679,14 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Write on MASTER
         byte[] value = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue()).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue()).get();
         assertNotNull(value);
         assertEquals("v1", new String(value, StandardCharsets.UTF_8));
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
         byte[] backupValue = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue()).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue()).get();
         assertNotNull(backupValue);
         assertEquals("v1", new String(backupValue, StandardCharsets.UTF_8));
     }
@@ -708,7 +709,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Write on MASTER
         byte[] removedValue = client.setMode(Mode.MASTER)
-                .getAndRemoveContainerValue(bytes(mapKey), hint, p("k1").getValue()).get();
+                .getAndRemoveContainerValue(bytes(mapKey), hint, p("k1").bytesValue()).get();
         assertNotNull(removedValue);
         assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
 
@@ -740,7 +741,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         ExecutionException ex = Assertions.assertThrows(
                 ExecutionException.class,
                 () -> client.setMode(Mode.MASTER)
-                        .getAndRemoveContainerValue(bytes(mapKey), hint, p("nonexistent").getValue()).get()
+                        .getAndRemoveContainerValue(bytes(mapKey), hint, p("nonexistent").bytesValue()).get()
         );
         Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
         assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
@@ -765,7 +766,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         ExecutionException ex = Assertions.assertThrows(
                 ExecutionException.class,
                 () -> client.setMode(Mode.MASTER)
-                        .getContainerValue(bytes(mapKey), hint, p("nonexistent").getValue()).get()
+                        .getContainerValue(bytes(mapKey), hint, p("nonexistent").bytesValue()).get()
         );
         Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
         assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
@@ -849,7 +850,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         // Verify on MASTER: getContainerValue will return NOT_FOUND
         try {
             client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(mapKey), hint, p("k1").getValue()).get();
+                    .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue()).get();
             fail("getContainerValue should return NOT_FOUND after TTL expiration on master");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -860,7 +861,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
         try {
             client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(mapKey), hint, p("k1").getValue()).get();
+                    .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue()).get();
             fail("getContainerValue should return NOT_FOUND after TTL expiration on backup");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -894,17 +895,17 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Both can read on MASTER
         byte[] val1 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val1);
 
         byte[] val2 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val2);
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
         byte[] backupVal1 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(backupVal1);
 
         // Release locks
@@ -930,7 +931,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Owner can read on MASTER
         byte[] val = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
 
         // Owner can add elements on MASTER
@@ -942,7 +943,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Intruder cannot read on MASTER
         assertDenied(client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
 
         // Intruder cannot add on MASTER
         List<Payload> intruderKeys = List.of(p("k3"));
@@ -978,12 +979,12 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Owner can read on MASTER
         byte[] val = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
 
         // Intruder cannot read on MASTER
         assertDenied(client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
 
         // Intruder cannot add on MASTER
         List<Payload> intruderKeys = List.of(p("k2"));
@@ -1057,7 +1058,7 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Read under READ_LOCK OK on MASTER
         byte[] val = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
 
         // Write is denied on MASTER
@@ -1100,14 +1101,14 @@ public class HashMapOperationsTest extends TestBaseCluster {
 
         // Now another client can read on MASTER
         byte[] val = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
         assertEquals("v1", new String(val, StandardCharsets.UTF_8));
 
         // Verify on BACKUP
         Thread.sleep(REPLICATION_DELAY_MS);
         byte[] backupVal = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(mapKey), hint, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
+                .getContainerValue(bytes(mapKey), hint, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(backupVal);
         assertEquals("v1", new String(backupVal, StandardCharsets.UTF_8));
     }

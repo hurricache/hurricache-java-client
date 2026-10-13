@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.ContainerType;
 import org.junit.jupiter.api.Test;
@@ -135,7 +136,7 @@ public class ExtendedHurriCacheStressTest extends TestBaseCluster {
                         long weight = random.nextLong(0, 10_000);
                         byte[] valBytes = ("val_" + threadId + "_" + j).getBytes(StandardCharsets.UTF_8);
                         Payload payload = Payload.of(valBytes);
-                        OrderedPayload item = OrderedPayload.of(payload.getValue(), weight);
+                        OrderedPayload item = OrderedPayload.of(payload.bytesValue(), weight);
 
                         // 1. Вставка элемента с весом
                         client.addElementWithWeight(bytes(setKey), hint, List.of(item)).get();

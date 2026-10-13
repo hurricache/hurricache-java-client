@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.smart;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;

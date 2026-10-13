@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import org.junit.jupiter.api.*;
@@ -89,7 +90,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Bounds: Доступ к элементам коллекции по некорректному индексу")
     void testOutOfBoundsPosition() throws Exception {
         String key = "list:bounds:test"+ UUID.randomUUID();
-        List<Payload> initial = List.of(Payload.of("elem1".getBytes()));
+        List<Payload> initial = List.of(Variant.ofBytes("elem1".getBytes()));
         KeyHintData hint = client.createList(key, initial, DEFAULT_CLIENT_ID).get();
 
         assertThrows(ExecutionException.class, () -> {

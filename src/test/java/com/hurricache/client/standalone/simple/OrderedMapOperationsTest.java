@@ -4,6 +4,7 @@ import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -48,11 +49,11 @@ public class OrderedMapOperationsTest extends TestBase {
 
 
     private Payload p(String val) {
-        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
     private OrderedPayload op(Long order, String val) {
-        return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
+        return OrderedVariant.ofBytes(order, val.getBytes(StandardCharsets.UTF_8));
     }
 
     private OrderedPayload op(byte[] value, Long order) {
@@ -60,7 +61,7 @@ public class OrderedMapOperationsTest extends TestBase {
     }
 
     private String str(Payload payload) {
-        return new String(payload.getValue(), StandardCharsets.UTF_8);
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
     }
 
     // =========================================================================
@@ -522,7 +523,7 @@ public class OrderedMapOperationsTest extends TestBase {
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
         assertEquals(1, result.size(), "1 element remains");
-        assertFalse(result.entrySet().stream().anyMatch(e -> "k1".equals(new String(e.getKey().getValue(), StandardCharsets.UTF_8))));
+        assertFalse(result.entrySet().stream().anyMatch(e -> "k1".equals(new String(e.getKey().bytesValue(), StandardCharsets.UTF_8))));
     }
 
     @Test
@@ -729,7 +730,7 @@ public class OrderedMapOperationsTest extends TestBase {
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
         assertEquals(1, result.size());
-        assertFalse(result.entrySet().stream().anyMatch(e -> "k1".equals(new String(e.getKey().getValue(), StandardCharsets.UTF_8))));
+        assertFalse(result.entrySet().stream().anyMatch(e -> "k1".equals(new String(e.getKey().bytesValue(), StandardCharsets.UTF_8))));
     }
 
     @Test
@@ -772,7 +773,7 @@ public class OrderedMapOperationsTest extends TestBase {
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
         assertEquals(2, result.size(), "2 elements remain");
-        assertFalse(result.entrySet().stream().anyMatch(e -> "k2".equals(new String(e.getKey().getValue(), StandardCharsets.UTF_8))));
+        assertFalse(result.entrySet().stream().anyMatch(e -> "k2".equals(new String(e.getKey().bytesValue(), StandardCharsets.UTF_8))));
     }
 
     @Test
@@ -816,9 +817,9 @@ public class OrderedMapOperationsTest extends TestBase {
 
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey).get();
         assertEquals(3, result.size());
-        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(1L).equals(e.getKey().getOrder()) && "v1".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(2L).equals(e.getKey().getOrder()) && "v2".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(3L).equals(e.getKey().getOrder()) && "v3".equals(str(e.getValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(1L).equals(e.getKey().getOrder()) && "v1".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(2L).equals(e.getKey().getOrder()) && "v2".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(3L).equals(e.getKey().getOrder()) && "v3".equals(str(e.bytesValue()))));
     }
 
     @Test
@@ -902,7 +903,7 @@ public class OrderedMapOperationsTest extends TestBase {
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(1L).equals(e.getKey().getOrder()) && "v1".equals(str(e.getValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(1L).equals(e.getKey().getOrder()) && "v1".equals(str(e.bytesValue()))));
     }
 
     // =========================================================================
@@ -939,9 +940,9 @@ public class OrderedMapOperationsTest extends TestBase {
         Map<OrderedPayload, Payload> result = client.streamOrderedMap(mapKey, hint).get();
         assertNotNull(result);
         assertEquals(3, result.size(), "OrderedMap should contain 3 elements");
-        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(1L).equals(e.getKey().getOrder()) && "v1".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(2L).equals(e.getKey().getOrder()) && "v2".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(3L).equals(e.getKey().getOrder()) && "v3".equals(str(e.getValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(1L).equals(e.getKey().getOrder()) && "v1".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(2L).equals(e.getKey().getOrder()) && "v2".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> Long.valueOf(3L).equals(e.getKey().getOrder()) && "v3".equals(str(e.bytesValue()))));
     }
 
     @Test

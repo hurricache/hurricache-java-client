@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.smart;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.Mode;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -44,12 +45,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Payload masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(listKey), hint)
                 .get();
-        assertEquals("Middle", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("Middle", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(listKey), hint)
                 .get();
-        assertEquals("Middle", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("Middle", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         // addElementToHead on MASTER
         client.setMode(Mode.MASTER)
@@ -61,13 +62,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Payload masterHeadAfter = client.setMode(Mode.MASTER)
                 .getHead(bytes(listKey), hint)
                 .get();
-        assertEquals("Head", new String(masterHeadAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("Head", new String(masterHeadAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns Head (replicated)
         Payload backupHeadAfter = client.setMode(Mode.BACKUP)
                 .getHead(bytes(listKey), hint)
                 .get();
-        assertEquals("Head", new String(backupHeadAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("Head", new String(backupHeadAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // addElementToPosition on MASTER
         client.setMode(Mode.MASTER)
@@ -80,14 +81,14 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
                 .getElementAtPosition(bytes(listKey), hint, 1)
                 .get();
         assertNotNull(pos1);
-        assertEquals("NewPos1", new String(pos1.getValue(), StandardCharsets.UTF_8));
+        assertEquals("NewPos1", new String(pos1.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getElementAtPosition(1) returns NewPos1 (replicated)
         Payload backupPos1 = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(bytes(listKey), hint, 1)
                 .get();
         assertNotNull(backupPos1);
-        assertEquals("NewPos1", new String(backupPos1.getValue(), StandardCharsets.UTF_8));
+        assertEquals("NewPos1", new String(backupPos1.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -117,13 +118,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(vecKey), hint)
                 .get();
-        assertEquals("2", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("2", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: 3 elements (replicated)
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(vecKey), hint)
                 .get();
-        assertEquals("2", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("2", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // removeTail on MASTER (removes "2")
         client.setMode(Mode.MASTER)
@@ -135,13 +136,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Payload masterTailAfter = client.setMode(Mode.MASTER)
                 .getTail(bytes(vecKey), hint)
                 .get();
-        assertEquals("1", new String(masterTailAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(masterTailAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns "1" (replicated)
         Payload backupTailAfter = client.setMode(Mode.BACKUP)
                 .getTail(bytes(vecKey), hint)
                 .get();
-        assertEquals("1", new String(backupTailAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(backupTailAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // removeElementAtPosition(0, 0) on MASTER (removes "0")
         client.setMode(Mode.MASTER)
@@ -154,14 +155,14 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
                 .getElementAtPosition(bytes(vecKey), hint, 0)
                 .get();
         assertNotNull(masterRemaining);
-        assertEquals("1", new String(masterRemaining.getValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(masterRemaining.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getElementAtPosition(0) returns "1" (replicated)
         Payload backupRemaining = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(bytes(vecKey), hint, 0)
                 .get();
         assertNotNull(backupRemaining);
-        assertEquals("1", new String(backupRemaining.getValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(backupRemaining.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -191,13 +192,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), hint)
                 .get();
-        assertEquals("4", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("4", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: 5 elements (replicated)
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), hint)
                 .get();
-        assertEquals("4", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("4", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // removeElementAtPosition(0, 2) on MASTER (removes positions 0-2: "0", "1", "2")
         Boolean removed = client.setMode(Mode.MASTER)
@@ -211,14 +212,14 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
                 .getTail(bytes(key), hint)
                 .get();
         assertNotNull(masterTailAfter);
-        assertEquals("4", new String(masterTailAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("4", new String(masterTailAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns "4" (replicated)
         Payload backupTailAfter = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), hint)
                 .get();
         assertNotNull(backupTailAfter);
-        assertEquals("4", new String(backupTailAfter.getValue(), StandardCharsets.UTF_8));
+        assertEquals("4", new String(backupTailAfter.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -240,12 +241,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Payload masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(qKey), hint)
                 .get();
-        assertEquals("q1", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("q1", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(qKey), hint)
                 .get();
-        assertEquals("q1", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("q1", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         // addElementToPosition on MASTER should fail for Queue
         try {

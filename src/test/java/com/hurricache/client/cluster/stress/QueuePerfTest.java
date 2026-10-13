@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.stress;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -178,7 +179,7 @@ public class QueuePerfTest {
                     inFlightWindow.release();
                     if (ex != null) {
                         metrics.failedReads.increment();
-                    } else if (resp != null && resp.getValue().length > 0) {
+                    } else if (resp != null && resp.bytesValue().length > 0) {
                         metrics.consumed.increment();
                     } else {
                         metrics.emptyReads.increment(); // Очередь пуста, писатель не успевает

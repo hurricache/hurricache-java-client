@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -47,8 +48,8 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         Assertions.assertNotNull(head1);
         Assertions.assertNotNull(pos1);
-        Assertions.assertArrayEquals(head, head1.getValue());
-        Assertions.assertArrayEquals(newPos1, pos1.getValue());
+        Assertions.assertArrayEquals(head, head1.bytesValue());
+        Assertions.assertArrayEquals(newPos1, pos1.bytesValue());
     }
 
     @Test
@@ -81,8 +82,8 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         Assertions.assertNotNull(head);
         Assertions.assertNotNull(pos1);
-        Assertions.assertArrayEquals(head1, head.getValue());
-        Assertions.assertArrayEquals(newPos1, pos1.getValue());
+        Assertions.assertArrayEquals(head1, head.bytesValue());
+        Assertions.assertArrayEquals(newPos1, pos1.bytesValue());
     }
 
     @Test
@@ -110,7 +111,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         Payload remaining = client.setMode(Mode.BACKUP).getElementAtPosition(vecKey, keyHint, 0).get();
         Assertions.assertNotNull(remaining);
-        Assertions.assertArrayEquals(first, remaining.getValue());
+        Assertions.assertArrayEquals(first, remaining.bytesValue());
     }
 
     @Test
@@ -138,7 +139,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         Payload remaining = client.setMode(Mode.MASTER).getElementAtPosition(vecKey, keyHint, 0).get();
         Assertions.assertNotNull(remaining);
-        Assertions.assertArrayEquals(first, remaining.getValue());
+        Assertions.assertArrayEquals(first, remaining.bytesValue());
     }
 
     @Test

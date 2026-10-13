@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -112,7 +113,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("GLOBAL Lock: Blocks collection operations from intruder - create on Master")
     void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
         String key = "lock_global_collection_master_" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of("item1".getBytes(StandardCharsets.UTF_8)));
+        List<Payload> initialData = List.of(Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)));
 
         // Create WITHOUT setMode
         KeyHintData hint = client.createList(key, initialData).get();
@@ -130,14 +131,14 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         assertDenied(client.setMode(Mode.MASTER)
                 .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.MASTER)
-                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+                .addElementToTail(bytes(key), hint, List.of(Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
 
         // Replication delay → verify intruder blocked on BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.BACKUP)
-                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+                .addElementToTail(bytes(key), hint, List.of(Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
 
         // Unlock by owner
         client.setMode(Mode.MASTER).unlockObject(key, hint, OWNER_ID).get();
@@ -147,7 +148,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("GLOBAL Lock: Blocks collection operations from intruder - create on Backup")
     void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
         String key = "lock_global_collection_backup_" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Payload.of("item1".getBytes(StandardCharsets.UTF_8)));
+        List<Payload> initialData = List.of(Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)));
 
         // Create WITHOUT setMode
         KeyHintData hint = client.createList(key, initialData).get();
@@ -165,14 +166,14 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         assertDenied(client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.BACKUP)
-                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+                .addElementToTail(bytes(key), hint, List.of(Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
 
         // Replication delay → verify intruder blocked on MASTER
         Thread.sleep((int) REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.MASTER)
                 .getHead(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.MASTER)
-                .addElementToTail(bytes(key), hint, List.of(Payload.of("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
+                .addElementToTail(bytes(key), hint, List.of(Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8))), INTRUDER_ID, Duration.ofSeconds(2)));
 
         // Unlock by owner
         client.setMode(Mode.BACKUP).unlockObject(key, hint, OWNER_ID).get();

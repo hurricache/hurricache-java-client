@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.stress;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockType;
 import org.junit.jupiter.api.Test;
 
@@ -88,7 +89,7 @@ public class ContainerStressTest extends TestBaseCluster {
         ConcurrentHashMap<String, KeyHintData> keyHintsMap = new ConcurrentHashMap<>();
         for (int i = 0; i < totalKeys; i++) {
             String key = "vec_" + i;
-            KeyHintData keyHint = client.createVector(key, List.of(Payload.of("init".getBytes()))).get();
+            KeyHintData keyHint = client.createVector(key, List.of(Variant.ofBytes("init".getBytes()))).get();
             keyHintsMap.put(key, keyHint);
         }
 

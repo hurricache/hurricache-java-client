@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
@@ -40,15 +41,15 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
 
         // 3. getHead (Peek without removing)
         Payload headData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, headData.getValue());
+        Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head)
         Payload popped = client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, popped.getValue());
+        Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message
         Payload newHeadData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(second, newHeadData.getValue());
+        Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data)
         boolean removed = client.setMode(Mode.BACKUP).removeHead(qKey, keyHint).get();
@@ -58,8 +59,8 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Thread.sleep(500);
         Payload emptyB = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Payload emptyM = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
-        Assertions.assertTrue(emptyM == null || emptyM.getValue() == null || emptyM.getValue().length == 0);
-        Assertions.assertTrue(emptyB == null || emptyB.getValue() == null || emptyB.getValue().length == 0);
+        Assertions.assertTrue(emptyM == null || emptyM.bytesValue() == null || emptyM.bytesValue().length == 0);
+        Assertions.assertTrue(emptyB == null || emptyB.bytesValue() == null || emptyB.bytesValue().length == 0);
     }
 
     @Test
@@ -84,15 +85,15 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
 
         // 3. getHead (Peek without removing)
         Payload headData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, headData.getValue());
+        Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head)
         Payload popped = client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get();
-        Assertions.assertArrayEquals(first, popped.getValue());
+        Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message
         Payload newHeadData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
-        Assertions.assertArrayEquals(second, newHeadData.getValue());
+        Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data)
         boolean removed = client.setMode(Mode.MASTER).removeHead(qKey, keyHint).get();
@@ -102,8 +103,8 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         Thread.sleep(500);
         Payload emptyB = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Payload emptyM = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
-        Assertions.assertTrue(emptyM == null || emptyM.getValue() == null || emptyM.getValue().length == 0);
-        Assertions.assertTrue(emptyB == null || emptyB.getValue() == null || emptyB.getValue().length == 0);
+        Assertions.assertTrue(emptyM == null || emptyM.bytesValue() == null || emptyM.bytesValue().length == 0);
+        Assertions.assertTrue(emptyB == null || emptyB.bytesValue() == null || emptyB.bytesValue().length == 0);
     }
 
     @Test
@@ -124,11 +125,11 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         byte[] three = createLargePayload(VALUE_SIZE);
         client.addElementToTail(qKey, keyHint, List.of(Payload.of(three))).get();
 
-        Assertions.assertArrayEquals(zero, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(zero, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(one, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(one, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(two, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(two, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
     }
 
     @Test
@@ -149,11 +150,11 @@ public class QueueOperationsReplicationTest extends TestBaseCluster {
         byte[] three = createLargePayload(VALUE_SIZE);
         client.addElementToTail(qKey, keyHint, List.of(Payload.of(three))).get();
 
-        Assertions.assertArrayEquals(zero, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(zero, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(one, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(one, client.setMode(Mode.MASTER).getAndRemoveFront(qKey, keyHint).get().bytesValue());
         Thread.sleep(500);
-        Assertions.assertArrayEquals(two, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().getValue());
+        Assertions.assertArrayEquals(two, client.setMode(Mode.BACKUP).getAndRemoveFront(qKey, keyHint).get().bytesValue());
     }
 
     @Test

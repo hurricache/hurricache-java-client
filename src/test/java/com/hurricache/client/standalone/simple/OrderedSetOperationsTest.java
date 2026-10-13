@@ -4,6 +4,7 @@ import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -48,7 +49,7 @@ public class OrderedSetOperationsTest extends TestBase {
 
 
     private OrderedPayload op(Long order, String val) {
-        return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
+        return OrderedVariant.ofBytes(order, val.getBytes(StandardCharsets.UTF_8));
     }
 
     private OrderedPayload op(byte[] value, Long order) {
@@ -56,7 +57,7 @@ public class OrderedSetOperationsTest extends TestBase {
     }
 
     private String str(Payload payload) {
-        return new String(payload.getValue(), StandardCharsets.UTF_8);
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
     }
 
     // =========================================================================
@@ -308,7 +309,7 @@ public class OrderedSetOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
 
-        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").getValue()).get();
+        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").bytesValue()).get();
         assertEquals(1, removed, "1 element should be removed");
 
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
@@ -330,7 +331,7 @@ public class OrderedSetOperationsTest extends TestBase {
         assertNotNull(hint);
 
         // Remove all elements matching key "item1" (3 items)
-        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").getValue()).get();
+        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").bytesValue()).get();
         assertEquals(3, removed, "3 elements with the same key must be removed");
 
         List<OrderedPayload> result = client.streamOrderedSet(setKey, hint).get();
@@ -347,7 +348,7 @@ public class OrderedSetOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(setKey, initialData).get();
         assertNotNull(hint);
 
-        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").getValue()).get();
+        Integer removed = client.removeFromContainer(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").bytesValue()).get();
         assertEquals(0, removed, "0 elements should be removed (element not found)");
     }
 
@@ -365,11 +366,11 @@ public class OrderedSetOperationsTest extends TestBase {
         assertNotNull(hint);
 
         // Check existing element
-        Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").getValue()).get();
+        Boolean exists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, op(1L, "item1").bytesValue()).get();
         assertTrue(exists, "Element item1 must exist");
 
         // Check non-existing element
-        Boolean notExists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").getValue()).get();
+        Boolean notExists = client.containsContainerKey(setKey.getBytes(StandardCharsets.UTF_8), hint, op(0L, "nonexistent").bytesValue()).get();
         Assertions.assertFalse(notExists, "Element nonexistent must not exist");
     }
 

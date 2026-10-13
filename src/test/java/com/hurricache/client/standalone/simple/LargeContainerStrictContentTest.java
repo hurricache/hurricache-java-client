@@ -4,6 +4,7 @@ import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -55,8 +56,8 @@ public class LargeContainerStrictContentTest extends TestBase {
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             assertArrayEquals(
-                    expectedPayloads.get(i).getValue(),
-                    actualPayloads.get(i).getValue(),
+                    expectedPayloads.get(i).bytesValue(),
+                    actualPayloads.get(i).bytesValue(),
                     "Data mismatch error at index: " + i
             );
         }
@@ -79,7 +80,7 @@ public class LargeContainerStrictContentTest extends TestBase {
         for (int index : checkIndices) {
             Payload actual = client.getElementAtPosition(key, hint, index, 0, TIMEOUT).get();
             assertNotNull(actual);
-            assertArrayEquals(expectedPayloads.get(index).getValue(), actual.getValue(),
+            assertArrayEquals(expectedPayloads.get(index).bytesValue(), actual.bytesValue(),
                               "Content error at point query position: " + index);
         }
     }
@@ -98,7 +99,7 @@ public class LargeContainerStrictContentTest extends TestBase {
         assertEquals(LARGE_ELEMENT_COUNT, actualPayloads.size());
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            assertArrayEquals(expectedPayloads.get(i).getValue(), actualPayloads.get(i).getValue(),
+            assertArrayEquals(expectedPayloads.get(i).bytesValue(), actualPayloads.get(i).bytesValue(),
                               "Vector mismatch error at index: " + i);
         }
     }
@@ -112,7 +113,7 @@ public class LargeContainerStrictContentTest extends TestBase {
         Set<Object> uniquePayloads = new HashSet<>();
         for (Payload p : expectedPayloads) {
             uniquePayloads.add(new Object() {
-                private final byte[] val = p.getValue();
+                private final byte[] val = p.bytesValue();
 
                 @Override
                 public boolean equals(Object o) {
@@ -149,9 +150,9 @@ public class LargeContainerStrictContentTest extends TestBase {
         Payload middle = expectedPayloads.get(LARGE_ELEMENT_COUNT / 2);
         Payload last = expectedPayloads.get(LARGE_ELEMENT_COUNT - 1);
 
-        assertTrue(client.containsContainerKey(key, hint, first.getValue(), 0, TIMEOUT).get());
-        assertTrue(client.containsContainerKey(key, hint, middle.getValue(), 0, TIMEOUT).get());
-        assertTrue(client.containsContainerKey(key, hint, last.getValue(), 0, TIMEOUT).get());
+        assertTrue(client.containsContainerKey(key, hint, first.bytesValue(), 0, TIMEOUT).get());
+        assertTrue(client.containsContainerKey(key, hint, middle.bytesValue(), 0, TIMEOUT).get());
+        assertTrue(client.containsContainerKey(key, hint, last.bytesValue(), 0, TIMEOUT).get());
     }
 
     @Test
@@ -177,7 +178,7 @@ public class LargeContainerStrictContentTest extends TestBase {
             OrderedPayload actual = streamed.get(i);
 
             assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at step: " + i);
-            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at step: " + i);
+            assertArrayEquals(expected.bytesValue(), actual.bytesValue(), "OrderedSet binary content does not match at step: " + i);
         }
     }
 
@@ -201,8 +202,8 @@ public class LargeContainerStrictContentTest extends TestBase {
         assertEquals(LARGE_ELEMENT_COUNT, actualMap.size());
 
         for (Map.Entry<Payload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().getValue();
-            byte[] expectedValue = entry.getValue().getValue();
+            byte[] subKey = entry.getKey().bytesValue();
+            byte[] expectedValue = entry.bytesValue().bytesValue();
 
             byte[] actualValue = client.getContainerValue(key, hint, subKey, 0, TIMEOUT).get();
             assertNotNull(actualValue, "Key not found in Map: " + new String(subKey));
@@ -230,8 +231,8 @@ public class LargeContainerStrictContentTest extends TestBase {
         assertEquals(LARGE_ELEMENT_COUNT, actualMap.size());
 
         for (Map.Entry<OrderedPayload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().getValue();
-            byte[] expectedValue = entry.getValue().getValue();
+            byte[] subKey = entry.getKey().bytesValue();
+            byte[] expectedValue = entry.bytesValue().bytesValue();
 
             byte[] actualValue = client.getContainerValue(key, hint, subKey, 0, TIMEOUT).get();
             assertNotNull(actualValue, "Key not found in OrderedMap: " + new String(subKey));

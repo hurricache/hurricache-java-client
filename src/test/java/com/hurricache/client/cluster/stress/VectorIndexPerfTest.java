@@ -4,6 +4,7 @@ import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -130,7 +131,7 @@ public class VectorIndexPerfTest {
                                 .getElementAtPosition(vectorKey, vectorHint, randomIdx, 0, TIMEOUT)
                                 .whenComplete((res, ex) -> {
                                     inFlightWindow.release();
-                                    if (ex == null && res != null && res.getValue() != null) {
+                                    if (ex == null && res != null && res.bytesValue() != null) {
                                         readOps.increment();
                                     } else {
                                         readErrors.increment();

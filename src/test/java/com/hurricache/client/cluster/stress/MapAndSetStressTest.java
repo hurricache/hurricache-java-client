@@ -5,6 +5,7 @@ import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,7 @@ import java.util.concurrent.ExecutionException;
 public class MapAndSetStressTest extends TestBaseCluster {
 
     private Payload p(String val) {
-        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
 

@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -632,7 +633,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: removeFromContainer
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).getValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
                 .get();
         assertEquals(1, removed, "1 element should be removed");
 
@@ -654,7 +655,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on MASTER: removeFromContainer
         Integer removedMaster = client.setMode(Mode.MASTER)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(2L, bytes("2")).getValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(2L, bytes("2")).bytesValue())
                 .get();
         assertEquals(1, removedMaster);
 
@@ -706,7 +707,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: remove all "item1" (3 items)
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).getValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
                 .get();
         assertEquals(3, removed, "3 elements with the same key must be removed");
 
@@ -756,7 +757,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: removeFromContainer non-existent
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).getValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).bytesValue())
                 .get();
         assertEquals(0, removed, "0 elements should be removed (element not found)");
 
@@ -796,19 +797,19 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for existing element
         Boolean masterExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
                 .get();
         assertTrue(masterExists);
 
         // Verify on BACKUP: containsContainerKey for existing element
         Boolean backupExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(1L, bytes("1")).bytesValue())
                 .get();
         assertTrue(backupExists);
 
         // Verify on BACKUP: containsContainerKey for non-existing element
         Boolean notExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).bytesValue())
                 .get();
         assertFalse(notExists, "Element nonexistent must not exist");
 
@@ -816,7 +817,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for non-existing element
         Boolean masterNotExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(0L, bytes("nonexistent")).bytesValue())
                 .get();
         assertFalse(masterNotExists, "Element nonexistent must not exist");
 
@@ -829,7 +830,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for new element
         Boolean newExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(3L, bytes("3")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(3L, bytes("3")).bytesValue())
                 .get();
         assertTrue(newExists);
 
@@ -837,7 +838,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: containsContainerKey for new element
         Boolean backupNewExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(3L, bytes("3")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(3L, bytes("3")).bytesValue())
                 .get();
         assertTrue(backupNewExists);
 
@@ -850,7 +851,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: containsContainerKey for new element
         Boolean backupNewExists2 = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(4L, bytes("4")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(4L, bytes("4")).bytesValue())
                 .get();
         assertTrue(backupNewExists2);
 
@@ -858,7 +859,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for new element
         Boolean masterNewExists2 = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(4L, bytes("4")).getValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedPayload.of(4L, bytes("4")).bytesValue())
                 .get();
         assertTrue(masterNewExists2);
     }
@@ -1909,7 +1910,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 30)
                 .get();
         assertNotNull(result);
-        assertEquals("3", new String(result.getValue(), StandardCharsets.UTF_8));
+        assertEquals("3", new String(result.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -1918,7 +1919,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 10)
                 .get();
         assertNotNull(result10);
-        assertEquals("1", new String(result10.getValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(result10.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -1927,7 +1928,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 30)
                 .get();
         assertNotNull(masterResult);
-        assertEquals("3", new String(masterResult.getValue(), StandardCharsets.UTF_8));
+        assertEquals("3", new String(masterResult.bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
@@ -1941,7 +1942,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 60)
                 .get();
         assertNotNull(masterNew);
-        assertEquals("6", new String(masterNew.getValue(), StandardCharsets.UTF_8));
+        assertEquals("6", new String(masterNew.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -1950,7 +1951,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 60)
                 .get();
         assertNotNull(backupNew);
-        assertEquals("6", new String(backupNew.getValue(), StandardCharsets.UTF_8));
+        assertEquals("6", new String(backupNew.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -1989,7 +1990,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 20)
                 .get();
         assertNotNull(result);
-        String value = new String(result.getValue(), StandardCharsets.UTF_8);
+        String value = new String(result.bytesValue(), StandardCharsets.UTF_8);
         assertTrue(value.equals("1") || value.equals("2") || value.equals("3"));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -2077,7 +2078,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getAndRemoveElementWithWeight(key, keyHint, 20)
                 .get();
         assertNotNull(removed);
-        assertEquals("2", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("2", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -2100,7 +2101,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getAndRemoveElementWithWeight(key, keyHint, 10)
                 .get();
         assertNotNull(removedMaster);
-        assertEquals("1", new String(removedMaster.getValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -2261,7 +2262,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(bytes(key), keyHint, 20)
                 .get();
         assertNotNull(result);
-        assertEquals("item2", new String(result.getValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(result.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getElementWithWeight returns same element (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -2269,7 +2270,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(bytes(key), keyHint, 20)
                 .get();
         assertNotNull(backupResult);
-        assertEquals("item2", new String(backupResult.getValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(backupResult.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================

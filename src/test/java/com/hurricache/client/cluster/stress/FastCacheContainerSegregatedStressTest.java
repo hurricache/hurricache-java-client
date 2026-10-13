@@ -4,6 +4,7 @@ import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.KeyHint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -347,7 +348,7 @@ public class FastCacheContainerSegregatedStressTest {
 
             for (CompletableFuture<Payload> future : pipeline) {
                 Payload data = future.getNow(null);
-                if (data != null && data.getValue().length == ELEMENT_PAYLOAD.length) {
+                if (data != null && data.bytesValue().length == ELEMENT_PAYLOAD.length) {
                     successCounter.incrementAndGet();
                 } else {
                     errorCounter.incrementAndGet();

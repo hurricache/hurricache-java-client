@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -52,14 +53,14 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(masterHead);
-        assertEquals(0, masterHead.getValue().length, "Expected empty payload on master");
+        assertEquals(0, masterHead.bytesValue().length, "Expected empty payload on master");
 
         // Verify on BACKUP: getHead returns empty
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(backupHead);
-        assertEquals(0, backupHead.getValue().length, "Expected empty payload on backup");
+        assertEquals(0, backupHead.bytesValue().length, "Expected empty payload on backup");
     }
 
     @Test
@@ -83,7 +84,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getAndRemoveFront(bytes(key), keyHint)
                 .get();
         assertNotNull(masterFront);
-        assertEquals("k1", new String(masterFront.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterFront.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns k2 (k1 was removed by replication)
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -91,7 +92,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(backupNext);
-        assertEquals("k2", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -127,23 +128,23 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterFirst = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("elem_0", new String(masterFirst.getValue(), StandardCharsets.UTF_8));
+        assertEquals("elem_0", new String(masterFirst.bytesValue(), StandardCharsets.UTF_8));
 
         Payload masterLast = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("elem_" + (elementCount - 1), new String(masterLast.getValue(), StandardCharsets.UTF_8));
+        assertEquals("elem_" + (elementCount - 1), new String(masterLast.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify first and last elements on BACKUP
         Payload backupFirst = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("elem_0", new String(backupFirst.getValue(), StandardCharsets.UTF_8));
+        assertEquals("elem_0", new String(backupFirst.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupLast = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("elem_" + (elementCount - 1), new String(backupLast.getValue(), StandardCharsets.UTF_8));
+        assertEquals("elem_" + (elementCount - 1), new String(backupLast.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -166,14 +167,14 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(masterHead);
-        assertEquals(0, masterHead.getValue().length);
+        assertEquals(0, masterHead.bytesValue().length);
 
         // Verify on BACKUP: getHead returns empty
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(backupHead);
-        assertEquals(0, backupHead.getValue().length);
+        assertEquals(0, backupHead.bytesValue().length);
     }
 
     @Test
@@ -192,14 +193,14 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getAndRemoveFront(bytes(key), keyHint)
                 .get();
         assertNotNull(masterFront);
-        assertEquals(0, masterFront.getValue().length);
+        assertEquals(0, masterFront.bytesValue().length);
 
         // Verify on BACKUP: getAndRemoveFront returns empty
         Payload backupFront = client.setMode(Mode.BACKUP)
                 .getAndRemoveFront(bytes(key), keyHint)
                 .get();
         assertNotNull(backupFront);
-        assertEquals(0, backupFront.getValue().length);
+        assertEquals(0, backupFront.bytesValue().length);
     }
 
     // =========================================================================
@@ -222,12 +223,12 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterInitial = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(masterInitial.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterInitial.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupInitial = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(backupInitial.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupInitial.bytesValue(), StandardCharsets.UTF_8));
 
         // addElementToTail on MASTER
         List<Payload> newElements = List.of(
@@ -243,13 +244,13 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns k3 (replicated)
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -268,12 +269,12 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterInitial = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(masterInitial.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterInitial.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupInitial = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(backupInitial.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupInitial.bytesValue(), StandardCharsets.UTF_8));
 
         // addElementToTail on BACKUP
         List<Payload> newElements = List.of(
@@ -289,13 +290,13 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getTail returns k3 (replicated)
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -322,32 +323,32 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterFront = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(masterFront.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterFront.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupFront = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(backupFront.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupFront.bytesValue(), StandardCharsets.UTF_8));
 
         // getAndRemoveFront on MASTER
         Payload removed = client.setMode(Mode.MASTER)
                 .getAndRemoveFront(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("k1", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getHead returns k2
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload masterNext = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(masterNext.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns k2 (replicated)
         Payload backupNext = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -370,32 +371,32 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterFront = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(masterFront.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterFront.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupFront = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(backupFront.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupFront.bytesValue(), StandardCharsets.UTF_8));
 
         // getAndRemoveFront on BACKUP
         Payload removed = client.setMode(Mode.BACKUP)
                 .getAndRemoveFront(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("k1", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns k2
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload backupNext = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getHead returns k2 (replicated)
         Payload masterNext = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(masterNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -422,33 +423,33 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // getAndRemoveTail on MASTER
         Payload removed = client.setMode(Mode.MASTER)
                 .getAndRemoveTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("k3", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getTail returns k2
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload masterNext = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(masterNext.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns k2 (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload backupNext = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -471,33 +472,33 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k3", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // getAndRemoveTail on BACKUP
         Payload removed = client.setMode(Mode.BACKUP)
                 .getAndRemoveTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("k3", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns k2
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload backupNext = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getTail returns k2 (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload masterNext = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(masterNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -524,12 +525,12 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         // removeHead on MASTER
         client.setMode(Mode.MASTER)
@@ -541,13 +542,13 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterNext = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(masterNext.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns k2 (replicated)
         Payload backupNext = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -570,12 +571,12 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k1", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         // removeHead on BACKUP
         client.setMode(Mode.BACKUP)
@@ -587,13 +588,13 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload backupNext = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getHead returns k2 (replicated)
         Payload masterNext = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("k2", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k2", new String(masterNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -621,14 +622,14 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(masterHead);
-        assertEquals("k1", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns k1 (replicated)
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(backupHead);
-        assertEquals("k1", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -652,14 +653,14 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(backupHead);
-        assertEquals("k1", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getHead returns k1 (replicated)
         Payload masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
         assertNotNull(masterHead);
-        assertEquals("k1", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -687,14 +688,14 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getTail(bytes(key), keyHint)
                 .get();
         assertNotNull(masterTail);
-        assertEquals("k3", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns k3 (replicated)
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
         assertNotNull(backupTail);
-        assertEquals("k3", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -718,14 +719,14 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getTail(bytes(key), keyHint)
                 .get();
         assertNotNull(backupTail);
-        assertEquals("k3", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getTail returns k3 (replicated)
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
         assertNotNull(masterTail);
-        assertEquals("k3", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k3", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -1105,7 +1106,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(masterVal);
-        assertEquals("k1", new String(masterVal.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(masterVal.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -1143,7 +1144,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(backupVal);
-        assertEquals("k1", new String(backupVal.getValue(), StandardCharsets.UTF_8));
+        assertEquals("k1", new String(backupVal.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -1282,20 +1283,20 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getAndRemoveFront(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("first", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getHead returns second
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload masterNext = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("second", new String(masterNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterNext.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns second (replicated)
         Payload backupNext = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("second", new String(backupNext.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(backupNext.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -1319,20 +1320,20 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getAndRemoveFront(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: queue is empty
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload masterEmpty = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals(0, masterEmpty.getValue().length);
+        assertEquals(0, masterEmpty.bytesValue().length);
 
         // Verify on BACKUP: queue is empty (replicated)
         Payload backupEmpty = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals(0, backupEmpty.getValue().length);
+        assertEquals(0, backupEmpty.bytesValue().length);
     }
 
     // =========================================================================
@@ -1360,20 +1361,20 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getAndRemoveTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("third", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("third", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getTail returns second
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("second", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns second (replicated)
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("second", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -1397,20 +1398,20 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getAndRemoveTail(bytes(key), keyHint)
                 .get();
         assertNotNull(removed);
-        assertEquals("only", new String(removed.getValue(), StandardCharsets.UTF_8));
+        assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: queue is empty
         Thread.sleep(REPLICATION_DELAY_MS);
         Payload masterEmpty = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals(0, masterEmpty.getValue().length);
+        assertEquals(0, masterEmpty.bytesValue().length);
 
         // Verify on BACKUP: queue is empty (replicated)
         Payload backupEmpty = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals(0, backupEmpty.getValue().length);
+        assertEquals(0, backupEmpty.bytesValue().length);
     }
 
     // =========================================================================
@@ -1442,13 +1443,13 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("first", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns first (replicated)
         Payload backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(key), keyHint)
                 .get();
-        assertEquals("first", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("first", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -1475,12 +1476,12 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("third", new String(masterTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("third", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         Payload backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("third", new String(backupTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("third", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // removeTail on MASTER
         client.setMode(Mode.MASTER)
@@ -1492,13 +1493,13 @@ public class QueueOperationsTest extends TestBaseCluster {
         Payload masterNewTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("second", new String(masterNewTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(masterNewTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns second (replicated)
         Payload backupNewTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), keyHint)
                 .get();
-        assertEquals("second", new String(backupNewTail.getValue(), StandardCharsets.UTF_8));
+        assertEquals("second", new String(backupNewTail.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -1529,7 +1530,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(masterHead);
-        assertEquals("data", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("data", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: intruder CAN read (READ_LOCK allows multiple readers)
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -1537,7 +1538,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint, INTRUDER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(backupHead);
-        assertEquals("data", new String(backupHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("data", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
         // But intruder CANNOT write - addElementToTail should be denied
         assertDenied(client.setMode(Mode.BACKUP)
@@ -1578,7 +1579,7 @@ public class QueueOperationsTest extends TestBaseCluster {
                 .getHead(bytes(key), keyHint, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(masterHead);
-        assertEquals("data", new String(masterHead.getValue(), StandardCharsets.UTF_8));
+        assertEquals("data", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);

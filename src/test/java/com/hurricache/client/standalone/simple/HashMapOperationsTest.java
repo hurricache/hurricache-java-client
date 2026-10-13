@@ -3,6 +3,7 @@ package com.hurricache.client.standalone.simple;
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -46,11 +47,11 @@ public class HashMapOperationsTest extends TestBase {
 
 
     private Payload p(String val) {
-        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
     private String str(Payload payload) {
-        return new String(payload.getValue(), StandardCharsets.UTF_8);
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
     }
 
     // =========================================================================
@@ -133,7 +134,7 @@ public class HashMapOperationsTest extends TestBase {
         Thread.sleep(3000);
 
         // Now another client can read
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
+        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
         assertEquals("v1", new String(val, StandardCharsets.UTF_8));
     }
@@ -227,10 +228,10 @@ public class HashMapOperationsTest extends TestBase {
         assertEquals(LockStatus.CANT_LOCK, lock2, "Second client should not get READ_LOCK");;
 
         // Both can read
-        byte[] val1 = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+        byte[] val1 = client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val1);
 
-        byte[] val2 = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
+        byte[] val2 = client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val2);
 
         // Release locks
@@ -251,7 +252,7 @@ public class HashMapOperationsTest extends TestBase {
         assertEquals(LockStatus.OK, lock, "Owner should get WRITE_LOCK");;
 
         // Owner can read
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
+        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
 
         // Owner can add elements
@@ -261,7 +262,7 @@ public class HashMapOperationsTest extends TestBase {
         assertEquals(1, added);
 
         // Intruder cannot read
-        assertDenied(client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
+        assertDenied(client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
 
         // Intruder cannot add
         List<Payload> intruderKeys = List.of(p("k3"));
@@ -285,11 +286,11 @@ public class HashMapOperationsTest extends TestBase {
         assertEquals(LockStatus.OK, lock, "Owner should get GLOBAL LOCK");;
 
         // Owner can read
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
+        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
 
         // Intruder cannot read
-        assertDenied(client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
+        assertDenied(client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
 
         // Intruder cannot add
         List<Payload> intruderKeys = List.of(p("k2"));
@@ -338,7 +339,7 @@ public class HashMapOperationsTest extends TestBase {
         assertEquals(LockStatus.OK, lock);
 
         // Read under READ_LOCK OK
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
+        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(val);
 
         // Write is denied
@@ -398,7 +399,7 @@ public class HashMapOperationsTest extends TestBase {
         Thread.sleep(1500);
 
         // Verify container is deleted - getContainerValue will return NOT_FOUND
-        assertNotFound(client.getContainerValue(bytes(mapKey), null, p("k1").getValue()));
+        assertNotFound(client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue()));
     }
 
     // =========================================================================
@@ -415,7 +416,7 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        byte[] removedValue = client.getAndRemoveContainerValue(bytes(mapKey), null, p("k1").getValue()).get();
+        byte[] removedValue = client.getAndRemoveContainerValue(bytes(mapKey), null, p("k1").bytesValue()).get();
         assertNotNull(removedValue);
         assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
 
@@ -435,7 +436,7 @@ public class HashMapOperationsTest extends TestBase {
 
         ExecutionException ex = Assertions.assertThrows(
                 ExecutionException.class,
-                () -> client.getAndRemoveContainerValue(bytes(mapKey), null, p("nonexistent").getValue()).get()
+                () -> client.getAndRemoveContainerValue(bytes(mapKey), null, p("nonexistent").bytesValue()).get()
         );
         Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
         assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
@@ -455,7 +456,7 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        byte[] value = client.getContainerValue(bytes(mapKey), null, p("k1").getValue()).get();
+        byte[] value = client.getContainerValue(bytes(mapKey), null, p("k1").bytesValue()).get();
         assertNotNull(value);
         assertEquals("v1", new String(value, StandardCharsets.UTF_8));
     }
@@ -471,7 +472,7 @@ public class HashMapOperationsTest extends TestBase {
 
         ExecutionException ex = Assertions.assertThrows(
                 ExecutionException.class,
-                () -> client.getContainerValue(bytes(mapKey), null, p("nonexistent").getValue()).get()
+                () -> client.getContainerValue(bytes(mapKey), null, p("nonexistent").bytesValue()).get()
         );
         Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
         assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
@@ -487,7 +488,7 @@ public class HashMapOperationsTest extends TestBase {
         client.createMap(mapKey, initialData).get();
 
         byte[] elemKey = bytes("k1");
-        byte[] oldValue = client.updateContainerValue(bytes(mapKey), null, elemKey, p("new_value").getValue()).get();
+        byte[] oldValue = client.updateContainerValue(bytes(mapKey), null, elemKey, p("new_value").bytesValue()).get();
         assertNotNull(oldValue, "oldValue should not be null");;
         assertEquals("old_value", new String(oldValue, StandardCharsets.UTF_8));
 
@@ -506,7 +507,7 @@ public class HashMapOperationsTest extends TestBase {
 
         ExecutionException ex = Assertions.assertThrows(
                 ExecutionException.class,
-                () -> client.updateContainerValue(bytes(mapKey), null, p("nonexistent").getValue(), p("new").getValue()).get()
+                () -> client.updateContainerValue(bytes(mapKey), null, p("nonexistent").bytesValue(), p("new").bytesValue()).get()
         );
         Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
         assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
@@ -616,7 +617,7 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        Boolean exists = client.containsContainerKey(bytes(mapKey), null, p("k1").getValue()).get();
+        Boolean exists = client.containsContainerKey(bytes(mapKey), null, p("k1").bytesValue()).get();
         assertTrue(exists, "Key k1 should exist");;
     }
 
@@ -629,7 +630,7 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        Boolean notExists = client.containsContainerKey(bytes(mapKey), null, p("nonexistent").getValue()).get();
+        Boolean notExists = client.containsContainerKey(bytes(mapKey), null, p("nonexistent").bytesValue()).get();
         assertFalse(notExists, "Key nonexistent should not exist");;
     }
 
@@ -647,8 +648,8 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        List<Payload> keys = List.of(Payload.of(p("k1").getValue()));
-        List<Payload> values = List.of(Payload.of(p("v1").getValue()));
+        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
+        List<Payload> values = List.of(Payload.of(p("v1").bytesValue()));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.MAP, keys, values).get();
         assertEquals(1, removed, "1 element should be removed");;
@@ -668,8 +669,8 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        List<Payload> keys = List.of(Payload.of(p("k1").getValue()));
-        List<Payload> values = List.of(Payload.of(p("wrong_value").getValue()));
+        List<Payload> keys = List.of(Payload.of(p("k1").bytesValue()));
+        List<Payload> values = List.of(Payload.of(p("wrong_value").bytesValue()));
 
         Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.MAP, keys, values).get();
         assertEquals(0, removed, "Element removed by key");;
@@ -693,7 +694,7 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("k2").getValue()).get();
+        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("k2").bytesValue()).get();
         assertEquals(1, removed, "1 element should be removed");;
 
         Map<Payload, Payload> result = client.streamMap(mapKey).get();
@@ -710,7 +711,7 @@ public class HashMapOperationsTest extends TestBase {
         );
         client.createMap(mapKey, initialData).get();
 
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("nonexistent").getValue()).get();
+        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("nonexistent").bytesValue()).get();
         assertEquals(0, removed, "Nothing removed (element not found)");;
     }
 
@@ -720,7 +721,7 @@ public class HashMapOperationsTest extends TestBase {
         String mapKey = baseKey + "_remove_empty";
         client.createMap(mapKey, Map.of()).get();
 
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("k1").getValue()).get();
+        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("k1").bytesValue()).get();
         assertEquals(0, removed, "Nothing removed from empty container");;
     }
 
@@ -742,9 +743,9 @@ public class HashMapOperationsTest extends TestBase {
 
         Map<Payload, Payload> result = client.streamMap(mapKey).get();
         assertEquals(3, result.size());
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k2".equals(str(e.getKey())) && "v2".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k3".equals(str(e.getKey())) && "v3".equals(str(e.getValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> "k2".equals(str(e.getKey())) && "v2".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> "k3".equals(str(e.getKey())) && "v3".equals(str(e.bytesValue()))));
     }
 
     @Test
@@ -833,7 +834,7 @@ public class HashMapOperationsTest extends TestBase {
         Map<Payload, Payload> result = client.streamMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.getValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.bytesValue()))));
     }
 
     // =========================================================================
@@ -871,9 +872,9 @@ public class HashMapOperationsTest extends TestBase {
         assertNotNull(result);
         assertEquals(3, result.size(), "Map should contain 3 elements");
         // Check via stream since streamMap returns new Payload objects
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k2".equals(str(e.getKey())) && "v2".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k3".equals(str(e.getKey())) && "v3".equals(str(e.getValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> "k2".equals(str(e.getKey())) && "v2".equals(str(e.bytesValue()))));
+        assertTrue(result.entrySet().stream().anyMatch(e -> "k3".equals(str(e.getKey())) && "v3".equals(str(e.bytesValue()))));
     }
 
     @Test

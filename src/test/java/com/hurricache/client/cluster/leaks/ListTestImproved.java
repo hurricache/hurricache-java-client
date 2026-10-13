@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.leaks;
 import com.hurricache.client.cluster.AdvancedTest;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,7 @@ public class ListTestImproved extends AdvancedTest {
         keyValueMap.forEach((k, v) -> {
             try {
                 Payload data = client.getHead(k, v.second).get();
-                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                if (data != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -56,7 +57,7 @@ public class ListTestImproved extends AdvancedTest {
         keyValueMap.forEach((k, v) -> {
             try {
                 Payload data = client.getAndRemoveFront(k, v.second).get();
-                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                if (data != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -89,7 +90,7 @@ public class ListTestImproved extends AdvancedTest {
         keyValueMap.forEach((k, v) -> {
             try {
                 Payload data = client.getAndRemoveElementAtPosition(k, v.second, 0).get();
-                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                if (data != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -122,7 +123,7 @@ public class ListTestImproved extends AdvancedTest {
         keyValueMap.forEach((k, v) -> {
             try {
                 Payload data = client.getAndRemoveTail(k, v.second).get();
-                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                if (data != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {

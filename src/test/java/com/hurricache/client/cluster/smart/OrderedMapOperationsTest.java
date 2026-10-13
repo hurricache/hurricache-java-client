@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
@@ -34,15 +35,15 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     private static final long REPLICATION_DELAY_MS = 150;
 
     private OrderedPayload op(Long order, String val) {
-        return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
+        return OrderedVariant.ofBytes(order, val.getBytes(StandardCharsets.UTF_8));
     }
 
     private Payload p(String val) {
-        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
 
     private String str(Payload payload) {
-        return new String(payload.getValue(), StandardCharsets.UTF_8);
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
     }
 
     // =========================================================================

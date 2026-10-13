@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.stress;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -126,7 +127,7 @@ public class QueueDrainPerfTest {
                                     inFlightWindow.release();
                                     if (ex == null) {
                                         // Если сервер вернул пустоту — значит очередь полностью выгребли
-                                        if (res == null || res.getValue().length == 0) {
+                                        if (res == null || res.bytesValue().length == 0) {
                                             queueIsEmpty.set(true);
                                         } else {
                                             readOps.increment();
