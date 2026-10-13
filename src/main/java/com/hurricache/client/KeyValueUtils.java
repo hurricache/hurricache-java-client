@@ -1,20 +1,118 @@
 package com.hurricache.client;
 
-import com.google.protobuf.ByteString;
+import com.google.protobuf.UnsafeByteOperations;
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.OrderedVariant;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.BinaryPayload;
+import com.hurricache.grpc.CreateRequest;
+import com.hurricache.grpc.GetRequest;
 import com.hurricache.grpc.Key;
-import com.hurricache.grpc.KeyBinaryPayload;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.Value;
+import com.hurricache.grpc.ValueResponse;
+import com.hurricache.grpc.ValueType;
 import com.hurricache.utils.CompressionUtils;
 
 import java.time.Duration;
 
 public class KeyValueUtils {
 
+    public static  Variant toVariant(ValueResponse resp) {
+        if (!resp.hasValueUnordered()) return Variant.none();
+        Value val = resp.getValueUnordered();
+        ValueType vt = val.hasValueType() ? val.getValueType() : ValueType.AUTO;
+        BinaryPayload bp = val.getValue();
+        switch (vt) {
+            case INT: return Variant.ofInt(bp.getIntPayload());
+            case DOUBLE: return Variant.ofDouble(bp.getDoublePayload());
+            case BYTES: case AUTO: default:
+                if (bp.hasIntPayload()) return Variant.ofInt(bp.getIntPayload());
+                if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
+                if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
+                return Variant.none();
+        }
+    }
+
+    public static  Key buildKey(byte[] key, KeyHintData hint, int clientId, int compressionThreshold ) {
+        return KeyValueUtils.createUnorderedKey(key, hint, clientId, compressionThreshold).build();
+    }
+
+    public static  GetRequest buildGetReq(byte[] key, KeyHintData hint, int clientId, int compressionThreshold) {
+        return GetRequest.newBuilder().setKey(buildKey(key, hint, clientId,compressionThreshold)).build();
+    }
+
+    public static   CreateRequest buildAtomicIntCreateRequest(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId,
+                                                              int compressionThreshold) {
+        Value.Builder vb = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(value))
+                .setValueType(ValueType.INT);
+        if (ttl != null && !ttl.isZero()) vb.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        return CreateRequest.newBuilder().setKey(buildKey(key, hint, clientId,compressionThreshold)).setValue(vb).build();
+    }
+
+    public static   CreateRequest buildAtomicIntCreateRequest(byte[] key, KeyHintData hint, double value, Duration ttl, int clientId,
+                                                              int compressionThreshold) {
+        Value.Builder vb = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(value))
+                .setValueType(ValueType.DOUBLE);
+        if (ttl != null && !ttl.isZero()) vb.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        return CreateRequest.newBuilder().setKey(buildKey(key, hint, clientId,compressionThreshold)).setValue(vb).build();
+    }
+
+    public static   Value buildValueFromVariant(Variant variant, Duration ttl) {
+        Value.Builder b = switch (variant.type()) {
+            case INT -> Value.newBuilder()
+                    .setValue(BinaryPayload.newBuilder().setIntPayload(variant.intValue()))
+                    .setValueType(ValueType.INT);
+            case DOUBLE -> Value.newBuilder()
+                    .setValue(BinaryPayload.newBuilder().setDoublePayload(variant.doubleValue()))
+                    .setValueType(ValueType.DOUBLE);
+            default -> Value.newBuilder()
+                    .setValue(BinaryPayload.newBuilder()
+                                      .setPayload(UnsafeByteOperations.unsafeWrap(variant.bytesValue())))
+                    .setValueType(ValueType.BYTES);
+        };
+        if (ttl != null && !ttl.isZero()) b.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        return b.build();
+    }
+
+    /**
+     * Builds a Value.Builder from a Variant.
+     * Compression is only applied for BYTES type; INT/DOUBLE are stored directly.
+     */
+    public static Value.Builder buildValueFromVariantCompressed(Variant variant, Integer compressionThreshold) {
+        Value.Builder builder;
+
+        switch (variant.type()) {
+            case INT:
+                builder = Value.newBuilder()
+                        .setValue(BinaryPayload.newBuilder().setIntPayload(variant.intValue()))
+                        .setValueType(ValueType.INT);
+                break;
+
+            case DOUBLE:
+                builder = Value.newBuilder()
+                        .setValue(BinaryPayload.newBuilder().setDoublePayload(variant.doubleValue()))
+                        .setValueType(ValueType.DOUBLE);
+                break;
+
+            case BYTES:
+                // Apply compression only for BYTES type
+                builder = CompressionUtils.compressIfNeeded(variant.bytesValue(), compressionThreshold);
+                builder.setValueType(ValueType.BYTES);
+                break;
+
+            default:
+                builder = Value.newBuilder()
+                        .setValueType(ValueType.AUTO);
+                break;
+        }
+
+        return builder;
+    }
     public static Key.Builder createUnorderedKey(byte[] keyStr, int clientId, Integer compressionThreshold) {
         return createUnorderedKey(keyStr, null, clientId,compressionThreshold );
     }
@@ -26,7 +124,7 @@ public class KeyValueUtils {
         Key.Builder builder = CompressionUtils.compressKeyIfNeeded(key, clientId,compressionThreshold);
             if (hint != null) {
                 KeyHint.Builder khBuilder = KeyHint.newBuilder();
-                if (hint.hasWeekHash()) khBuilder.setWeekHash(hint.getWeek_hash());
+                if (hint.hasWeekHash()) khBuilder.setWeakHash(hint.getWeek_hash());
                 if (hint.hasStrongHash()) khBuilder.setStrongHash(hint.getStrong_hash());
                 builder.setKeyHint(khBuilder);
         }
@@ -37,7 +135,7 @@ public class KeyValueUtils {
         OrderedKey.Builder builder = CompressionUtils.compressKeyIfNeeded(keyStr,order, clientId,compressionThreshold);
         if (hint != null) {
             KeyHint.Builder khBuilder = KeyHint.newBuilder();
-            if (hint.hasWeekHash()) khBuilder.setWeekHash(hint.getWeek_hash());
+            if (hint.hasWeekHash()) khBuilder.setWeakHash(hint.getWeek_hash());
             if (hint.hasStrongHash()) khBuilder.setStrongHash(hint.getStrong_hash());
             builder.setKeyHint(khBuilder);
         }
@@ -62,6 +160,50 @@ public class KeyValueUtils {
         OrderedValue.Builder builder = CompressionUtils.compressIfNeeded(data,order,compressionThreshold);
         if (ttl != null && !ttl.isZero()) builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         builder.setOrder(order);
+        return builder;
+    }
+
+    /**
+     * Builds an OrderedValue.Builder from an OrderedVariant.
+     * Compression is only applied for BYTES type; INT/DOUBLE are stored directly.
+     */
+    public static OrderedValue.Builder buildOrderedValueFromVariant(OrderedVariant orderedVariant, Duration ttl, Integer compressionThreshold) {
+        Variant variant = orderedVariant.variant();
+        long order = orderedVariant.getOrder() != null ? orderedVariant.getOrder() : 0L;
+        OrderedValue.Builder builder;
+
+        switch (variant.type()) {
+            case INT:
+                builder = OrderedValue.newBuilder()
+                        .setValue(BinaryPayload.newBuilder().setIntPayload(variant.intValue()))
+                        .setValueType(ValueType.INT)
+                        .setOrder(order);
+                break;
+
+            case DOUBLE:
+                builder = OrderedValue.newBuilder()
+                        .setValue(BinaryPayload.newBuilder().setDoublePayload(variant.doubleValue()))
+                        .setValueType(ValueType.DOUBLE)
+                        .setOrder(order);
+                break;
+
+            case BYTES:
+                // Apply compression only for BYTES type
+                builder = CompressionUtils.compressIfNeeded(variant.bytesValue(), order, compressionThreshold);
+                builder.setValueType(ValueType.BYTES);
+                break;
+
+            default:
+                builder = OrderedValue.newBuilder()
+                        .setValueType(ValueType.AUTO)
+                        .setOrder(order);
+                break;
+        }
+
+        if (ttl != null && !ttl.isZero()) {
+            builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
+
         return builder;
     }
 

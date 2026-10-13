@@ -1,5 +1,7 @@
 package com.hurricache.utils;
 
+import com.hurricache.client.intf.OrderedVariant;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.BinaryPayload;
 import com.hurricache.grpc.Key;
 import com.hurricache.grpc.OrderedKey;
@@ -90,5 +92,29 @@ public class CompressionUtils {
                         .setSize(responseKey.getPayload().getSize()))
                 .setCompressionInfo(responseKey.getCompressionInfo())
                 .build());
+    }
+
+    /**
+     * Decompresses an OrderedValue and returns a Variant (without order).
+     * Handles BinaryPayload.oneof: bytes → decompress, int → intPayload, double → doublePayload.
+     */
+    public static Variant decompressIfNeededToVariant(OrderedValue responseValue) {
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.decompressIfNeededToVariant(responseValue);
+        } else {
+            return LZ4CompressionUtils.decompressIfNeededToVariant(responseValue);
+        }
+    }
+
+    /**
+     * Decompresses an OrderedValue and returns an OrderedVariant (with order preserved).
+     * Handles BinaryPayload.oneof: bytes → decompress, int → intPayload, double → doublePayload.
+     */
+    public static OrderedVariant decompressIfNeededToOrderedVariant(OrderedValue responseValue) {
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.decompressIfNeededToOrderedVariant(responseValue);
+        } else {
+            return LZ4CompressionUtils.decompressIfNeededToOrderedVariant(responseValue);
+        }
     }
 }

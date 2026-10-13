@@ -29,7 +29,7 @@ message KeyBinaryPayload {
 
 // Optimization hash hints for fast lookup and data locality in shards.
 message KeyHint {
-  optional uint32 week_hash = 1;    // Fast (weak) key hash for primary filtering
+  optional uint32 weak_hash = 1;    // Fast (weak) key hash for primary filtering
   optional uint32 strong_hash = 2;  // Cryptographic/full hash for accuracy and bucket distribution
 }
 

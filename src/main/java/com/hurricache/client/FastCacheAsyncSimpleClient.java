@@ -46,7 +46,6 @@ import com.hurricache.utils.StreamBatchOrderedMapVariantObserver;
 import com.hurricache.utils.StreamBatchOrderedVariantObserver;
 import com.hurricache.utils.StreamBatchVariantObserver;
 import com.hurricache.utils.StreamBatchOrderedObserver;
-import com.hurricache.utils.StreamBatchOrderedMapObserver;
 import com.hurricache.utils.StreamBatchUnorderedObserver;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
@@ -316,7 +315,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
         if (initialValue != null) {
             for (Variant payload : initialValue) {
-                Value.Builder compressedValue = CompressionUtils.compressIfNeeded(payload.getValue(), null);
+                Value.Builder compressedValue = KeyValueUtils.buildValueFromVariantCompressed(payload, getDefaultCompressionThreshold());
                 builder.addValueUnordered(compressedValue);
             }
         }
@@ -369,7 +368,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<KeyHintData> createMap(byte[] key,
                                                     KeyHintData keyHint,
-                                                    Map<Payload, Payload> initialValue,
+                                                    Map<Payload, Variant> initialValue,
                                                     Duration ttl,
                                                     int clientId,
                                                     Duration timeout) {
@@ -383,9 +382,12 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         builder.setKey(protoKey).setType(ContainerType.MAP);
 
         if (initialValue != null) {
-            for (Map.Entry<Payload, Payload> entry : initialValue.entrySet()) {
-                Key kVal = KeyValueUtils.createUnorderedKey(entry.getKey().getValue(), clientId, null).build();
-                Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(), ttl, null).build();
+            for (Map.Entry<Payload, Variant> entry : initialValue.entrySet()) {
+                Key kVal = KeyValueUtils.createUnorderedKey(entry.getKey().getValue(), clientId, getDefaultCompressionThreshold()).build();
+                Value.Builder vVal = KeyValueUtils.buildValueFromVariantCompressed(entry.getValue(), getDefaultCompressionThreshold());
+                if (ttl != null && !ttl.isZero()) {
+                    vVal.setTtl(System.currentTimeMillis() + ttl.toMillis());
+                }
                 builder.addKeyUnordered(kVal);
                 builder.addValueUnordered(vVal);
             }
@@ -402,7 +404,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     public CompletableFuture<KeyHintData> createOrderedMap(byte[] key,
                                                            KeyHintData keyHint,
-                                                           Map<OrderedPayload, Payload> initialValue,
+                                                           Map<OrderedPayload, Variant> initialValue,
                                                            Duration ttl,
                                                            int clientId,
                                                            Duration timeout) {
@@ -415,14 +417,15 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         builder.setKey(protoKey).setType(ContainerType.ORDERED_MAP);
 
         if (initialValue != null) {
-            for (Map.Entry<OrderedPayload, Payload> entry : initialValue.entrySet()) {
+            for (Map.Entry<OrderedPayload, Variant> entry : initialValue.entrySet()) {
                 long order = entry.getKey().getOrder() != null
                              ? entry.getKey().getOrder()
                              : 0L;
-                OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId,getDefaultCompressionThreshold()).build();
-                Value vVal = KeyValueUtils.createUnorderedValue(entry.getValue().getValue(),
-                                                                ttl,
-                                                                getDefaultCompressionThreshold()).build();
+                OrderedKey kVal = KeyValueUtils.createOrderedKey(entry.getKey().getValue(), order, clientId, getDefaultCompressionThreshold()).build();
+                Value.Builder vVal = KeyValueUtils.buildValueFromVariantCompressed(entry.getValue(), getDefaultCompressionThreshold());
+                if (ttl != null && !ttl.isZero()) {
+                    vVal.setTtl(System.currentTimeMillis() + ttl.toMillis());
+                }
                 builder.addKeyOrdered(kVal);
                 builder.addValueUnordered(vVal);
             }
@@ -444,15 +447,13 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                            int pos,
                                                            int clientId,
                                                            Duration timeout) {
-        CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
+        CompletableFuture<Variant> future = new CompletableFuture<>();
         KeyPositionRequest request = KeyPositionRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
                 .setPos(pos)
                 .build();
-        getStub(timeout).getElementAtPosition(request, new DecompressingOrderedObserver(rawFuture));
-        return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
-                                            : null);
+        getStub(timeout).getElementAtPosition(request, new DecompressingOrderedObserver(future));
+        return future;
     }
 
     @Override
@@ -461,15 +462,13 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                                     int pos,
                                                                     int clientId,
                                                                     Duration timeout) {
-        CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
+        CompletableFuture<Variant> future = new CompletableFuture<>();
         KeyPositionRequest request = KeyPositionRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
                 .setPos(pos)
                 .build();
-        getStub(timeout).getAndDeleteElementAtPosition(request, new DecompressingOrderedObserver(rawFuture));
-        return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
-                                            : null);
+        getStub(timeout).getAndDeleteElementAtPosition(request, new DecompressingOrderedObserver(future));
+        return future;
     }
 
 
@@ -486,7 +485,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
         getStub(timeout).getAndDeleteHead(buildGetReq(key, hint, clientId,getDefaultCompressionThreshold()), new DecompressingObserver(rawFuture));
         return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
+                                            ? Variant.ofBytes(bytes)
                                             : null);
     }
 
@@ -495,7 +494,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
         getStub(timeout).getHead(buildGetReq(key, hint, clientId,getDefaultCompressionThreshold()), new DecompressingObserver(rawFuture));
         return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
+                                            ? Variant.ofBytes(bytes)
                                             : null);
     }
 
@@ -504,7 +503,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
         getStub(timeout).getTail(buildGetReq(key, hint, clientId,getDefaultCompressionThreshold()), new DecompressingObserver(rawFuture));
         return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
+                                            ? Variant.ofBytes(bytes)
                                             : null);
     }
 
@@ -521,7 +520,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .build();
         getStub(timeout).getElementAtPosition(req, new DecompressingObserver(rawFuture));
         return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
+                                            ? Variant.ofBytes(bytes)
                                             : null);
     }
 
@@ -632,8 +631,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .setReverse(reverse)
                 .build();
 
-        CompletableFuture<Map<OrderedPayload,Payload>>rawFuture = new CompletableFuture<>();
-        getStub(timeout).getElementsInRange(request, new StreamBatchOrderedMapObserver(rawFuture));
+        CompletableFuture<Map<OrderedPayload,Variant>>rawFuture = new CompletableFuture<>();
+        getStub(timeout).getElementsInRange(request, new StreamBatchOrderedMapVariantObserver(rawFuture));
         return rawFuture;
     }
 
@@ -656,7 +655,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .setPos(-1);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.createUnorderedValue(datum.getValue(), Duration.ZERO, null));
+            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum, getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -675,7 +674,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             return CompletableFuture.completedFuture(0);
         }
         AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(buildKey(key, hint, clientId,getDefaultCompressionThreshold()));
-        for (OrderedVariant datum : data) {
+        for (OrderedPayload datum : data) {
             OrderedValue.Builder compressedValue = KeyValueUtils.createOrderedValue(datum.getValue(),
                                                                                     datum.getOrder(),
                                                                                     Duration.ZERO, getDefaultCompressionThreshold());
@@ -703,7 +702,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.createUnorderedValue(datum.getValue(), Duration.ZERO, null));
+            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum, getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -725,7 +724,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.createUnorderedValue(datum.getValue(), Duration.ZERO, null));
+            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum, getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -750,7 +749,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .setPos(pos);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.createUnorderedValue(datum.getValue(), Duration.ZERO, null));
+            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum, getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -763,7 +762,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     public CompletableFuture<Integer> addElementToPositionBefore(byte[] key,
                                                                  KeyHintData hint,
                                                                  List<Variant> data,
-                                                                 Payload pivot,
+                                                                 Variant pivot,
                                                                  int clientId,
                                                                  Duration timeout) {
         if (data == null || data.isEmpty()) {
@@ -773,10 +772,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToValRequest.Builder builder = AddToValRequest.newBuilder();
         builder.setKey(buildKey(key, hint, clientId,getDefaultCompressionThreshold()));
         builder.setIsBefore(true);
-        data.forEach(element -> builder.addValue(KeyValueUtils.createUnorderedValue(element.getValue(),
-                                                                                    Duration.ZERO,
-                                                                                    null)));
-        builder.setPos(KeyValueUtils.createUnorderedValue(pivot.getValue(), Duration.ZERO, null));
+        data.forEach(element -> builder.addValue(KeyValueUtils.buildValueFromVariantCompressed(element, getDefaultCompressionThreshold()).build()));
+        builder.setPos(KeyValueUtils.buildValueFromVariantCompressed(pivot, getDefaultCompressionThreshold()).build());
         getStub(timeout).addElementToPositionByValue(builder.build(),
                                                      new CompletableFutureObserver<>(future, IntResponse::getSize));
         return future;
@@ -796,10 +793,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToValRequest.Builder builder = AddToValRequest.newBuilder();
         builder.setKey(buildKey(key, hint, clientId,getDefaultCompressionThreshold()));
         builder.setIsBefore(false);
-        data.forEach(element -> builder.addValue(KeyValueUtils.createUnorderedValue(element.getValue(),
-                                                                                    Duration.ZERO,
-                                                                                    null)));
-        builder.setPos(KeyValueUtils.createUnorderedValue(pivot.getValue(), Duration.ZERO, null));
+        data.forEach(element -> builder.addValue(KeyValueUtils.buildValueFromVariantCompressed(element, getDefaultCompressionThreshold()).build()));
+        builder.setPos(KeyValueUtils.buildValueFromVariantCompressed(pivot, getDefaultCompressionThreshold()).build());
         getStub(timeout).addElementToPositionByValue(builder.build(),
                                                      new CompletableFutureObserver<>(future, IntResponse::getSize));
         return future;
@@ -814,7 +809,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         CompletableFuture<byte[]> rawFuture = new CompletableFuture<>();
         getStub(timeout).getAndDeleteTail(buildGetReq(key, hint, clientId,getDefaultCompressionThreshold()), new DecompressingObserver(rawFuture));
         return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
+                                            ? Variant.ofBytes(bytes)
                                             : null);
     }
 
@@ -831,7 +826,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .build();
         getStub(timeout).getAndDeleteElementAtPosition(request, new DecompressingObserver(rawFuture));
         return rawFuture.thenApply(bytes -> bytes != null
-                                            ? Payload.of(bytes)
+                                            ? Variant.ofBytes(bytes)
                                             : null);
     }
 
@@ -878,7 +873,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
         if (values != null) {
             for (Variant val : values) {
-                builder.addValues(CompressionUtils.compressIfNeeded(val.getValue(), null));
+                builder.addValues(KeyValueUtils.buildValueFromVariantCompressed(val, getDefaultCompressionThreshold()));
             }
         }
 
@@ -886,7 +881,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             for (Payload k : keys) {
                 builder.addKeys(KeyValueUtils.createUnorderedKey(k.getValue(),
                                                                  clientId,
-                                                                 getDefaultCompressionThreshold()));
+                                                                 getDefaultCompressionThreshold()).build());
             }
         }
 
@@ -941,42 +936,51 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<Number> atomicExchange(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<Number> future = new CompletableFuture<>();
-        getStub(timeout).atomicExchange(buildAtomicIntCreateRequest(key, hint, value, ttl, clientId), new CompletableFutureObserver<>(future, KeyValueUtils::toVariant));
+        getStub(timeout).atomicExchange(buildAtomicIntCreateRequest(key, hint, value, ttl, clientId, getDefaultCompressionThreshold()), new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
         return future;
     }
 
     @Override
     public CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<Number> future = new CompletableFuture<>();
-        getStub(timeout).atomicAdd(buildAtomicIntCreateRequest(key, hint, delta, ttl, clientId), new CompletableFutureObserver<>(future, KeyValueUtils::toVariant));
+        getStub(timeout).atomicAdd(buildAtomicIntCreateRequest(key, hint, delta, ttl, clientId, getDefaultCompressionThreshold()), new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
         return future;
     }
 
     @Override
     public CompletableFuture<Number> atomicSub(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<Number> future = new CompletableFuture<>();
-        getStub(timeout).atomicSub(buildAtomicIntCreateRequest(key, hint, delta, ttl, clientId), new CompletableFutureObserver<>(future, KeyValueUtils::toVariant));
+        getStub(timeout).atomicSub(buildAtomicIntCreateRequest(key, hint, delta, ttl, clientId, getDefaultCompressionThreshold()), new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
         return future;
     }
 
     @Override
     public CompletableFuture<Long> atomicAnd(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<Long> future = new CompletableFuture<>();
-        getStub(timeout).atomicAnd(KeyValueUtils.buildAtomicIntCreateRequest(key, hint, mask, ttl, clientId,getDefaultCompressionThreshold()), new CompletableFutureObserver<>(future, v -> ((Number)toVariant(v)).longValue()));
+        getStub(timeout).atomicAnd(buildAtomicIntCreateRequest(key, hint, mask, ttl, clientId, getDefaultCompressionThreshold()), new CompletableFutureObserver<>(future, resp -> {
+            Variant variant = KeyValueUtils.toVariant(resp);
+            return variant.isNone() ? 0L : variant.intValue();
+        }));
         return future;
     }
 
     @Override
     public CompletableFuture<Long> atomicOr(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<Long> future = new CompletableFuture<>();
-        getStub(timeout).atomicOr(buildAtomicIntCreateRequest(key, hint, mask, ttl, clientId), new CompletableFutureObserver<>(future, v -> ((Number)toVariant(v)).longValue()));
+        getStub(timeout).atomicOr(buildAtomicIntCreateRequest(key, hint, mask, ttl, clientId, getDefaultCompressionThreshold()), new CompletableFutureObserver<>(future, resp -> {
+            Variant variant = KeyValueUtils.toVariant(resp);
+            return variant.isNone() ? 0L : variant.intValue();
+        }));
         return future;
     }
 
     @Override
     public CompletableFuture<Long> atomicXor(byte[] key, KeyHintData hint, long mask, Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<Long> future = new CompletableFuture<>();
-        getStub(timeout).atomicXor(buildAtomicIntCreateRequest(key, hint, mask, ttl, clientId), new CompletableFutureObserver<>(future, v -> ((Number)toVariant(v)).longValue()));
+        getStub(timeout).atomicXor(buildAtomicIntCreateRequest(key, hint, mask, ttl, clientId, getDefaultCompressionThreshold()), new CompletableFutureObserver<>(future, resp -> {
+            Variant variant = KeyValueUtils.toVariant(resp);
+            return variant.isNone() ? 0L : variant.intValue();
+        }));
         return future;
     }
 
@@ -1086,17 +1090,14 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         for (int i = 0; i < size; i++) {
             Payload payload = container_keys.get(i);
             Variant upayload = container_values.get(i);
-            Key.Builder uk = Key.newBuilder()
+            Key uk = Key.newBuilder()
                     .setPayload(KeyBinaryPayload.newBuilder()
                                         .setSize(payload.getValue().length)
                                         .setPayload(UnsafeByteOperations.unsafeWrap(payload.getValue()))
-                                        .build());
+                                        .build())
+                    .build();
 
-            Value.Builder unorderedValueBuilder = Value.newBuilder()
-                    .setValue(BinaryPayload.newBuilder()
-                                      .setSize(upayload.getValue().length)
-                                      .setPayload(UnsafeByteOperations.unsafeWrap(upayload.getValue()))
-                                      .build());
+            Value.Builder unorderedValueBuilder = KeyValueUtils.buildValueFromVariantCompressed(upayload, getDefaultCompressionThreshold());
 
             builder.addKeyUnordered(uk).addValueUnordered(unorderedValueBuilder);
         }
@@ -1133,9 +1134,9 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             long order = payload.getOrder() != null
                          ? payload.getOrder()
                          : 0L;
-            OrderedKey.Builder orderedValue = CompressionUtils.compressKeyIfNeeded(payload.getValue(),payload.getOrder(),clientId,getDefaultCompressionThreshold());
+            OrderedKey orderedValue = CompressionUtils.compressKeyIfNeeded(payload.getValue(),payload.getOrder(),clientId,getDefaultCompressionThreshold()).build();
 
-            Value.Builder unorderedValueBuilder = CompressionUtils.compressIfNeeded(upayload.getValue(),getDefaultCompressionThreshold());
+            Value.Builder unorderedValueBuilder = KeyValueUtils.buildValueFromVariantCompressed(upayload, getDefaultCompressionThreshold());
             builder.addKeyOrdered(orderedValue).addValueUnordered(unorderedValueBuilder);
         }
         builder.setType(ContainerType.ORDERED_MAP);

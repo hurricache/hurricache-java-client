@@ -1,5 +1,6 @@
 package com.hurricache.client.intf;
 
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 
 import java.time.Duration;
@@ -15,82 +16,82 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      * @param pos      position index.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing the payload at the position.
+     * @return a {@link CompletableFuture} containing the variant at the position.
      */
-    CompletableFuture<Payload> getElementAtPosition(byte[] key,
+    CompletableFuture<Variant> getElementAtPosition(byte[] key,
                                                     KeyHintData hint,
                                                     int pos,
                                                     int clientId,
                                                     Duration timeout);
 
-    default CompletableFuture<Payload> getElementAtPosition(String key, KeyHintData hint, int pos,
+    default CompletableFuture<Variant> getElementAtPosition(String key, KeyHintData hint, int pos,
                                                             int clientId, Duration timeout) {
         return getElementAtPosition(serializeKey(key), hint, pos, clientId, timeout);
     }
 
-    default CompletableFuture<Payload> getElementAtPosition(String key, int pos) {
+    default CompletableFuture<Variant> getElementAtPosition(String key, int pos) {
         return getElementAtPosition(serializeKey(key), null, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getElementAtPosition(byte[] key, int pos) {
+    default CompletableFuture<Variant> getElementAtPosition(byte[] key, int pos) {
         return getElementAtPosition(key, null, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getElementAtPosition(String key, KeyHintData hint, int pos) {
+    default CompletableFuture<Variant> getElementAtPosition(String key, KeyHintData hint, int pos) {
         return getElementAtPosition(serializeKey(key), hint, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getElementAtPosition(byte[] key, KeyHintData hint, int pos) {
+    default CompletableFuture<Variant> getElementAtPosition(byte[] key, KeyHintData hint, int pos) {
         return getElementAtPosition(key, hint, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getElementAtPosition(String key, int pos, int clientId) {
+    default CompletableFuture<Variant> getElementAtPosition(String key, int pos, int clientId) {
         return getElementAtPosition(serializeKey(key), null, pos, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getElementAtPosition(byte[] key, int pos, int clientId) {
+    default CompletableFuture<Variant> getElementAtPosition(byte[] key, int pos, int clientId) {
         return getElementAtPosition(key, null, pos, clientId, getDefaultTimeout());
     }
 
     /**
-     * Atomically fetches and removes an element situated at a specific index/position.
+     * Atomically fetches and deletes an element situated at a specific index/position.
      *
      * @param key      target container key in byte array form.
      * @param hint     optional key routing hint.
      * @param pos      position index.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing the removed payload.
+     * @return a {@link CompletableFuture} containing the deleted variant.
      */
-    CompletableFuture<Payload> getAndRemoveElementAtPosition(byte[] key,
+    CompletableFuture<Variant> getAndDeleteElementAtPosition(byte[] key,
                                                              KeyHintData hint,
                                                              int pos,
                                                              int clientId,
                                                              Duration timeout);
 
-    default CompletableFuture<Payload> getAndRemoveElementAtPosition(String key, KeyHintData hint, int pos,
+    default CompletableFuture<Variant> getAndDeleteElementAtPosition(String key, KeyHintData hint, int pos,
                                                                      int clientId, Duration timeout) {
-        return getAndRemoveElementAtPosition(serializeKey(key), hint, pos, clientId, timeout);
+        return getAndDeleteElementAtPosition(serializeKey(key), hint, pos, clientId, timeout);
     }
 
-    default CompletableFuture<Payload> getAndRemoveElementAtPosition(String key, KeyHintData hint, int pos) {
-        return getAndRemoveElementAtPosition(serializeKey(key), hint, pos, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> getAndDeleteElementAtPosition(String key, KeyHintData hint, int pos) {
+        return getAndDeleteElementAtPosition(serializeKey(key), hint, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveElementAtPosition(byte[] key, KeyHintData hint, int pos) {
-        return getAndRemoveElementAtPosition(key, hint, pos, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> getAndDeleteElementAtPosition(byte[] key, KeyHintData hint, int pos) {
+        return getAndDeleteElementAtPosition(key, hint, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveElementAtPosition(String key,
+    default CompletableFuture<Variant> getAndDeleteElementAtPosition(String key,
                                                                      KeyHintData hint,
                                                                      int pos,
                                                                      int clientId) {
-        return getAndRemoveElementAtPosition(serializeKey(key), hint, pos, clientId, getDefaultTimeout());
+        return getAndDeleteElementAtPosition(serializeKey(key), hint, pos, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveElementAtPosition(byte[] key, KeyHintData hint, int pos,
+    default CompletableFuture<Variant> getAndDeleteElementAtPosition(byte[] key, KeyHintData hint, int pos,
                                                                      int clientId) {
-        return getAndRemoveElementAtPosition(key, hint, pos, clientId, getDefaultTimeout());
+        return getAndDeleteElementAtPosition(key, hint, pos, clientId, getDefaultTimeout());
     }
 
     /**
@@ -98,7 +99,7 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      *
      * @param key      target container key in byte array form.
      * @param hint     optional key routing hint.
-     * @param data     list of payloads to insert.
+     * @param data     list of Variant values to insert.
      * @param pos      position index.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
@@ -106,42 +107,42 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      */
     CompletableFuture<Integer> addElementToPosition(byte[] key,
                                                     KeyHintData hint,
-                                                    List<Payload> data,
+                                                    List<Variant> data,
                                                     int pos,
                                                     int clientId,
                                                     Duration timeout);
 
-    default CompletableFuture<Integer> addElementToPosition(String key, KeyHintData hint, List<Payload> data,
+    default CompletableFuture<Integer> addElementToPosition(String key, KeyHintData hint, List<Variant> data,
                                                             int pos, int clientId, Duration timeout) {
         return addElementToPosition(serializeKey(key), hint, data, pos, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementToPosition(String key, List<Payload> data, int pos) {
+    default CompletableFuture<Integer> addElementToPosition(String key, List<Variant> data, int pos) {
         return addElementToPosition(serializeKey(key), null, data, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPosition(byte[] key, List<Payload> data, int pos) {
+    default CompletableFuture<Integer> addElementToPosition(byte[] key, List<Variant> data, int pos) {
         return addElementToPosition(key, null, data, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPosition(String key, KeyHintData hint, List<Payload> data, int pos) {
+    default CompletableFuture<Integer> addElementToPosition(String key, KeyHintData hint, List<Variant> data, int pos) {
         return addElementToPosition(serializeKey(key), hint, data, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Payload> data, int pos) {
+    default CompletableFuture<Integer> addElementToPosition(byte[] key, KeyHintData hint, List<Variant> data, int pos) {
         return addElementToPosition(key, hint, data, pos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPosition(String key, List<Payload> data, int pos, int clientId) {
+    default CompletableFuture<Integer> addElementToPosition(String key, List<Variant> data, int pos, int clientId) {
         return addElementToPosition(serializeKey(key), null, data, pos, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPosition(byte[] key, List<Payload> data, int pos, int clientId) {
+    default CompletableFuture<Integer> addElementToPosition(byte[] key, List<Variant> data, int pos, int clientId) {
         return addElementToPosition(key, null, data, pos, clientId, getDefaultTimeout());
     }
 
     /**
-     * Removes a range of elements by position indexes.
+     * Deletes a range of elements by position indexes.
      *
      * @param key      target container key in byte array form.
      * @param hint     optional key routing hint.
@@ -149,44 +150,44 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      * @param endPos   end position (-1 for single element).
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing true if successful.
+     * @return a {@link CompletableFuture} containing count of elements deleted.
      */
-    CompletableFuture<Boolean> removeElementAtPosition(byte[] key,
+    CompletableFuture<Integer> deleteElementAtPosition(byte[] key,
                                                        KeyHintData hint,
                                                        long pos,
                                                        long endPos,
                                                        int clientId,
                                                        Duration timeout);
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, long pos, long endPos,
+    default CompletableFuture<Integer> deleteElementAtPosition(String key, KeyHintData hint, long pos, long endPos,
                                                                int clientId, Duration timeout) {
-        return removeElementAtPosition(serializeKey(key), hint, pos, endPos, clientId, timeout);
+        return deleteElementAtPosition(serializeKey(key), hint, pos, endPos, clientId, timeout);
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, long pos, long endPos) {
-        return removeElementAtPosition(serializeKey(key), hint, pos, endPos, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteElementAtPosition(String key, KeyHintData hint, long pos, long endPos) {
+        return deleteElementAtPosition(serializeKey(key), hint, pos, endPos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, long pos) {
-        return removeElementAtPosition(key, hint, pos, -1, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteElementAtPosition(byte[] key, KeyHintData hint, long pos) {
+        return deleteElementAtPosition(key, hint, pos, -1, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, long pos) {
-        return removeElementAtPosition(serializeKey(key), hint, pos, -1, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteElementAtPosition(String key, KeyHintData hint, long pos) {
+        return deleteElementAtPosition(serializeKey(key), hint, pos, -1, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, long pos, long endPos) {
-        return removeElementAtPosition(key, hint, pos, endPos, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteElementAtPosition(byte[] key, KeyHintData hint, long pos, long endPos) {
+        return deleteElementAtPosition(key, hint, pos, endPos, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(String key, KeyHintData hint, long pos, long endPos,
+    default CompletableFuture<Integer> deleteElementAtPosition(String key, KeyHintData hint, long pos, long endPos,
                                                                int clientId) {
-        return removeElementAtPosition(serializeKey(key), hint, pos, endPos, clientId, getDefaultTimeout());
+        return deleteElementAtPosition(serializeKey(key), hint, pos, endPos, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeElementAtPosition(byte[] key, KeyHintData hint, long pos, long endPos,
+    default CompletableFuture<Integer> deleteElementAtPosition(byte[] key, KeyHintData hint, long pos, long endPos,
                                                                int clientId) {
-        return removeElementAtPosition(key, hint, pos, endPos, clientId, getDefaultTimeout());
+        return deleteElementAtPosition(key, hint, pos, endPos, clientId, getDefaultTimeout());
     }
 
     /**
@@ -194,7 +195,7 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      *
      * @param key      target container key in byte array form.
      * @param hint     optional key routing hint.
-     * @param data     list of payloads to insert.
+     * @param data     list of Variant values to insert.
      * @param pivot    pivot payload element.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
@@ -202,41 +203,41 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      */
     CompletableFuture<Integer> addElementToPositionBefore(byte[] key,
                                                           KeyHintData hint,
-                                                          List<Payload> data,
-                                                          Payload pivot,
+                                                          List<Variant> data,
+                                                          Variant pivot,
                                                           int clientId,
                                                           Duration timeout);
 
-    default CompletableFuture<Integer> addElementToPositionBefore(String key, KeyHintData hint, List<Payload> data,
-                                                                  Payload pivot, int clientId, Duration timeout) {
+    default CompletableFuture<Integer> addElementToPositionBefore(String key, KeyHintData hint, List<Variant> data,
+                                                                  Variant pivot, int clientId, Duration timeout) {
         return addElementToPositionBefore(serializeKey(key), hint, data, pivot, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementToPositionBefore(String key, List<Payload> data, Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionBefore(String key, List<Variant> data, Variant pivot) {
         return addElementToPositionBefore(serializeKey(key), null, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionBefore(byte[] key, List<Payload> data, Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionBefore(byte[] key, List<Variant> data, Variant pivot) {
         return addElementToPositionBefore(key, null, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionBefore(String key, KeyHintData hint, List<Payload> data,
-                                                                  Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionBefore(String key, KeyHintData hint, List<Variant> data,
+                                                                  Variant pivot) {
         return addElementToPositionBefore(serializeKey(key), hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionBefore(byte[] key, KeyHintData hint, List<Payload> data,
-                                                                  Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionBefore(byte[] key, KeyHintData hint, List<Variant> data,
+                                                                  Variant pivot) {
         return addElementToPositionBefore(key, hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionBefore(String key, List<Payload> data,
-                                                                  Payload pivot, int clientId) {
+    default CompletableFuture<Integer> addElementToPositionBefore(String key, List<Variant> data,
+                                                                  Variant pivot, int clientId) {
         return addElementToPositionBefore(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionBefore(byte[] key, List<Payload> data,
-                                                                  Payload pivot, int clientId) {
+    default CompletableFuture<Integer> addElementToPositionBefore(byte[] key, List<Variant> data,
+                                                                  Variant pivot, int clientId) {
         return addElementToPositionBefore(key, null, data, pivot, clientId, getDefaultTimeout());
     }
 
@@ -245,7 +246,7 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      *
      * @param key      target container key in byte array form.
      * @param hint     optional key routing hint.
-     * @param data     list of payloads to insert.
+     * @param data     list of Variant values to insert.
      * @param pivot    pivot payload element.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
@@ -253,41 +254,41 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      */
     CompletableFuture<Integer> addElementToPositionAfter(byte[] key,
                                                          KeyHintData hint,
-                                                         List<Payload> data,
-                                                         Payload pivot,
+                                                         List<Variant> data,
+                                                         Variant pivot,
                                                          int clientId,
                                                          Duration timeout);
 
-    default CompletableFuture<Integer> addElementToPositionAfter(String key, KeyHintData hint, List<Payload> data,
-                                                                 Payload pivot, int clientId, Duration timeout) {
+    default CompletableFuture<Integer> addElementToPositionAfter(String key, KeyHintData hint, List<Variant> data,
+                                                                 Variant pivot, int clientId, Duration timeout) {
         return addElementToPositionAfter(serializeKey(key), hint, data, pivot, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementToPositionAfter(String key, List<Payload> data, Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionAfter(String key, List<Variant> data, Variant pivot) {
         return addElementToPositionAfter(serializeKey(key), null, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionAfter(byte[] key, List<Payload> data, Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionAfter(byte[] key, List<Variant> data, Variant pivot) {
         return addElementToPositionAfter(key, null, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionAfter(String key, KeyHintData hint, List<Payload> data,
-                                                                 Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionAfter(String key, KeyHintData hint, List<Variant> data,
+                                                                 Variant pivot) {
         return addElementToPositionAfter(serializeKey(key), hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionAfter(byte[] key, KeyHintData hint, List<Payload> data,
-                                                                 Payload pivot) {
+    default CompletableFuture<Integer> addElementToPositionAfter(byte[] key, KeyHintData hint, List<Variant> data,
+                                                                 Variant pivot) {
         return addElementToPositionAfter(key, hint, data, pivot, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionAfter(String key, List<Payload> data,
-                                                                 Payload pivot, int clientId) {
+    default CompletableFuture<Integer> addElementToPositionAfter(String key, List<Variant> data,
+                                                                 Variant pivot, int clientId) {
         return addElementToPositionAfter(serializeKey(key), null, data, pivot, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToPositionAfter(byte[] key, List<Payload> data,
-                                                                 Payload pivot, int clientId) {
+    default CompletableFuture<Integer> addElementToPositionAfter(byte[] key, List<Variant> data,
+                                                                 Variant pivot, int clientId) {
         return addElementToPositionAfter(key, null, data, pivot, clientId, getDefaultTimeout());
     }
 
@@ -303,7 +304,7 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
      * @param timeout       execution timeout duration.
      * @return a {@link CompletableFuture} containing list of payloads in range.
      */
-    CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
+    CompletableFuture<List<Variant>> streamElementInRangeUnordered(byte[] key,
                                                                    KeyHintData hint,
                                                                    ContainerType containerType,
                                                                    int start,
@@ -311,42 +312,42 @@ public interface HurriCacheClientRandomAccessContainers extends HurriCacheClient
                                                                    int clientId,
                                                                    Duration timeout);
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key, KeyHintData hint,
+    default CompletableFuture<List<Variant>> streamElementInRangeUnordered(String key, KeyHintData hint,
                                                                            ContainerType containerType,
                                                                            int start, int end,
                                                                            int clientId, Duration timeout) {
         return streamElementInRangeUnordered(serializeKey(key), hint, containerType, start, end, clientId, timeout);
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key, KeyHintData hint,
+    default CompletableFuture<List<Variant>> streamElementInRangeUnordered(String key, KeyHintData hint,
                                                                            ContainerType containerType,
                                                                            int start, int end) {
         return streamElementInRangeUnordered(serializeKey(key), hint, containerType, start, end,
                                              getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key, KeyHintData hint,
+    default CompletableFuture<List<Variant>> streamElementInRangeUnordered(byte[] key, KeyHintData hint,
                                                                            ContainerType containerType,
                                                                            int start, int end) {
         return streamElementInRangeUnordered(key, hint, containerType, start, end,
                                              getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(String key,
+    default CompletableFuture<List<Variant>> streamElementInRangeUnordered(String key,
                                                                            ContainerType containerType,
                                                                            int start, int end, int clientId) {
         return streamElementInRangeUnordered(serializeKey(key), null, containerType, start, end, clientId,
                                              getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
+    default CompletableFuture<List<Variant>> streamElementInRangeUnordered(byte[] key,
                                                                            ContainerType containerType,
                                                                            int start, int end) {
         return streamElementInRangeUnordered(key, null, containerType, start, end,
                                              getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamElementInRangeUnordered(byte[] key,
+    default CompletableFuture<List<Variant>> streamElementInRangeUnordered(byte[] key,
                                                                            ContainerType containerType,
                                                                            int start, int end, int clientId) {
         return streamElementInRangeUnordered(key, null, containerType, start, end, clientId, getDefaultTimeout());
