@@ -3,6 +3,7 @@ package com.hurricache.client.cluster.migration;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.*;
@@ -78,7 +79,7 @@ public class ChaosClusterTest extends TestBaseCluster {
     private List<Variant> generatePayloads(Random random, int count) {
         var payloads = new ArrayList<Variant>(count);
         for (int i = 0; i < count; i++) {
-            payloads.add(Payload.of(("elem_" + random.nextInt(100_000)).getBytes(StandardCharsets.UTF_8)));
+            payloads.add(Variant.ofBytes(("elem_" + random.nextInt(100_000)).getBytes(StandardCharsets.UTF_8)));
         }
         return payloads;
     }
@@ -86,7 +87,7 @@ public class ChaosClusterTest extends TestBaseCluster {
     private Map<Payload, Variant> generateMapEntries(Random random, int count) {
         var entries = new LinkedHashMap<Payload, Variant>();
         for (int i = 0; i < count; i++) {
-            entries.put(Payload.of(("k_" + random.nextInt(1_000_000)).getBytes()), Payload.of(("v_" + random.nextInt(1_000_000)).getBytes()));
+            entries.put(Payload.of(("k_" + random.nextInt(1_000_000)).getBytes()), Variant.ofBytes(("v_" + random.nextInt(1_000_000)).getBytes()));
         }
         return entries;
     }
@@ -94,7 +95,7 @@ public class ChaosClusterTest extends TestBaseCluster {
     private Map<OrderedPayload, Variant> generateOrderedMapEntries(Random random, int count) {
         var entries = new LinkedHashMap<OrderedPayload, Variant>();
         for (int i = 0; i < count; i++) {
-            entries.put(OrderedPayload.of((long) random.nextInt(1_000_000), ("k_" + random.nextInt(1_000_000)).getBytes()), Payload.of(("v_" + random.nextInt(1_000_000)).getBytes()));
+            entries.put(OrderedPayload.of((long) random.nextInt(1_000_000), ("k_" + random.nextInt(1_000_000)).getBytes()), Variant.ofBytes(("v_" + random.nextInt(1_000_000)).getBytes()));
         }
         return entries;
     }
@@ -103,6 +104,14 @@ public class ChaosClusterTest extends TestBaseCluster {
         var payloads = new ArrayList<OrderedPayload>(count);
         for (int i = 0; i < count; i++) {
             payloads.add(OrderedPayload.of((long) random.nextInt(1_000_000), ("elem_" + random.nextInt(1_000_000)).getBytes()));
+        }
+        return payloads;
+    }
+
+    private List<OrderedVariant> generateOrderedPayloadsVariant(Random random, int count) {
+        var payloads = new ArrayList<OrderedVariant>(count);
+        for (int i = 0; i < count; i++) {
+            payloads.add(OrderedVariant.of( Variant.ofBytes(("elem_" + random.nextInt(1_000_000)).getBytes()),(long) random.nextInt(1_000_000)));
         }
         return payloads;
     }
@@ -137,7 +146,7 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "scalar-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.createKeyValue(key, ("val_" + clientId).getBytes(StandardCharsets.UTF_8)).join();
+                    c.createKeyValue(key, Variant.ofBytes(("val_" + clientId).getBytes(StandardCharsets.UTF_8))).join();
                 }
             },
             new ChaosOperation() {
@@ -149,7 +158,7 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "scalar-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.updateKeyValue(key.getBytes(), null, ("upd_" + System.currentTimeMillis()).getBytes(), null, clientId, Duration.ofSeconds(5)).join();
+                    c.createKeyValue(key, Variant.ofBytes(("upd_" + clientId).getBytes(StandardCharsets.UTF_8))).join();
                 }
             },
             new ChaosOperation() {
@@ -169,7 +178,7 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "vector-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.addElementToTail(key, null, List.of(Payload.of(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
+                    c.addElementToTail(key, null, List.of(Variant.ofBytes(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
                 }
             },
             new ChaosOperation() {
@@ -195,13 +204,13 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "list-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.addElementToTail(key, null, List.of(Payload.of(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
+                    c.addElementToTail(key, null, List.of(Variant.ofBytes(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
                 }
             },
             new ChaosOperation() {
                 public String getPrefix() { return "list-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.addElementToHead(key, null, List.of(Payload.of(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
+                    c.addElementToHead(key, null, List.of(Variant.ofBytes(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
                 }
             },
             new ChaosOperation() {
@@ -233,7 +242,7 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "queue-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.addElementToTail(key, null, List.of(Payload.of(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
+                    c.addElementToTail(key, null, List.of(Variant.ofBytes(("item_" + System.currentTimeMillis()).getBytes())), clientId).join();
                 }
             },
             new ChaosOperation() {
@@ -259,7 +268,7 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "set-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.addElementUnordered(key, null, List.of(Payload.of(("elem_" + System.currentTimeMillis()).getBytes())), clientId).join();
+                    c.addElementUnordered(key, null, List.of(Variant.ofBytes(("elem_" + System.currentTimeMillis()).getBytes())), clientId).join();
                 }
             },
             new ChaosOperation() {
@@ -271,7 +280,8 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "set-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.removeFromContainer(key.getBytes(), null, "dummy".getBytes(), clientId, Duration.ofSeconds(5)).join();
+                    c.removeFromContainerByKeyAndValue(key.getBytes(), null,
+                                                       Collections.emptyList(), Collections.emptyList(), clientId, Duration.ofSeconds(5)).join();
                 }
             },
 
@@ -307,13 +317,13 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "oset-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.createOrderedSet(key, generateOrderedPayloads(rand, 10)).join();
+                    c.createOrderedSet(key, generateOrderedPayloadsVariant(rand, 10)).join();
                 }
             },
             new ChaosOperation() {
                 public String getPrefix() { return "oset-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.addElementWithWeight(key, null, List.of(OrderedPayload.of(System.currentTimeMillis(), ("elem_" + System.currentTimeMillis()).getBytes())), clientId).join();
+                    c.addElementWithWeight(key, null, List.of(OrderedVariant.of(Variant.ofBytes(("elem_" + System.currentTimeMillis()).getBytes()),System.currentTimeMillis())), clientId).join();
                 }
             },
             new ChaosOperation() {
@@ -333,19 +343,19 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "atomic-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.atomicCreate(key, (Math.abs(rand.nextLong()) % 1_000_000) + 1).join();
+                    c.atomicCompareAndSet(key, 0L, (Math.abs(rand.nextLong()) % 1_000_000) + 1).join();
                 }
             },
             new ChaosOperation() {
                 public String getPrefix() { return "atomic-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.atomicLoad(key, null, clientId, Duration.ofSeconds(5)).join();
+                    c.atomicExchange(key, null, rand.nextLong()).join();
                 }
             },
             new ChaosOperation() {
                 public String getPrefix() { return "atomic-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.atomicStore(key, null, rand.nextLong()).join();
+                    c.atomicExchange(key, null, rand.nextLong()).join();
                 }
             },
             new ChaosOperation() {
@@ -486,15 +496,15 @@ public class ChaosClusterTest extends TestBaseCluster {
     private void preloadOperation(String key, int clientId, ChaosTestConfig config, Random random) {
         String type = key.split("-")[0];
         switch (type) {
-            case "scalar" -> client.createKeyValue(key, ("value_" + clientId).getBytes(StandardCharsets.UTF_8)).join();
+            case "scalar" -> client.createKeyValue(key, Variant.ofBytes(("value_" + clientId).getBytes(StandardCharsets.UTF_8))).join();
             case "vector" -> client.createVector(key, generatePayloads(random, config.elementsPerContainer)).join();
             case "list" -> client.createList(key, generatePayloads(random, config.elementsPerContainer)).join();
             case "queue" -> client.createQueue(key, generatePayloads(random, config.elementsPerContainer)).join();
             case "set" -> client.createSet(key, generatePayloads(random, config.elementsPerContainer)).join();
             case "map" -> client.createMap(key, generateMapEntries(random, config.elementsPerContainer)).join();
             case "omap" -> client.createOrderedMap(key, generateOrderedMapEntries(random, config.elementsPerContainer)).join();
-            case "oset" -> client.createOrderedSet(key, generateOrderedPayloads(random, config.elementsPerContainer)).join();
-            case "atomic" -> client.atomicCreate(key, (Math.abs(random.nextLong()) % 1_000_000) + 1).join();
+            case "oset" -> client.createOrderedSet(key, generateOrderedPayloadsVariant(random, config.elementsPerContainer)).join();
+            case "atomic" -> client.atomicCompareAndSet(key, 0L, (Math.abs(random.nextLong()) % 1_000_000) + 1).join();
         }
     }
 

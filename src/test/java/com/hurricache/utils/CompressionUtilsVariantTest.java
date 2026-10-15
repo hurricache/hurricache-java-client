@@ -53,7 +53,7 @@ class CompressionUtilsVariantTest {
         Variant variant = CompressionUtils.decompressIfNeededToVariant(response);
 
         assertEquals(Variant.Type.INT, variant.type());
-        assertEquals(42L, variant.intValue());
+        assertEquals(42L, variant.longValue());
     }
 
     @Test
@@ -109,7 +109,7 @@ class CompressionUtilsVariantTest {
         Variant variant = CompressionUtils.decompressIfNeededToVariant(orderedValue);
 
         assertEquals(Variant.Type.INT, variant.type());
-        assertEquals(999L, variant.intValue());
+        assertEquals(999L, variant.longValue());
     }
 
     @Test
@@ -163,7 +163,7 @@ class CompressionUtilsVariantTest {
         OrderedVariant orderedVariant = CompressionUtils.decompressIfNeededToOrderedVariant(orderedValue);
 
         assertEquals(Variant.Type.INT, orderedVariant.variant().type());
-        assertEquals(123L, orderedVariant.variant().intValue());
+        assertEquals(123L, orderedVariant.variant().longValue());
         assertEquals(456L, orderedVariant.getOrder());
     }
 
@@ -235,7 +235,7 @@ class CompressionUtilsVariantTest {
                 .build();
         Variant intVariant = CompressionUtils.decompressIfNeededToVariant(
                 ValueResponse.newBuilder().setValueUnordered(intVal).build());
-        assertEquals(0L, intVariant.intValue());
+        assertEquals(0L, intVariant.longValue());
 
         // DOUBLE zero
         Value doubleVal = Value.newBuilder()
@@ -257,7 +257,7 @@ class CompressionUtilsVariantTest {
                 .build();
         Variant intVariant = CompressionUtils.decompressIfNeededToVariant(
                 ValueResponse.newBuilder().setValueUnordered(intVal).build());
-        assertEquals(-42L, intVariant.intValue());
+        assertEquals(-42L, intVariant.longValue());
 
         // Negative DOUBLE
         Value doubleVal = Value.newBuilder()

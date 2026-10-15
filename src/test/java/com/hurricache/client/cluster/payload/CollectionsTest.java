@@ -22,16 +22,16 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testListEdgeOperationsCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] listKey = createLargePayload(KEY_SIZE);
+        byte[] listKey = createLargePayloadKey(KEY_SIZE);
         // Create on master
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createVector(listKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
-        byte[] one = createLargePayload(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Position
@@ -45,16 +45,16 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testListEdgeOperationsCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] listKey = createLargePayload(KEY_SIZE);
+        byte[] listKey = createLargePayloadKey(KEY_SIZE);
         // Create on backup
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createVector(listKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
-        byte[] one = createLargePayload(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Position
@@ -68,9 +68,9 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testRangeStreamingCreateOnMasterValidateOnBackup() throws InterruptedException, ExecutionException {
-        byte[] rangeKey = createLargePayload(KEY_SIZE);
+        byte[] rangeKey = createLargePayloadKey(KEY_SIZE);
         // Create on master
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createList(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
@@ -78,7 +78,7 @@ public class CollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
         byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
-            byte[] item = createLargePayload(VALUE_SIZE);
+            byte[] item = createLargePayloadKey(VALUE_SIZE);
             if (i == 2) item3 = item;
             client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
@@ -95,9 +95,9 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testRangeStreamingCreateOnBackupValidateOnMaster() throws InterruptedException, ExecutionException {
-        byte[] rangeKey = createLargePayload(KEY_SIZE);
+        byte[] rangeKey = createLargePayloadKey(KEY_SIZE);
         // Create on backup
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createList(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
@@ -105,7 +105,7 @@ public class CollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
         byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
-            byte[] item = createLargePayload(VALUE_SIZE);
+            byte[] item = createLargePayloadKey(VALUE_SIZE);
             if (i == 2) item3 = item;
             client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
@@ -122,9 +122,9 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testRangeStreamingVectorCreateOnMasterValidateOnBackup() throws InterruptedException, ExecutionException {
-        byte[] rangeKey = createLargePayload(KEY_SIZE);
+        byte[] rangeKey = createLargePayloadKey(KEY_SIZE);
         // Create on master
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createVector(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
@@ -132,7 +132,7 @@ public class CollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
         byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
-            byte[] item = createLargePayload(VALUE_SIZE);
+            byte[] item = createLargePayloadKey(VALUE_SIZE);
             if (i == 2) item3 = item;
             client.setMode(Mode.BACKUP).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
@@ -149,9 +149,9 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testRangeStreamingVectorCreateOnBackupValidateOnMaster() throws InterruptedException, ExecutionException {
-        byte[] rangeKey = createLargePayload(KEY_SIZE);
+        byte[] rangeKey = createLargePayloadKey(KEY_SIZE);
         // Create on backup
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createVector(rangeKey, List.of(Variant.ofBytes(zero)))
                 .get();
@@ -159,7 +159,7 @@ public class CollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
         byte[] item3 = null;
         for (int i = 1; i < 10; i++) {
-            byte[] item = createLargePayload(VALUE_SIZE);
+            byte[] item = createLargePayloadKey(VALUE_SIZE);
             if (i == 2) item3 = item;
             client.setMode(Mode.MASTER).addElementToTail(rangeKey, keyHint, List.of(Variant.ofBytes(item))).get();
         }
@@ -176,9 +176,9 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testCreateAndStreamListCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
-        byte[] val1 = createLargePayload(VALUE_SIZE);
-        byte[] val2 = createLargePayload(VALUE_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
+        byte[] val1 = createLargePayloadKey(VALUE_SIZE);
+        byte[] val2 = createLargePayloadKey(VALUE_SIZE);
 
         // Create List with first element on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
@@ -198,9 +198,9 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testCreateAndStreamListCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
-        byte[] val1 = createLargePayload(VALUE_SIZE);
-        byte[] val2 = createLargePayload(VALUE_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
+        byte[] val1 = createLargePayloadKey(VALUE_SIZE);
+        byte[] val2 = createLargePayloadKey(VALUE_SIZE);
 
         // Create List with first element on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
@@ -220,16 +220,16 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testCreateAndStreamVectorCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         // Create on master
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createVector(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
-        byte[] one = createLargePayload(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
         List<Variant> results = client.setMode(Mode.BACKUP).streamVector(key, keyHint).get();
@@ -240,16 +240,16 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testCreateAndStreamVectorCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         // Create on backup
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createVector(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
-        byte[] one = createLargePayload(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
         List<Variant> results = client.setMode(Mode.MASTER).streamVector(key, keyHint).get();
@@ -260,16 +260,16 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testFrontBackOperationsCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         // Create on master
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createList(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
-        byte[] one = createLargePayload(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.BACKUP).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Head/Front
@@ -283,16 +283,16 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testFrontBackOperationsCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         // Create on backup
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createList(key, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
-        byte[] one = createLargePayload(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.MASTER).addElementToTail(key, keyHint, List.of(Variant.ofBytes(one))).get();
 
         // Get Head/Front
@@ -306,10 +306,10 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testAtomicRemoval() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
-        byte[] head = createLargePayload(VALUE_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
+        byte[] head = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.createList(key, List.of(Variant.ofBytes(head))).get();
-        byte[] tail = createLargePayload(VALUE_SIZE);
+        byte[] tail = createLargePayloadKey(VALUE_SIZE);
         client.addElementToTail(key, keyHint, List.of(Variant.ofBytes(tail))).get();
 
         // Remove Front
@@ -323,11 +323,11 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testPositionalOperationsVector() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
-        byte[] init = createLargePayload(VALUE_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
+        byte[] init = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.createVector(key, List.of(Variant.ofBytes(init))).get();
-        byte[] zero = createLargePayload(VALUE_SIZE);
-        byte[] one = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
         client.addElementToTail(key, keyHint,
                                 Arrays.asList(Variant.ofBytes(zero), Variant.ofBytes(one))).get();
 
@@ -350,11 +350,11 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testPositionalOperationsList() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.createList(key, List.of(Variant.ofBytes(zero))).get();
-        byte[] one = createLargePayload(VALUE_SIZE);
-        byte[] two = createLargePayload(VALUE_SIZE);
+        byte[] one = createLargePayloadKey(VALUE_SIZE);
+        byte[] two = createLargePayloadKey(VALUE_SIZE);
         client.addElementToTail(key, keyHint,
                                 Arrays.asList(Variant.ofBytes(one), Variant.ofBytes(two))).get();
 
@@ -376,7 +376,7 @@ public class CollectionsTest extends TestBaseCluster {
 
     @Test
     void testCollectionNotFound() {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         try {
             client.getHead(key, null, 0, Duration.ofSeconds(1)).get();
         } catch (ExecutionException e) {

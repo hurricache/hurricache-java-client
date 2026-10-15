@@ -2,7 +2,7 @@ package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.Mode;
@@ -46,7 +46,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on BACKUP: streamOrderedSet returns empty list
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -64,7 +64,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("Create ordered set with data on master, verify replication to backup")
     void testCreateOrderedSetWithData() throws ExecutionException, InterruptedException {
         String key = "orderedSetWithData" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(1L, bytes("1")),
                 OrderedVariant.ofBytes(2L, bytes("2")),
                 OrderedVariant.ofBytes(3L, bytes("3"))
@@ -77,7 +77,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 3 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
@@ -89,7 +89,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         assertEquals(3L, masterStream.get(2).getOrder());
 
         // Verify on BACKUP: streamOrderedSet returns 3 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -106,7 +106,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 4 elements
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, backupAfterWrite.size());
@@ -115,7 +115,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 4 elements
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, masterAfterWrite.size());
@@ -128,7 +128,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         String key = "largeOrderedSet" + UUID.randomUUID();
         int elementCount = 1500;
 
-        List<OrderedPayload> payloads = new ArrayList<>(elementCount);
+        List<OrderedVariant> payloads = new ArrayList<>(elementCount);
         for (int i = 0; i < elementCount; i++) {
             payloads.add(OrderedVariant.ofBytes(i, ("large_item_" + i + "_" + UUID.randomUUID()).getBytes(
                     StandardCharsets.UTF_8)));
@@ -141,14 +141,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(1000); // replication wait for large object (~1000ms for 1500 elements)
 
         // Verify on MASTER: streamOrderedSet returns 1500 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(elementCount, masterStream.size(), "Expected " + elementCount + " elements on master");
 
         // Verify on BACKUP: streamOrderedSet returns 1500 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -167,7 +167,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("Stream ordered set on master, verify replication and write on backup")
     void testStreamOrderedSet() throws ExecutionException, InterruptedException {
         String key = "streamOrderedSetTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(1L, bytes("elem1")),
                 OrderedVariant.ofBytes(2L, bytes("elem2")),
                 OrderedVariant.ofBytes(3L, bytes("elem3"))
@@ -180,14 +180,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 3 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(3, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 3 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -201,7 +201,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 4 elements
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, backupAfterWrite.size());
@@ -209,7 +209,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 4 elements
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, masterAfterWrite.size());
@@ -222,7 +222,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 5 elements
-        List<OrderedPayload> masterAfterWrite2 = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite2 = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(5, masterAfterWrite2.size());
@@ -230,7 +230,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 5 elements
-        List<OrderedPayload> backupAfterWrite2 = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite2 = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(5, backupAfterWrite2.size());
@@ -242,7 +242,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementWithWeight on master, verify replication and write on backup")
     void testAddElementWithWeight() throws ExecutionException, InterruptedException {
         String key = "addElementWithWeightTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
+        List<OrderedVariant> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -263,7 +263,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 3 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -274,7 +274,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 3 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -287,7 +287,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 4 elements
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, masterAfterWrite.size());
@@ -295,7 +295,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 4 elements
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, backupAfterWrite.size());
@@ -305,7 +305,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementWithWeight allows duplicates (same keys with different weights)")
     void testAddElementWithWeightAllowsDuplicates() throws ExecutionException, InterruptedException {
         String key = "addElementWithWeightDup" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
+        List<OrderedVariant> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -325,7 +325,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 3 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -333,7 +333,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 3 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -343,7 +343,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("addElementWithWeight with empty list returns 0")
     void testAddElementWithWeightEmptyList() throws ExecutionException, InterruptedException {
         String key = "addElementWithWeightEmpty" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
+        List<OrderedVariant> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -352,13 +352,13 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, backupStream.size());
@@ -372,7 +372,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet still returns 1 element
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, backupAfterWrite.size());
@@ -380,7 +380,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet still returns 1 element (replication check)
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, masterAfterWrite.size());
@@ -392,7 +392,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedSet on master, verify replication and write on backup")
     void testStreamElementInRangeOrderedSet() throws ExecutionException, InterruptedException {
         String key = "streamRangeOrderedTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3")),
@@ -407,14 +407,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamElementInRangeOrderedSet returns 3 elements
-        List<OrderedPayload> masterRange = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRange = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertNotNull(masterRange);
         assertEquals(3, masterRange.size());
 
         // Verify on BACKUP: streamElementInRangeOrderedSet returns 3 elements
-        List<OrderedPayload> backupRange = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRange = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertNotNull(backupRange);
@@ -428,7 +428,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamElementInRangeOrderedSet returns 3 elements (range 20-40)
-        List<OrderedPayload> backupRangeAfter = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRangeAfter = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, backupRangeAfter.size());
@@ -436,7 +436,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamElementInRangeOrderedSet returns 3 elements (range 20-40)
-        List<OrderedPayload> masterRangeAfter = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRangeAfter = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, masterRangeAfter.size());
@@ -449,7 +449,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamElementInRangeOrderedSet still returns 3 elements (range 20-40)
-        List<OrderedPayload> masterRangeAfter2 = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRangeAfter2 = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, masterRangeAfter2.size());
@@ -457,7 +457,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamElementInRangeOrderedSet still returns 3 elements
-        List<OrderedPayload> backupRangeAfter2 = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRangeAfter2 = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, backupRangeAfter2.size());
@@ -467,7 +467,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedSet with reverse=true returns elements in reverse order")
     void testStreamElementInRangeOrderedSetReverse() throws ExecutionException, InterruptedException {
         String key = "streamRangeOrderedReverse" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3")),
@@ -482,7 +482,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: reverse order works
-        List<OrderedPayload> masterRange = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRange = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, true, 1, Duration.ofSeconds(30))
                 .get();
         assertNotNull(masterRange);
@@ -490,7 +490,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         assertEquals(40L, masterRange.get(0).getOrder());
 
         // Verify on BACKUP: reverse order works
-        List<OrderedPayload> backupRange = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRange = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, true, 1, Duration.ofSeconds(30))
                 .get();
         assertNotNull(backupRange);
@@ -505,7 +505,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: reverse order returns 4 elements
-        List<OrderedPayload> backupRangeAfter = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRangeAfter = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, true, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, backupRangeAfter.size()); // range 20-40 still only 3 elements
@@ -513,7 +513,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: reverse order returns 4 elements
-        List<OrderedPayload> masterRangeAfter = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRangeAfter = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, true, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, masterRangeAfter.size());
@@ -526,7 +526,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: reverse order returns 4 elements
-        List<OrderedPayload> masterRangeAfter2 = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRangeAfter2 = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, true, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, masterRangeAfter2.size());
@@ -534,7 +534,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: reverse order returns 4 elements
-        List<OrderedPayload> backupRangeAfter2 = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRangeAfter2 = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 20L, 40L, true, 1, Duration.ofSeconds(30))
                 .get();
         assertEquals(3, backupRangeAfter2.size());
@@ -544,7 +544,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedSet returns empty list if no elements fall in range")
     void testStreamElementInRangeOrderedSetNoMatch() throws ExecutionException, InterruptedException {
         String key = "streamRangeOrderedNoMatch" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3"))
@@ -557,14 +557,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamElementInRangeOrderedSet with range 100-200 returns empty
-        List<OrderedPayload> masterRange = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRange = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 100L, 200L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertNotNull(masterRange);
         assertTrue(masterRange.isEmpty(), "List must be empty");
 
         // Verify on BACKUP: streamElementInRangeOrderedSet with range 100-200 returns empty
-        List<OrderedPayload> backupRange = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRange = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 100L, 200L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertNotNull(backupRange);
@@ -578,7 +578,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: range 100-200 still empty
-        List<OrderedPayload> backupRangeAfter = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRangeAfter = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 100L, 200L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertTrue(backupRangeAfter.isEmpty(), "List must be empty");
@@ -586,7 +586,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: range 100-200 still empty
-        List<OrderedPayload> masterRangeAfter = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRangeAfter = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 100L, 200L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertTrue(masterRangeAfter.isEmpty());
@@ -599,7 +599,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: range 100-200 still empty
-        List<OrderedPayload> masterRangeAfter2 = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterRangeAfter2 = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 100L, 200L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertTrue(masterRangeAfter2.isEmpty());
@@ -607,7 +607,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: range 100-200 still empty
-        List<OrderedPayload> backupRangeAfter2 = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupRangeAfter2 = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 100L, 200L, false, 1, Duration.ofSeconds(30))
                 .get();
         assertTrue(backupRangeAfter2.isEmpty());
@@ -619,7 +619,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer on master, verify replication and write on backup")
     void testRemoveFromContainer() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(1L, bytes("1")),
                 OrderedVariant.ofBytes(2L, bytes("2")),
                 OrderedVariant.ofBytes(3L, bytes("3"))
@@ -633,14 +633,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Write on BACKUP: removeFromContainer
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).getValue())
                 .get();
         assertEquals(1, removed, "1 element should be removed");
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 2 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
@@ -648,21 +648,21 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 2 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
 
         // Write on MASTER: removeFromContainer
         Integer removedMaster = client.setMode(Mode.MASTER)
-                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(2L, bytes("2")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(2L, bytes("2")).getValue())
                 .get();
         assertEquals(1, removedMaster);
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, masterAfterWrite.size());
@@ -670,7 +670,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, backupAfterWrite.size());
@@ -680,7 +680,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer removes multiple duplicates with same key")
     void testRemoveFromContainerMultipleDuplicates() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerMulti" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(1L, bytes("1")),
                 OrderedVariant.ofBytes(2L, bytes("1")),
                 OrderedVariant.ofBytes(3L, bytes("1")),
@@ -694,27 +694,27 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 4 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 4 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, backupStream.size());
 
         // Write on BACKUP: remove all "item1" (3 items)
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).getValue())
                 .get();
         assertEquals(3, removed, "3 elements with the same key must be removed");
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, backupAfterWrite.size());
@@ -722,7 +722,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, masterAfterWrite.size());
@@ -732,7 +732,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("removeFromContainer returns 0 if element does not exist")
     void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
         String key = "removeFromContainerNonExist" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(1L, bytes("1")),
                 OrderedVariant.ofBytes(2L, bytes("2"))
         );
@@ -744,27 +744,27 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 2 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 2 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
 
         // Write on BACKUP: removeFromContainer non-existent
         Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).bytesValue())
+                .removeFromContainer(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).getValue())
                 .get();
         assertEquals(0, removed, "0 elements should be removed (element not found)");
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet still returns 2 elements
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, backupAfterWrite.size());
@@ -772,7 +772,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet still returns 2 elements (replication check)
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, masterAfterWrite.size());
@@ -784,7 +784,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("containsContainerKey on master, verify replication and write on backup")
     void testContainsContainerKey() throws ExecutionException, InterruptedException {
         String key = "containsContainerKeyTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(1L, bytes("1")),
                 OrderedVariant.ofBytes(2L, bytes("2"))
         );
@@ -797,19 +797,19 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for existing element
         Boolean masterExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).getValue())
                 .get();
         assertTrue(masterExists);
 
         // Verify on BACKUP: containsContainerKey for existing element
         Boolean backupExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(1L, bytes("1")).getValue())
                 .get();
         assertTrue(backupExists);
 
         // Verify on BACKUP: containsContainerKey for non-existing element
         Boolean notExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).getValue())
                 .get();
         assertFalse(notExists, "Element nonexistent must not exist");
 
@@ -817,7 +817,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for non-existing element
         Boolean masterNotExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(0L, bytes("nonexistent")).getValue())
                 .get();
         assertFalse(masterNotExists, "Element nonexistent must not exist");
 
@@ -830,7 +830,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for new element
         Boolean newExists = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(3L, bytes("3")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(3L, bytes("3")).getValue())
                 .get();
         assertTrue(newExists);
 
@@ -838,7 +838,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: containsContainerKey for new element
         Boolean backupNewExists = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(3L, bytes("3")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(3L, bytes("3")).getValue())
                 .get();
         assertTrue(backupNewExists);
 
@@ -851,7 +851,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: containsContainerKey for new element
         Boolean backupNewExists2 = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(4L, bytes("4")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(4L, bytes("4")).getValue())
                 .get();
         assertTrue(backupNewExists2);
 
@@ -859,7 +859,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: containsContainerKey for new element
         Boolean masterNewExists2 = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(4L, bytes("4")).bytesValue())
+                .containsContainerKey(bytes(key), keyHint, OrderedVariant.ofBytes(4L, bytes("4")).getValue())
                 .get();
         assertTrue(masterNewExists2);
     }
@@ -870,7 +870,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition on master, verify replication and write on backup")
     void testRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3")),
@@ -893,7 +893,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 2 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
@@ -903,7 +903,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 2 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
@@ -917,7 +917,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, masterAfterWrite.size());
@@ -926,7 +926,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, backupAfterWrite.size());
@@ -936,7 +936,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition works when weight boundaries match")
     void testRemoveElementAtPositionSamePos() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionSame" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3"))
@@ -949,13 +949,13 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 3 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 3 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -969,7 +969,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 2 elements
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, backupAfterWrite.size());
@@ -979,7 +979,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 2 elements
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, masterAfterWrite.size());
@@ -995,7 +995,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterAfterWrite2 = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite2 = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, masterAfterWrite2.size());
@@ -1004,7 +1004,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupAfterWrite2 = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite2 = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, backupAfterWrite2.size());
@@ -1092,14 +1092,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(1, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1160,14 +1160,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
         assertEquals(1, backupStream.size());
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
@@ -1229,14 +1229,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(1, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1251,7 +1251,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: client 1 can read (streamOrderedSet)
-        List<OrderedPayload> backupStreamOwner = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamOwner = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupStreamOwner);
@@ -1259,13 +1259,13 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: client 1 can read (streamOrderedSet)
-        List<OrderedPayload> masterStreamOwner = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamOwner = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamOwner);
 
         // Client 2 can read (should succeed with READ_LOCK) on BACKUP
-        List<OrderedPayload> backupStreamIntruder = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamIntruder = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupStreamIntruder);
@@ -1273,7 +1273,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Client 2 can read on MASTER (READ_LOCK replicated)
-        List<OrderedPayload> masterStreamIntruder = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamIntruder = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamIntruder);
@@ -1363,14 +1363,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(1, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1392,7 +1392,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: owner can read (streamOrderedSet)
-        List<OrderedPayload> masterStreamOwner = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamOwner = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamOwner);
@@ -1509,14 +1509,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(1, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1531,7 +1531,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: owner can read (streamOrderedSet)
-        List<OrderedPayload> backupStreamOwner = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamOwner = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupStreamOwner);
@@ -1539,7 +1539,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: owner can read (streamOrderedSet)
-        List<OrderedPayload> masterStreamOwner = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamOwner = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamOwner);
@@ -1654,14 +1654,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(1, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1738,14 +1738,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(1, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1767,7 +1767,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet shows lock is replicated
-        List<OrderedPayload> backupStreamAfter = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamAfter = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID, Duration.ofSeconds(5))
                 .get();
         assertEquals(2, backupStreamAfter.size());
@@ -1776,7 +1776,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(3500);
 
         // Verify on MASTER: streamOrderedSet succeeds (lock expired, data accessible)
-        List<OrderedPayload> masterStreamAfter = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamAfter = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamAfter);
@@ -1784,13 +1784,13 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet succeeds (lock expired, data replicated)
-        List<OrderedPayload> backupStreamAfterLock = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamAfterLock = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupStreamAfterLock);
 
         // Verify on BACKUP: client 2 can read/write (lock no longer active)
-        List<OrderedPayload> backupStreamIntruder = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamIntruder = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupStreamIntruder);
@@ -1798,7 +1798,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: client 2 can read/write (lock no longer active)
-        List<OrderedPayload> masterStreamIntruder = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamIntruder = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamIntruder);
@@ -1817,14 +1817,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
         assertEquals(1, backupStream.size());
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
@@ -1846,7 +1846,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet shows lock is replicated
-        List<OrderedPayload> masterStreamAfter = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamAfter = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertEquals(2, masterStreamAfter.size());
@@ -1855,7 +1855,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(3500);
 
         // Verify on BACKUP: streamOrderedSet succeeds (lock expired, data accessible)
-        List<OrderedPayload> backupStreamAfter = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamAfter = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupStreamAfter);
@@ -1863,13 +1863,13 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet succeeds (lock expired, data replicated)
-        List<OrderedPayload> masterStreamAfterLock = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamAfterLock = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamAfterLock);
 
         // Verify on MASTER: client 2 can read/write (lock no longer active)
-        List<OrderedPayload> masterStreamIntruder = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStreamIntruder = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterStreamIntruder);
@@ -1877,7 +1877,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: client 2 can read/write (lock no longer active)
-        List<OrderedPayload> backupStreamIntruder = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStreamIntruder = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupStreamIntruder);
@@ -1891,7 +1891,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("getElementWithWeight on master, verify replication and write on backup")
     void testGetElementWithWeight() throws ExecutionException, InterruptedException {
         String key = "getElementWithWeightTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3")),
@@ -1910,7 +1910,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 30)
                 .get();
         assertNotNull(result);
-        assertEquals("3", new String(result.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("3", new String(result.getValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -1919,7 +1919,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 10)
                 .get();
         assertNotNull(result10);
-        assertEquals("1", new String(result10.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(result10.getValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -1928,7 +1928,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 30)
                 .get();
         assertNotNull(masterResult);
-        assertEquals("3", new String(masterResult.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("3", new String(masterResult.getValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: addElementWithWeight
         client.setMode(Mode.MASTER)
@@ -1942,7 +1942,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 60)
                 .get();
         assertNotNull(masterNew);
-        assertEquals("6", new String(masterNew.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("6", new String(masterNew.getValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
@@ -1951,14 +1951,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 60)
                 .get();
         assertNotNull(backupNew);
-        assertEquals("6", new String(backupNew.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("6", new String(backupNew.getValue(), StandardCharsets.UTF_8));
     }
 
     @Test
     @DisplayName("getElementWithWeight returns any matching element if multiple have the same weight")
     void testGetElementWithWeightMultipleSameWeight() throws ExecutionException, InterruptedException {
         String key = "getElementWithWeightMulti" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(20L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(20L, bytes("3")),
@@ -1972,14 +1972,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 4 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(4, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 4 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1990,7 +1990,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(key, keyHint, 20)
                 .get();
         assertNotNull(result);
-        String value = new String(result.bytesValue(), StandardCharsets.UTF_8);
+        String value = new String(result.getValue(), StandardCharsets.UTF_8);
         assertTrue(value.equals("1") || value.equals("2") || value.equals("3"));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
@@ -2006,7 +2006,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("getElementAtPosition throws NOT_FOUND if weight does not exist")
     void testGetElementAtPositionNotFound() throws ExecutionException, InterruptedException {
         String key = "getElementAtPositionNotFound" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3"))
@@ -2019,14 +2019,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 3 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(3, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 3 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -2061,7 +2061,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveElementWithWeight on master, verify replication and write on backup")
     void testGetAndRemoveElementWithWeight() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveElementWithWeightTest" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2")),
                 OrderedVariant.ofBytes(30L, bytes("3"))
@@ -2078,12 +2078,12 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getAndRemoveElementWithWeight(key, keyHint, 20)
                 .get();
         assertNotNull(removed);
-        assertEquals("2", new String(removed.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("2", new String(removed.getValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 2 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
@@ -2091,7 +2091,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 2 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
@@ -2101,12 +2101,12 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getAndRemoveElementWithWeight(key, keyHint, 10)
                 .get();
         assertNotNull(removedMaster);
-        assertEquals("1", new String(removedMaster.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(removedMaster.getValue(), StandardCharsets.UTF_8));
 
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on MASTER: streamOrderedSet returns 1 element
-        List<OrderedPayload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, masterAfterWrite.size());
@@ -2114,7 +2114,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication delay
 
         // Verify on BACKUP: streamOrderedSet returns 1 element
-        List<OrderedPayload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(1, backupAfterWrite.size());
@@ -2124,7 +2124,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("getAndRemoveElementAtPosition throws NOT_FOUND if weight does not exist")
     void testGetAndRemoveElementAtPositionNotFound() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveElementAtPositionNotFound" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("1")),
                 OrderedVariant.ofBytes(20L, bytes("2"))
         );
@@ -2136,14 +2136,14 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS); // replication wait
 
         // Verify on MASTER: streamOrderedSet returns 2 elements
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(2, masterStream.size());
 
         // Verify on BACKUP: streamOrderedSet returns 2 elements
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -2182,7 +2182,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("READ_LOCK: multiple clients can read concurrently on both nodes")
     void testReadLockParallelReads() throws ExecutionException, InterruptedException {
         String key = "readLockParallel" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
+        List<OrderedVariant> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -2204,13 +2204,13 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Both clients can read on MASTER
         Thread.sleep(REPLICATION_DELAY_MS);
-        List<OrderedPayload> result1 = client.setMode(Mode.MASTER)
+        List<OrderedVariant> result1 = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(result1);
         assertEquals(1, result1.size());
 
-        List<OrderedPayload> result2 = client.setMode(Mode.MASTER)
+        List<OrderedVariant> result2 = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(result2);
@@ -2218,12 +2218,12 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: lock is replicated, both can read
         Thread.sleep(REPLICATION_DELAY_MS);
-        List<OrderedPayload> backupResult1 = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupResult1 = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupResult1);
 
-        List<OrderedPayload> backupResult2 = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupResult2 = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint, INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupResult2);
@@ -2245,7 +2245,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("getElementWithWeight returns element by specific weight on both nodes")
     void testGetElementWithWeightReplication() throws ExecutionException, InterruptedException {
         String key = "getElementWithWeightRep" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("item1")),
                 OrderedVariant.ofBytes(20L, bytes("item2")),
                 OrderedVariant.ofBytes(30L, bytes("item3"))
@@ -2262,7 +2262,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(bytes(key), keyHint, 20)
                 .get();
         assertNotNull(result);
-        assertEquals("item2", new String(result.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(result.getValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getElementWithWeight returns same element (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
@@ -2270,7 +2270,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
                 .getElementWithWeight(bytes(key), keyHint, 20)
                 .get();
         assertNotNull(backupResult);
-        assertEquals("item2", new String(backupResult.bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("item2", new String(backupResult.getValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -2281,7 +2281,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("Methods not applicable to ordered set must throw errors")
     void testUnsupportedMethodsForOrderedSet() throws ExecutionException, InterruptedException {
         String key = "unsupportedOrderedSet" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
+        List<OrderedVariant> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)
@@ -2320,7 +2320,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedSet includes endWeight on both nodes")
     void testStreamElementInRangeOrderedSetEndWeightIncluded() throws ExecutionException, InterruptedException {
         String key = "rangeEndIncluded" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("item1")),
                 OrderedVariant.ofBytes(20L, bytes("item2")),
                 OrderedVariant.ofBytes(30L, bytes("item3"))
@@ -2333,7 +2333,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // streamElementInRangeOrderedSet on MASTER (10-30 inclusive)
-        List<OrderedPayload> result = client.setMode(Mode.MASTER)
+        List<OrderedVariant> result = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(result);
@@ -2342,7 +2342,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: same result (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        List<OrderedPayload> backupResult = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupResult = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(backupResult);
@@ -2358,7 +2358,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("streamElementInRangeOrderedSet includes startWeight on both nodes")
     void testStreamElementInRangeOrderedSetStartWeightIncluded() throws ExecutionException, InterruptedException {
         String key = "rangeStartIncluded" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("item1")),
                 OrderedVariant.ofBytes(20L, bytes("item2")),
                 OrderedVariant.ofBytes(30L, bytes("item3"))
@@ -2371,7 +2371,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // streamElementInRangeOrderedSet on MASTER (10-30 inclusive)
-        List<OrderedPayload> result = client.setMode(Mode.MASTER)
+        List<OrderedVariant> result = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(result);
@@ -2380,7 +2380,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: same result (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        List<OrderedPayload> backupResult = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupResult = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), keyHint, 10L, 30L, false, OWNER_CLIENT_ID, Duration.ofSeconds(30))
                 .get();
         assertNotNull(backupResult);
@@ -2396,7 +2396,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("removeElementAtPosition removes range including endPos inclusively on both nodes")
     void testRemoveElementAtPositionEndPosIncluded() throws ExecutionException, InterruptedException {
         String key = "removePosEndIncluded" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(
+        List<OrderedVariant> initialData = List.of(
                 OrderedVariant.ofBytes(10L, bytes("item1")),
                 OrderedVariant.ofBytes(20L, bytes("item2")),
                 OrderedVariant.ofBytes(30L, bytes("item3")),
@@ -2410,12 +2410,12 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify initial state
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, masterStream.size());
 
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(4, backupStream.size());
@@ -2428,7 +2428,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: 2 elements remain (10 and 40)
         Thread.sleep(REPLICATION_DELAY_MS);
-        List<OrderedPayload> masterAfter = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterAfter = client.setMode(Mode.MASTER)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, masterAfter.size());
@@ -2436,7 +2436,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
         assertEquals(40L, masterAfter.get(1).getOrder());
 
         // Verify on BACKUP: 2 elements remain (replicated)
-        List<OrderedPayload> backupAfter = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupAfter = client.setMode(Mode.BACKUP)
                 .streamOrderedSet(key, keyHint)
                 .get();
         assertEquals(2, backupAfter.size());
@@ -2452,7 +2452,7 @@ public class OrderedSetOperationsTest extends TestBaseCluster {
     @DisplayName("WRITE_LOCK expires after duration, intruder can acquire on both nodes")
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String key = "writeLockExp" + UUID.randomUUID();
-        List<OrderedPayload> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
+        List<OrderedVariant> initialData = List.of(OrderedVariant.ofBytes(1L, bytes("item1")));
 
         // Create ordered set
         KeyHintData keyHint = client.createOrderedSet(key, initialData)

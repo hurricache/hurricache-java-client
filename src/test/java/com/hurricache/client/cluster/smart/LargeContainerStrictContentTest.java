@@ -47,7 +47,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     @DisplayName("Queue: strict byte-by-byte content verification of all elements with replication")
     void testCreateLargeQueueStrict() throws ExecutionException, InterruptedException {
         String key = "strict_queue_" + UUID.randomUUID();
-        List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
+        List<Variant> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
 
         // Create WITHOUT setMode
         KeyHintData hint = client.createQueue(key, expectedPayloads).get();
@@ -57,9 +57,9 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         Thread.sleep(1000);
 
         // Verify on MASTER: pop all elements and verify byte-by-byte
-        List<Payload> actualPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
+        List<Variant> actualPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            Payload popped = client.setMode(Mode.MASTER)
+            Variant popped = client.setMode(Mode.MASTER)
                     .getAndDeleteHead(bytes(key), hint).get();
             if (popped == null || popped.bytesValue().length == 0) {
                 break;
@@ -86,7 +86,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     @DisplayName("List: strict content verification via streamList and point getter with replication")
     void testCreateLargeListStrict() throws ExecutionException, InterruptedException {
         String key = "strict_list_" + UUID.randomUUID();
-        List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
+        List<Variant> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
 
         // Create WITHOUT setMode
         KeyHintData hint = client.createList(key, expectedPayloads).get();
@@ -96,13 +96,13 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         Thread.sleep(1000);
 
         // Verify on MASTER: streamList + point getter at key indices
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
         int[] checkIndices = {0, LARGE_ELEMENT_COUNT / 2, LARGE_ELEMENT_COUNT - 1};
         for (int index : checkIndices) {
-            Payload actual = client.setMode(Mode.MASTER)
+            Variant actual = client.setMode(Mode.MASTER)
                     .getElementAtPosition(bytes(key), hint, index).get();
             assertNotNull(actual);
             assertArrayEquals(expectedPayloads.get(index).bytesValue(), actual.bytesValue(),
@@ -111,12 +111,12 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
 
         // Replication delay → verify BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
         for (int index : checkIndices) {
-            Payload actual = client.setMode(Mode.BACKUP)
+            Variant actual = client.setMode(Mode.BACKUP)
                     .getElementAtPosition(bytes(key), hint, index).get();
             assertNotNull(actual);
             assertArrayEquals(expectedPayloads.get(index).bytesValue(), actual.bytesValue(),
@@ -132,7 +132,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     @DisplayName("Vector: strict order and value verification of all chunks with replication")
     void testCreateLargeVectorStrict() throws ExecutionException, InterruptedException {
         String key = "strict_vector_" + UUID.randomUUID();
-        List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
+        List<Variant> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
 
         // Create WITHOUT setMode
         KeyHintData hint = client.createVector(key, expectedPayloads).get();
@@ -142,7 +142,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         Thread.sleep(1000);
 
         // Verify on MASTER: stream all elements
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamVector(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
@@ -153,7 +153,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
 
         // Replication delay → verify BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamVector(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
@@ -171,11 +171,11 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     @DisplayName("Set: data completeness check and absence of corrupted values with replication")
     void testCreateLargeSetStrict() throws ExecutionException, InterruptedException {
         String key = "strict_set_" + UUID.randomUUID();
-        List<Payload> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
+        List<Variant> expectedPayloads = generateDeterministicPayloadList(LARGE_ELEMENT_COUNT);
 
         // Count unique elements
-        Set<Payload> uniquePayloads = new HashSet<>();
-        for (Payload p : expectedPayloads) {
+        Set<Variant> uniquePayloads = new HashSet<>();
+        for (Variant p : expectedPayloads) {
             uniquePayloads.add(p);
         }
         int expectedUniqueCount = uniquePayloads.size();
@@ -187,22 +187,22 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         // Large object replication wait
         Thread.sleep(2000);
 
-        // Verify on MASTER: size + containsContainerKey
+        // Verify on MASTER: size + existInContainerByKey
         Integer masterSize = client.setMode(Mode.MASTER)
                 .getSize(bytes(key), hint).get();
         assertEquals(expectedUniqueCount, masterSize,
                 "Set size does not match number of unique elements! Expected: " + expectedUniqueCount + ", Received: " + masterSize);
 
-        Payload first = expectedPayloads.get(0);
-        Payload middle = expectedPayloads.get(LARGE_ELEMENT_COUNT / 2);
-        Payload last = expectedPayloads.get(LARGE_ELEMENT_COUNT - 1);
+        Variant first = expectedPayloads.get(0);
+        Variant middle = expectedPayloads.get(LARGE_ELEMENT_COUNT / 2);
+        Variant last = expectedPayloads.get(LARGE_ELEMENT_COUNT - 1);
 
         assertTrue(client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), hint, first.bytesValue()).get());
+                .existInContainerByKey(bytes(key), hint, first.bytesValue()).get());
         assertTrue(client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), hint, middle.bytesValue()).get());
+                .existInContainerByKey(bytes(key), hint, middle.bytesValue()).get());
         assertTrue(client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), hint, last.bytesValue()).get());
+                .existInContainerByKey(bytes(key), hint, last.bytesValue()).get());
 
         // Replication delay → verify BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
@@ -211,11 +211,11 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         assertEquals(expectedUniqueCount, backupSize);
 
         assertTrue(client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), hint, first.bytesValue()).get());
+                .existInContainerByKey(bytes(key), hint, first.bytesValue()).get());
         assertTrue(client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), hint, middle.bytesValue()).get());
+                .existInContainerByKey(bytes(key), hint, middle.bytesValue()).get());
         assertTrue(client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), hint, last.bytesValue()).get());
+                .existInContainerByKey(bytes(key), hint, last.bytesValue()).get());
     }
 
     // =========================================================================
@@ -249,7 +249,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             OrderedPayload expected = expectedPayloads.get(i);
             OrderedPayload actual = masterStream.get(i);
             assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at step: " + i);
-            assertArrayEquals(expected.bytesValue(), actual.bytesValue(), "OrderedSet binary content does not match at step: " + i);
+            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at step: " + i);
         }
 
         // Replication delay → verify BACKUP
@@ -262,7 +262,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
             OrderedPayload expected = expectedPayloads.get(i);
             OrderedPayload actual = backupStream.get(i);
             assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at BACKUP step: " + i);
-            assertArrayEquals(expected.bytesValue(), actual.bytesValue(), "OrderedSet binary content does not match at BACKUP step: " + i);
+            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at BACKUP step: " + i);
         }
     }
 
@@ -279,7 +279,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] subKey = ("map_key_" + i).getBytes(StandardCharsets.UTF_8);
             byte[] value = createDeterministicPayload(i, PAYLOAD_SIZE);
-            expectedMap.put(Variant.ofBytes(subKey), Variant.ofBytes(value));
+            expectedMap.put(p(subKey), Variant.ofBytes(value));
         }
 
         // Create WITHOUT setMode
@@ -294,14 +294,14 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
                 .streamMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
-        for (Map.Entry<Payload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().bytesValue();
-            byte[] expectedValue = entry.bytesValue().bytesValue();
+        for (Map.Entry<Payload, Variant> entry : expectedMap.entrySet()) {
+            byte[] subKey = entry.getKey().getValue();
+            byte[] expectedValue = entry.getValue().bytesValue();
 
-            byte[] actualValue = client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), hint, subKey).get();
+            Variant actualValue = client.setMode(Mode.MASTER)
+                    .getValueInContainerByKey(bytes(key), hint, subKey).get();
             assertNotNull(actualValue, "Key not found in Map: " + new String(subKey));
-            assertArrayEquals(expectedValue, actualValue, "Value by key is corrupted: " + new String(subKey));
+            assertArrayEquals(expectedValue, actualValue.bytesValue(), "Value by key is corrupted: " + new String(subKey));
         }
 
         // Replication delay → verify BACKUP
@@ -310,14 +310,14 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
                 .streamMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
-        for (Map.Entry<Payload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().bytesValue();
-            byte[] expectedValue = entry.bytesValue().bytesValue();
+        for (Map.Entry<Payload, Variant> entry : expectedMap.entrySet()) {
+            byte[] subKey = entry.getKey().getValue();
+            byte[] expectedValue = entry.getValue().bytesValue();
 
-            byte[] actualValue = client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), hint, subKey).get();
+            Variant actualValue = client.setMode(Mode.BACKUP)
+                    .getValueInContainerByKey(bytes(key), hint, subKey).get();
             assertNotNull(actualValue, "Key not found in BACKUP Map: " + new String(subKey));
-            assertArrayEquals(expectedValue, actualValue, "Value corrupted in BACKUP Map by key: " + new String(subKey));
+            assertArrayEquals(expectedValue, actualValue.bytesValue(), "Value corrupted in BACKUP Map by key: " + new String(subKey));
         }
     }
 
@@ -334,7 +334,7 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] subKey = ("ord_map_key_" + i).getBytes(StandardCharsets.UTF_8);
             byte[] value = createDeterministicPayload(i, PAYLOAD_SIZE);
-            expectedMap.put(OrderedVariant.ofBytes(subKey, (long) i), Variant.ofBytes(value));
+            expectedMap.put(OrderedPayload.of(subKey, (long) i), Variant.ofBytes(value));
         }
 
         // Create WITHOUT setMode
@@ -349,14 +349,14 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
                 .streamOrderedMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
-        for (Map.Entry<OrderedPayload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().bytesValue();
-            byte[] expectedValue = entry.bytesValue().bytesValue();
+        for (Map.Entry<OrderedPayload, Variant> entry : expectedMap.entrySet()) {
+            byte[] subKey = entry.getKey().getValue();
+            byte[] expectedValue = entry.getValue().bytesValue();
 
-            byte[] actualValue = client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), hint, subKey).get();
+            Variant actualValue = client.setMode(Mode.MASTER)
+                    .getValueInContainerByKey(bytes(key), hint, subKey).get();
             assertNotNull(actualValue, "Key not found in OrderedMap: " + new String(subKey));
-            assertArrayEquals(expectedValue, actualValue, "Value corrupted in OrderedMap by key: " + new String(subKey));
+            assertArrayEquals(expectedValue, actualValue.bytesValue(), "Value corrupted in OrderedMap by key: " + new String(subKey));
         }
 
         // Replication delay → verify BACKUP
@@ -365,14 +365,14 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
                 .streamOrderedMap(bytes(key), hint).get();
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
-        for (Map.Entry<OrderedPayload, Payload> entry : expectedMap.entrySet()) {
-            byte[] subKey = entry.getKey().bytesValue();
-            byte[] expectedValue = entry.bytesValue().bytesValue();
+        for (Map.Entry<OrderedPayload, Variant> entry : expectedMap.entrySet()) {
+            byte[] subKey = entry.getKey().getValue();
+            byte[] expectedValue = entry.getValue().bytesValue();
 
-            byte[] actualValue = client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), hint, subKey).get();
+            Variant actualValue = client.setMode(Mode.BACKUP)
+                    .getValueInContainerByKey(bytes(key), hint, subKey).get();
             assertNotNull(actualValue, "Key not found in BACKUP OrderedMap: " + new String(subKey));
-            assertArrayEquals(expectedValue, actualValue, "Value corrupted in BACKUP OrderedMap by key: " + new String(subKey));
+            assertArrayEquals(expectedValue, actualValue.bytesValue(), "Value corrupted in BACKUP OrderedMap by key: " + new String(subKey));
         }
     }
 
@@ -389,8 +389,8 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         return payload;
     }
 
-    private List<Payload> generateDeterministicPayloadList(int count) {
-        List<Payload> payloads = new ArrayList<>(count);
+    private List<Variant> generateDeterministicPayloadList(int count) {
+        List<Variant> payloads = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             payloads.add(Variant.ofBytes(createDeterministicPayload(i, PAYLOAD_SIZE)));
         }

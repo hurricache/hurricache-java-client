@@ -3,9 +3,9 @@ package com.hurricache.client.cluster.migration;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +50,7 @@ public class DataStabilityTest extends TestBaseCluster {
     private List<Variant> generatePayloads(int count) {
         var payloads = new ArrayList<Variant>(count);
         for (int i = 0; i < count; i++) {
-            payloads.add(Payload.of(("elem_" + i).getBytes(StandardCharsets.UTF_8)));
+            payloads.add(Variant.ofBytes(("elem_" + i).getBytes(StandardCharsets.UTF_8)));
         }
         return payloads;
     }
@@ -58,7 +58,7 @@ public class DataStabilityTest extends TestBaseCluster {
     private Map<Payload, Variant> generateMapEntries(int count) {
         var entries = new LinkedHashMap<Payload, Variant>();
         for (int i = 0; i < count; i++) {
-            entries.put(Payload.of(("k_" + i).getBytes()), Payload.of(("v_" + i).getBytes()));
+            entries.put(Payload.of(("k_" + i).getBytes()), Variant.ofBytes(("v_" + i).getBytes()));
         }
         return entries;
     }
@@ -66,7 +66,7 @@ public class DataStabilityTest extends TestBaseCluster {
     private Map<OrderedPayload, Variant> generateOrderedMapEntries(int count) {
         var entries = new LinkedHashMap<OrderedPayload, Variant>();
         for (int i = 0; i < count; i++) {
-            entries.put(OrderedPayload.of((long) i, ("k_" + i).getBytes()), Payload.of(("v_" + i).getBytes()));
+            entries.put(OrderedPayload.of((long) i, ("k_" + i).getBytes()), Variant.ofBytes(("v_" + i).getBytes()));
         }
         return entries;
     }
@@ -75,6 +75,13 @@ public class DataStabilityTest extends TestBaseCluster {
         var payloads = new ArrayList<OrderedPayload>(count);
         for (int i = 0; i < count; i++) {
             payloads.add(OrderedPayload.of((long) i, ("elem_" + i).getBytes()));
+        }
+        return payloads;
+    }
+    private List<OrderedVariant> generateOrderedPayloadsVariant(int count) {
+        var payloads = new ArrayList<OrderedVariant>(count);
+        for (int i = 0; i < count; i++) {
+            payloads.add(OrderedVariant.of(Variant.ofBytes (("elem_" + i).getBytes()),i));
         }
         return payloads;
     }
@@ -101,15 +108,15 @@ public class DataStabilityTest extends TestBaseCluster {
 
                 switch (type) {
                     case "scalar" ->
-                        client.createKeyValue(key, ("value_" + objNum).getBytes(StandardCharsets.UTF_8)).join();
+                        client.createKeyValue(key, Variant.ofBytes(("value_" + objNum).getBytes(StandardCharsets.UTF_8))).join();
                     case "atomic" ->
-                        client.atomicCreate(key, objNum).join();
+                        client.createKeyValue(key, Variant.ofInt(objNum));
                     case "vector" ->
                         client.createVector(key, generatePayloads(elementsPerContainer)).join();
                     case "set" ->
                         client.createSet(key, generatePayloads(elementsPerContainer)).join();
                     case "oset" ->
-                        client.createOrderedSet(key, generateOrderedPayloads(elementsPerContainer)).join();
+                        client.createOrderedSet(key, generateOrderedPayloadsVariant(elementsPerContainer)).join();
                     case "omap" ->
                         client.createOrderedMap(key, generateOrderedMapEntries(elementsPerContainer)).join();
                     case "map" ->
@@ -152,15 +159,15 @@ public class DataStabilityTest extends TestBaseCluster {
                 try {
                     switch (type) {
                         case "scalar" -> {
-                            byte[] result = client.getValue(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            Variant result = client.getValue(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             String expected = "value_" + objNum;
-                            if (result == null || !new String(result, StandardCharsets.UTF_8).equals(expected)) {
+                            if (result == null || !new String(result.bytesValue(), StandardCharsets.UTF_8).equals(expected)) {
                                 errors.add("SCALAR " + key + ": expected '" + expected + "', got '" + 
-                                    (result != null ? new String(result, StandardCharsets.UTF_8) : "null") + "'");
+                                    (result != null ? new String(result.bytesValue(), StandardCharsets.UTF_8) : "null") + "'");
                             }
                         }
                         case "atomic" -> {
-                            Long result = client.atomicLoad(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            Long result = client.getValue(key.getBytes(), null, 0, Duration.ofSeconds(5)).join().longValue();
                             if (result == null || result != objNum) {
                                 errors.add("ATOMIC " + key + ": expected " + objNum + ", got " + result);
                             }
@@ -180,7 +187,7 @@ public class DataStabilityTest extends TestBaseCluster {
                             }
                         }
                         case "oset" -> {
-                            List<OrderedPayload> result = client.streamOrderedSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            List<OrderedVariant> result = client.streamOrderedSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("OSET " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));

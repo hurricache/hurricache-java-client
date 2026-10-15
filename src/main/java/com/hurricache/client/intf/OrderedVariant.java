@@ -88,7 +88,7 @@ public final class OrderedVariant {
     }
 
     public long intValue() {
-        return variant.intValue();
+        return variant.longValue();
     }
 
     public double doubleValue() {

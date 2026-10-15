@@ -20,10 +20,10 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testHeadAndPositionalAdditionCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] listKey = createLargePayload(KEY_SIZE);
+        byte[] listKey = createLargePayloadKey(KEY_SIZE);
         // Start with a list: [Middle]
         // Create on master
-        byte[] middle = createLargePayload(VALUE_SIZE);
+        byte[] middle = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createList(listKey, List.of(Variant.ofBytes(middle)))
                 .get();
@@ -31,13 +31,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // addElementToHead -> [Head, Middle]
-        byte[] head = createLargePayload(VALUE_SIZE);
+        byte[] head = createLargePayloadKey(VALUE_SIZE);
         Integer intResp = client.setMode(Mode.BACKUP)
                 .addElementToHead(listKey, keyHint, List.of(Variant.ofBytes(head)))
                 .get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
-        byte[] newPos1 = createLargePayload(VALUE_SIZE);
+        byte[] newPos1 = createLargePayloadKey(VALUE_SIZE);
         Integer intResp1 = client.setMode(Mode.BACKUP)
                 .addElementToPosition(listKey, keyHint, List.of(Variant.ofBytes(newPos1)), 1)
                 .get();
@@ -53,10 +53,10 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testHeadAndPositionalAdditionCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] listKey = createLargePayload(KEY_SIZE);
+        byte[] listKey = createLargePayloadKey(KEY_SIZE);
         // Start with a list: [Middle]
         // Create on backup
-        byte[] middle1 = createLargePayload(VALUE_SIZE);
+        byte[] middle1 = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createList(listKey, List.of(Variant.ofBytes(middle1)))
                 .get();
@@ -64,13 +64,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // addElementToHead -> [Head, Middle]
-        byte[] head1 = createLargePayload(VALUE_SIZE);
+        byte[] head1 = createLargePayloadKey(VALUE_SIZE);
         Integer boolResponse = client.setMode(Mode.MASTER)
                 .addElementToHead(listKey, keyHint, List.of(Variant.ofBytes(head1)))
                 .get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
-        byte[] newPos1 = createLargePayload(VALUE_SIZE);
+        byte[] newPos1 = createLargePayloadKey(VALUE_SIZE);
         Integer boolResponse1 = client.setMode(Mode.MASTER)
                 .addElementToPosition(listKey, keyHint, List.of(Variant.ofBytes(newPos1)), 1)
                 .get();
@@ -87,17 +87,17 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testTailAndPositionalRemovalCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] vecKey = createLargePayload(KEY_SIZE);
+        byte[] vecKey = createLargePayloadKey(KEY_SIZE);
         // Setup Vector: [0, 1, 2]
         // Create on master
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createVector(vecKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
-        byte[] first = createLargePayload(VALUE_SIZE);
-        byte[] second = createLargePayload(VALUE_SIZE);
+        byte[] first = createLargePayloadKey(VALUE_SIZE);
+        byte[] second = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.BACKUP)
                 .addElementToTail(vecKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
                 .get();
@@ -115,17 +115,17 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testTailAndPositionalRemovalCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] vecKey = createLargePayload(KEY_SIZE);
+        byte[] vecKey = createLargePayloadKey(KEY_SIZE);
         // Setup Vector: [0, 1, 2]
         // Create on backup
-        byte[] zero = createLargePayload(VALUE_SIZE);
+        byte[] zero = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createVector(vecKey, List.of(Variant.ofBytes(zero)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
-        byte[] first = createLargePayload(VALUE_SIZE);
-        byte[] second = createLargePayload(VALUE_SIZE);
+        byte[] first = createLargePayloadKey(VALUE_SIZE);
+        byte[] second = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.MASTER)
                 .addElementToTail(vecKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
                 .get();
@@ -143,16 +143,16 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testRemoveElementInRangeSuccessCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         // Create on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createVector(key, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))))
+                .createVector(key, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
             client.setMode(Mode.BACKUP)
-                    .addElementToTail(key, keyHint, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))))
+                    .addElementToTail(key, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                     .get();
         }
 
@@ -164,16 +164,16 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testRemoveElementInRangeSuccessCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         // Create on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createVector(key, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))))
+                .createVector(key, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
             client.setMode(Mode.MASTER)
-                    .addElementToTail(key, keyHint, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))))
+                    .addElementToTail(key, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                     .get();
         }
 
@@ -185,10 +185,10 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testQueueTypeSafetyCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] qKey = createLargePayload(KEY_SIZE);
+        byte[] qKey = createLargePayloadKey(KEY_SIZE);
         // Create on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createQueue(qKey, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))))
+                .createQueue(qKey, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -197,7 +197,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementToPosition(qKey, keyHint, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))), 1)
+                    .addElementToPosition(qKey, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))), 1)
                     .get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -208,10 +208,10 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
     @Test
     void testQueueTypeSafetyCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] qKey = createLargePayload(KEY_SIZE);
+        byte[] qKey = createLargePayloadKey(KEY_SIZE);
         // Create on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createQueue(qKey, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))))
+                .createQueue(qKey, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -220,7 +220,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
             client.setMode(Mode.MASTER)
-                    .addElementToPosition(qKey, keyHint, List.of(Variant.ofBytes(createLargePayload(VALUE_SIZE))), 1)
+                    .addElementToPosition(qKey, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))), 1)
                     .get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();

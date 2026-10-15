@@ -4,6 +4,7 @@ import com.hurricache.client.intf.HurriCacheClientInterface;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.AtomicCasRes;
@@ -556,7 +557,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<List<OrderedPayload>> streamElementInRangeOrderedSet(byte[] key,
+    public CompletableFuture<List<OrderedVariant>> streamElementInRangeOrderedSet(byte[] key,
                                                                                   KeyHintData hint,
                                                                                   long startWeight,
                                                                                   long endWeight,
@@ -572,7 +573,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<List<Variant>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
+    public CompletableFuture<List<OrderedVariant>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId, Duration timeout) {
         return execute(hint, c -> c.streamOrderedSet(key, hint, clientId, timeout));
     }
 
@@ -771,14 +772,18 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<Integer> removeFromContainer(byte[] key,
-                                                          KeyHintData hint,
-                                                          ContainerType type,
-                                                          List<Payload> keys,
-                                                          List<Variant> values,
-                                                          int clientId,
-                                                          Duration timeout) {
-        return executeWrite(hint, c -> c.removeFromContainer(key, hint, type, keys, values, clientId, timeout));
+    public CompletableFuture<Integer> removeFromContainerByKeyAndValue(byte[] key,
+                                                                       KeyHintData hint, List<Payload> keys,
+                                                                       List<Variant> values,
+                                                                       int clientId,
+                                                                       Duration timeout) {
+        return executeWrite(hint, c -> c.removeFromContainerByKeyAndValue(key, hint, keys, values, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Integer> removeFromContainerByKey(byte[] key, KeyHintData hint,
+                                                               Payload keys, int clientId, Duration timeout) {
+        return executeWrite(hint,c -> c.removeFromContainerByKey(key, hint, keys, clientId, timeout));
     }
 
     @Override
@@ -906,12 +911,12 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     @Override
     public CompletableFuture<KeyHintData> createOrderedSet(byte[] key,
                                                            KeyHintData keyHint,
-                                                           List<OrderedPayload> initialValue,
+                                                           List<OrderedVariant> initialValue,
                                                            Duration ttl,
                                                            int clientId,
                                                            Duration timeout) {
-        List<OrderedPayload> firstChunk = new ArrayList<>();
-        List<OrderedPayload> remaining = new ArrayList<>();
+        List<OrderedVariant> firstChunk = new ArrayList<>();
+        List<OrderedVariant> remaining = new ArrayList<>();
         splitOrderedPayloads(initialValue, firstChunk, remaining, clientId);
 
         return createContainerWithChunks(key, keyHint, ttl, clientId, timeout,
@@ -1084,12 +1089,27 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return size;
     }
 
-    private void splitOrderedPayloads(List<OrderedPayload> source, List<OrderedPayload> firstChunk, List<OrderedPayload> remaining, int clientId) {
+//    private void splitOrderedPayloads(List<OrderedPayload> source, List<OrderedPayload> firstChunk, List<OrderedPayload> remaining, int clientId) {
+//        if (source == null) return;
+//        long currentChunkSize = 128;
+//        for (OrderedPayload op : source) {
+//            long order = op.getOrder() != null ? op.getOrder() : 0L;
+//            long elemSize = KeyValueUtils.createOrderedValue(op.getValue(), order, null, getDefaultCompressionThreshold()).build().getSerializedSize();
+//            if (remaining.isEmpty() && (currentChunkSize + elemSize <= MAX_RPC_SIZE)) {
+//                firstChunk.add(op);
+//                currentChunkSize += elemSize;
+//            } else {
+//                remaining.add(op);
+//            }
+//        }
+//    }
+
+    private void splitOrderedPayloads(List<OrderedVariant> source, List<OrderedVariant> firstChunk, List<OrderedVariant> remaining, int clientId) {
         if (source == null) return;
         long currentChunkSize = 128;
-        for (OrderedPayload op : source) {
+        for (OrderedVariant op : source) {
             long order = op.getOrder() != null ? op.getOrder() : 0L;
-            long elemSize = KeyValueUtils.createOrderedValue(op.getValue(), order, null, getDefaultCompressionThreshold()).build().getSerializedSize();
+            long elemSize = KeyValueUtils.buildOrderedValueFromVariant(op,  null, getDefaultCompressionThreshold()).build().getSerializedSize();
             if (remaining.isEmpty() && (currentChunkSize + elemSize <= MAX_RPC_SIZE)) {
                 firstChunk.add(op);
                 currentChunkSize += elemSize;
@@ -1193,14 +1213,14 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedPayload> data, int clientId, Duration timeout) {
+    public CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint, List<OrderedVariant> data, int clientId, Duration timeout) {
         if (data == null || data.isEmpty()) {
             return CompletableFuture.completedFuture(0);
         }
-        List<List<OrderedPayload>> chunks = splitOrderedPayloads(key, hint, data, clientId);
+        List<List<OrderedVariant>> chunks = splitOrderedPayloadsVariant(key, hint, data, clientId);
         CompletableFuture<Integer> future = CompletableFuture.completedFuture(0);
 
-        for (List<OrderedPayload> chunk : chunks) {
+        for (List<OrderedVariant> chunk : chunks) {
             future = future.thenCompose(addedCount ->
                                                 executeWrite(hint, c -> c.addElementWithWeight(key, hint, chunk, clientId, timeout))
                                                         .thenApply(res -> addedCount + res)
@@ -1487,6 +1507,35 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
         return chunks;
     }
+
+    private List<List<OrderedVariant>> splitOrderedPayloadsVariant(byte[] key, KeyHintData hint, List<OrderedVariant> data, int clientId) {
+        List<List<OrderedVariant>> chunks = new ArrayList<>();
+        Key protoKey = KeyValueUtils.createUnorderedKey(key, clientId, null).build();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
+
+        List<OrderedVariant> currentChunk = new ArrayList<>();
+
+        for (OrderedVariant payload : data) {
+            OrderedValue orderedValue = KeyValueUtils.buildOrderedValueFromVariant(payload,  null, getDefaultCompressionThreshold()).build();
+            int elemSize = orderedValue.getSerializedSize();
+
+            if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {
+                chunks.add(currentChunk);
+                currentChunk = new ArrayList<>();
+                currentChunkSize = protoKey.getSerializedSize() + 32;
+            }
+
+            currentChunk.add(payload);
+            currentChunkSize += elemSize;
+        }
+
+        if (!currentChunk.isEmpty()) {
+            chunks.add(currentChunk);
+        }
+
+        return chunks;
+    }
+
 
     private record RerouteTargets(String masterTarget, String backupTarget) {}
 }

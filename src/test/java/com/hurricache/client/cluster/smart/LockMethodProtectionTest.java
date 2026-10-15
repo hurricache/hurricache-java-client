@@ -3,12 +3,9 @@ package com.hurricache.client.cluster.smart;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -41,7 +37,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_global_unary_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -56,7 +52,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         assertDenied(client.setMode(Mode.MASTER)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.MASTER)
-                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
+                .updateKeyValue(bytes(key), hint, Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8)), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.MASTER)
                 .remove(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
 
@@ -65,7 +61,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         assertDenied(client.setMode(Mode.BACKUP)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.BACKUP)
-                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
+                .updateKeyValue(bytes(key), hint, Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8)), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
 
         // Unlock by owner
         client.setMode(Mode.MASTER).unlockObject(key, hint, OWNER_ID).get();
@@ -77,7 +73,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_global_unary_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -92,14 +88,14 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         assertDenied(client.setMode(Mode.BACKUP)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.BACKUP)
-                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
+                .updateKeyValue(bytes(key), hint, Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8)), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
 
         // Replication delay → verify intruder blocked on MASTER
         Thread.sleep((int) REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.MASTER)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)));
         assertDenied(client.setMode(Mode.MASTER)
-                .updateKeyValue(bytes(key), hint, "new".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
+                .updateKeyValue(bytes(key), hint, Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8)), Duration.ofSeconds(30), INTRUDER_ID, Duration.ofSeconds(2)));
 
         // Unlock by owner
         client.setMode(Mode.BACKUP).unlockObject(key, hint, OWNER_ID).get();
@@ -113,7 +109,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("GLOBAL Lock: Blocks collection operations from intruder - create on Master")
     void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
         String key = "lock_global_collection_master_" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)));
+        List<Variant> initialData = List.of(Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)));
 
         // Create WITHOUT setMode
         KeyHintData hint = client.createList(key, initialData).get();
@@ -148,7 +144,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("GLOBAL Lock: Blocks collection operations from intruder - create on Backup")
     void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
         String key = "lock_global_collection_backup_" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)));
+        List<Variant> initialData = List.of(Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)));
 
         // Create WITHOUT setMode
         KeyHintData hint = client.createList(key, initialData).get();
@@ -189,7 +185,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_read_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -201,19 +197,19 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read on MASTER (immediate)
-        byte[] val = client.setMode(Mode.MASTER)
+        Variant val = client.setMode(Mode.MASTER)
                 .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(val);
 
         // Replication delay → verify owner can read on BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        byte[] backupVal = client.setMode(Mode.BACKUP)
+        Variant backupVal = client.setMode(Mode.BACKUP)
                 .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(backupVal);
 
         // Write is denied on MASTER
         assertDenied(client.setMode(Mode.MASTER)
-                .updateKeyValue(bytes(key), hint, "bad".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), OWNER_ID, Duration.ofSeconds(2)));
+                .updateKeyValue(bytes(key), hint, Variant.ofBytes("bad".getBytes(StandardCharsets.UTF_8)), Duration.ofSeconds(30), OWNER_ID, Duration.ofSeconds(2)));
 
         // Unlock by owner
         client.setMode(Mode.MASTER).unlockObject(key, hint, OWNER_ID).get();
@@ -225,7 +221,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_read_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -237,19 +233,19 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read on BACKUP (immediate)
-        byte[] val = client.setMode(Mode.BACKUP)
+        Variant val = client.setMode(Mode.BACKUP)
                 .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(val);
 
         // Replication delay → verify owner can read on MASTER
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        byte[] masterVal = client.setMode(Mode.MASTER)
+        Variant masterVal = client.setMode(Mode.MASTER)
                 .getValue(bytes(key), hint, OWNER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(masterVal);
 
         // Write is denied on BACKUP
         assertDenied(client.setMode(Mode.BACKUP)
-                .updateKeyValue(bytes(key), hint, "bad".getBytes(StandardCharsets.UTF_8), Duration.ofSeconds(30), OWNER_ID, Duration.ofSeconds(2)));
+                .updateKeyValue(bytes(key), hint, Variant.ofBytes("bad".getBytes(StandardCharsets.UTF_8)), Duration.ofSeconds(30), OWNER_ID, Duration.ofSeconds(2)));
 
         // Unlock by owner
         client.setMode(Mode.BACKUP).unlockObject(key, hint, OWNER_ID).get();
@@ -265,7 +261,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_compat_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -288,7 +284,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Replication delay → verify on BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        byte[] backupVal = client.setMode(Mode.BACKUP)
+        Variant backupVal = client.setMode(Mode.BACKUP)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(backupVal);
 
@@ -303,7 +299,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_compat_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -326,7 +322,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Replication delay → verify on MASTER
 
-        byte[] masterVal = client.setMode(Mode.MASTER)
+        Variant masterVal = client.setMode(Mode.MASTER)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(masterVal);
 
@@ -345,7 +341,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_read_exp_master_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -360,13 +356,13 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(3000);
 
         // Now intruder can read on MASTER
-        byte[] val = client.setMode(Mode.MASTER)
+        Variant val = client.setMode(Mode.MASTER)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(val);
 
         // Replication delay → verify on BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        byte[] backupVal = client.setMode(Mode.BACKUP)
+        Variant backupVal = client.setMode(Mode.BACKUP)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(backupVal);
     }
@@ -377,7 +373,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         String key = "lock_write_exp_backup_" + UUID.randomUUID();
 
         // Create WITHOUT setMode
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(Variant.ofBytes("initial_value".getBytes()))).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes("initial_value".getBytes())).get();
         assertNotNull(hint);
 
         // Small object replication wait
@@ -398,7 +394,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Replication delay → verify on MASTER
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        byte[] masterVal = client.setMode(Mode.MASTER)
+        Variant masterVal = client.setMode(Mode.MASTER)
                 .getValue(bytes(key), hint, INTRUDER_ID, Duration.ofSeconds(2)).get();
         assertNotNull(masterVal);
 

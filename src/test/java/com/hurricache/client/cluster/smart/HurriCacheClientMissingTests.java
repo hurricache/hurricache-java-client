@@ -42,7 +42,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
         String key = "ttl:test:key"+ UUID.randomUUID();
         byte[] payload = "temp_data".getBytes();
 
-        client.createKeyValue(key, payload, DEFAULT_CLIENT_ID).get();
+        client.createKeyValue(key, Variant.ofBytes(payload), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
         Boolean ttlSet = client.setTtl(key, null, 100).get();
         assertTrue(ttlSet, "TTL должен быть успешно установлен");
@@ -79,7 +79,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Type Mismatch: Запрос операции со списком для обычного KV ключа")
     void testTypeMismatchErrorHandling() throws Exception {
         String key = "kv:for:mismatch"+ UUID.randomUUID();
-        client.createKeyValue(key, "just_string".getBytes(), DEFAULT_CLIENT_ID).get();
+        client.createKeyValue(key, Variant.ofBytes("just_string".getBytes()), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
         assertThrows(ExecutionException.class, () -> {
             client.getHead(key, null).get();
@@ -90,7 +90,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Bounds: Доступ к элементам коллекции по некорректному индексу")
     void testOutOfBoundsPosition() throws Exception {
         String key = "list:bounds:test"+ UUID.randomUUID();
-        List<Payload> initial = List.of(Variant.ofBytes("elem1".getBytes()));
+        List<Variant> initial = List.of(Variant.ofBytes("elem1".getBytes()));
         KeyHintData hint = client.createList(key, initial, DEFAULT_CLIENT_ID).get();
 
         assertThrows(ExecutionException.class, () -> {
@@ -110,7 +110,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Locks: Совместимость нескольких READ_LOCK от разных клиентов")
     void testMultipleReadLocksAllowed() throws Exception {
         String key = "lock:shared:read"+ UUID.randomUUID();
-        KeyHintData keyHint = client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get();
+        KeyHintData keyHint = client.createKeyValue(key, Variant.ofBytes("data".getBytes()), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
         LockStatus lock1 = client.lockObject(key,keyHint, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(2)).get();
         LockStatus lock2 = client.lockObject(key,keyHint, LockType.READ_LOCK, SECONDARY_CLIENT_ID, Duration.ofSeconds(2)).get();
@@ -126,7 +126,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Locks: Отклонение WRITE_LOCK при активном READ_LOCK")
     void testWriteLockRejectedWhenReadLocked() throws Exception {
         String key = "lock:exclusive:write"+ UUID.randomUUID();
-        client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get();
+        client.createKeyValue(key, Variant.ofBytes("data".getBytes()), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
         client.lockObject(key, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofMinutes(5)).get();
         Thread.sleep(500);
@@ -143,7 +143,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Locks: Запрет анлока чужим clientId")
     void testUnlockByWrongClientFails() throws Exception {
         String key = "lock:wrong:owner"+ UUID.randomUUID();
-        client.createKeyValue(key, "data".getBytes(), DEFAULT_CLIENT_ID).get();
+        client.createKeyValue(key, Variant.ofBytes("data".getBytes()), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
         client.lockObject(key, LockType.WRITE_LOCK, DEFAULT_CLIENT_ID, Duration.ofMinutes(5)).get();
         Thread.sleep(500);
@@ -162,7 +162,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Concurrency: Параллельное увеличение атомика из 10 потоков")
     void testConcurrentAtomicIncrements() throws Exception {
         String key = "atomic:concurrent:counter"+ UUID.randomUUID();
-        KeyHintData hint = client.atomicCreate(key, 0L).get();
+        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(new byte[0]), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
         int threads = 10;
         int incrementsPerThread = 50;
@@ -186,7 +186,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
         boolean finished = latch.await(10, TimeUnit.SECONDS);
         assertTrue(finished, "Все потоки должны успешно завершиться до таймаута");
 
-        long finalValue = client.atomicAdd(key, hint, 0L).get();
+        Number finalValue = client.atomicAdd(key, hint, 0L).get();
         assertEquals((long) threads * incrementsPerThread, finalValue);
 
         executor.shutdown();
@@ -216,7 +216,7 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
             int emptyReads = 0;
             while (poppedCount.get() < itemCount && emptyReads < 50) {
                 try {
-                    Payload item = client.getAndDeleteHead(key, hint).get();
+                    Variant item = client.getAndDeleteHead(key, hint).get();
                     if (item != null) {
                         poppedCount.incrementAndGet();
                         emptyReads = 0;
@@ -244,14 +244,14 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
     @DisplayName("Mode: Отклонение операций записи при Mode.BACKUP")
     void testWriteOperationFailsInBackupMode() throws Exception {
         String key = "mode:backup:write:test"  + UUID.randomUUID();
-        client.createKeyValue(key, "initial".getBytes(), DEFAULT_CLIENT_ID).get();
+        client.createKeyValue(key, Variant.ofBytes("initial".getBytes()), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
         client.setMode(Mode.BACKUP);
 
-        byte[] val = client.getValue(key, null, DEFAULT_CLIENT_ID).get();
+        byte[] val = client.getValue(key, null, DEFAULT_CLIENT_ID).get().bytesValue();
         assertNotNull(val);
 
-        byte[] bytes = client.updateKeyValue(key, null, "new_val".getBytes(), DEFAULT_CLIENT_ID).get();
+        byte[] bytes = client.updateKeyValue(key, null, Variant.ofBytes("new_val".getBytes()), DEFAULT_CLIENT_ID).get().bytesValue();
         assertArrayEquals(val, bytes);
 
         client.setMode(Mode.MASTER);
@@ -267,12 +267,11 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
         String key = "edge:empty:payload"+ UUID.randomUUID();
         byte[] emptyBuffer = new byte[0];
 
-        client.createKeyValue(key, emptyBuffer, DEFAULT_CLIENT_ID).get();
+        client.createKeyValue(key, Variant.ofBytes(emptyBuffer), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
-        byte[] retrieved = client.getValue(key, null, DEFAULT_CLIENT_ID).get();
-
+        Variant retrieved = client.getValue(key, null, DEFAULT_CLIENT_ID).get();
         assertNotNull(retrieved);
-        assertEquals(0, retrieved.length);
+        assertEquals(0, retrieved.bytesValue().length);
     }
 
     @Test
@@ -282,12 +281,11 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
         byte[] largeBuffer = new byte[1024 * 1024]; // 1MB
         Arrays.fill(largeBuffer, (byte) 0xAB);
 
-        client.createKeyValue(key, largeBuffer, DEFAULT_CLIENT_ID).get();
+        client.createKeyValue(key, Variant.ofBytes(largeBuffer), DEFAULT_CLIENT_ID).get();
         Thread.sleep(500);
-        byte[] retrieved = client.getValue(key, null, DEFAULT_CLIENT_ID).get();
-
+        Variant retrieved = client.getValue(key, null, DEFAULT_CLIENT_ID).get();
         assertNotNull(retrieved);
-        assertArrayEquals(largeBuffer, retrieved);
+        assertArrayEquals(largeBuffer, retrieved.bytesValue());
     }
 
     @ParameterizedTest
@@ -305,11 +303,11 @@ public class HurriCacheClientMissingTests extends TestBaseCluster {
         }catch (Exception e) {}
         Thread.sleep(500);
         byte[] value = ("test_data"+ UUID.randomUUID()).getBytes();
-        KeyHintData keyHint = client.createKeyValue(specialKey, value, DEFAULT_CLIENT_ID).get();
+        KeyHintData keyHint = client.createKeyValue(specialKey, Variant.ofBytes(value), DEFAULT_CLIENT_ID).get();
         System.out.println("KeyHint: " + keyHint);
         Thread.sleep(500);
-        byte[] retrieved = client.getValue(specialKey, null, DEFAULT_CLIENT_ID).get();
-        assertArrayEquals(value, retrieved);
+        Variant retrieved = client.getValue(specialKey, null, DEFAULT_CLIENT_ID).get();
+        assertArrayEquals(value, retrieved.bytesValue());
         client.remove(specialKey, null, DEFAULT_CLIENT_ID).get();
 
 

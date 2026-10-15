@@ -42,12 +42,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify initial state on both nodes
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(listKey), hint)
                 .get();
         assertEquals("Middle", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(listKey), hint)
                 .get();
         assertEquals("Middle", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
@@ -59,13 +59,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // Verify on MASTER: getHead returns Head
         Thread.sleep(REPLICATION_DELAY_MS);
-        Payload masterHeadAfter = client.setMode(Mode.MASTER)
+        Variant masterHeadAfter = client.setMode(Mode.MASTER)
                 .getHead(bytes(listKey), hint)
                 .get();
         assertEquals("Head", new String(masterHeadAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getHead returns Head (replicated)
-        Payload backupHeadAfter = client.setMode(Mode.BACKUP)
+        Variant backupHeadAfter = client.setMode(Mode.BACKUP)
                 .getHead(bytes(listKey), hint)
                 .get();
         assertEquals("Head", new String(backupHeadAfter.bytesValue(), StandardCharsets.UTF_8));
@@ -77,14 +77,14 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // Verify on MASTER: getElementAtPosition(1) returns NewPos1
         Thread.sleep(REPLICATION_DELAY_MS);
-        Payload pos1 = client.setMode(Mode.MASTER)
+        Variant pos1 = client.setMode(Mode.MASTER)
                 .getElementAtPosition(bytes(listKey), hint, 1)
                 .get();
         assertNotNull(pos1);
         assertEquals("NewPos1", new String(pos1.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getElementAtPosition(1) returns NewPos1 (replicated)
-        Payload backupPos1 = client.setMode(Mode.BACKUP)
+        Variant backupPos1 = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(bytes(listKey), hint, 1)
                 .get();
         assertNotNull(backupPos1);
@@ -115,13 +115,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // Verify on MASTER: 3 elements
         Thread.sleep(REPLICATION_DELAY_MS);
-        Payload masterTail = client.setMode(Mode.MASTER)
+        Variant masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(vecKey), hint)
                 .get();
         assertEquals("2", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: 3 elements (replicated)
-        Payload backupTail = client.setMode(Mode.BACKUP)
+        Variant backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(vecKey), hint)
                 .get();
         assertEquals("2", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
@@ -133,13 +133,13 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // Verify on MASTER: getTail returns "1"
         Thread.sleep(REPLICATION_DELAY_MS);
-        Payload masterTailAfter = client.setMode(Mode.MASTER)
+        Variant masterTailAfter = client.setMode(Mode.MASTER)
                 .getTail(bytes(vecKey), hint)
                 .get();
         assertEquals("1", new String(masterTailAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns "1" (replicated)
-        Payload backupTailAfter = client.setMode(Mode.BACKUP)
+        Variant backupTailAfter = client.setMode(Mode.BACKUP)
                 .getTail(bytes(vecKey), hint)
                 .get();
         assertEquals("1", new String(backupTailAfter.bytesValue(), StandardCharsets.UTF_8));
@@ -151,14 +151,14 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // Verify on MASTER: getElementAtPosition(0) returns "1"
         Thread.sleep(REPLICATION_DELAY_MS);
-        Payload masterRemaining = client.setMode(Mode.MASTER)
+        Variant masterRemaining = client.setMode(Mode.MASTER)
                 .getElementAtPosition(bytes(vecKey), hint, 0)
                 .get();
         assertNotNull(masterRemaining);
         assertEquals("1", new String(masterRemaining.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getElementAtPosition(0) returns "1" (replicated)
-        Payload backupRemaining = client.setMode(Mode.BACKUP)
+        Variant backupRemaining = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(bytes(vecKey), hint, 0)
                 .get();
         assertNotNull(backupRemaining);
@@ -189,33 +189,33 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
 
         // Verify on MASTER: 5 elements
         Thread.sleep(REPLICATION_DELAY_MS);
-        Payload masterTail = client.setMode(Mode.MASTER)
+        Variant masterTail = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), hint)
                 .get();
         assertEquals("4", new String(masterTail.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: 5 elements (replicated)
-        Payload backupTail = client.setMode(Mode.BACKUP)
+        Variant backupTail = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), hint)
                 .get();
         assertEquals("4", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
         // deleteElementAtPosition(0, 2) on MASTER (removes positions 0-2: "0", "1", "2")
-        Boolean removed = client.setMode(Mode.MASTER)
+        Integer removed = client.setMode(Mode.MASTER)
                 .deleteElementAtPosition(bytes(key), hint, 0L, 2L)
                 .get();
-        assertTrue(removed);
+        assertTrue(removed == 1);
 
         // Verify on MASTER: getTail returns "4" (3 elements remain: "3", "4")
         Thread.sleep(REPLICATION_DELAY_MS);
-        Payload masterTailAfter = client.setMode(Mode.MASTER)
+        Variant masterTailAfter = client.setMode(Mode.MASTER)
                 .getTail(bytes(key), hint)
                 .get();
         assertNotNull(masterTailAfter);
         assertEquals("4", new String(masterTailAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getTail returns "4" (replicated)
-        Payload backupTailAfter = client.setMode(Mode.BACKUP)
+        Variant backupTailAfter = client.setMode(Mode.BACKUP)
                 .getTail(bytes(key), hint)
                 .get();
         assertNotNull(backupTailAfter);
@@ -238,12 +238,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify initial state on both nodes
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(bytes(qKey), hint)
                 .get();
         assertEquals("q1", new String(masterHead.bytesValue(), StandardCharsets.UTF_8));
 
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(bytes(qKey), hint)
                 .get();
         assertEquals("q1", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));

@@ -3,7 +3,6 @@ package com.hurricache.client.cluster.smart;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
@@ -44,7 +43,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Verify on BACKUP: streamList returns empty list
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -62,7 +61,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("Create list with data on master, verify replication to backup and write on backup")
     void testCreateListWithData() throws ExecutionException, InterruptedException {
         String key = "listWithData" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         );
@@ -74,7 +73,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Verify on MASTER: streamList returns [first, second]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(masterStream);
@@ -83,7 +82,7 @@ public class ListOperationsTest extends TestBaseCluster {
         assertEquals("second", new String(masterStream.get(1).bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: streamList returns [first, second]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -99,7 +98,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [first, second, third]
-        List<Payload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<Variant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupAfterWrite.size());
@@ -108,7 +107,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [first, second, third]
-        List<Payload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<Variant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterAfterWrite.size());
@@ -122,9 +121,9 @@ public class ListOperationsTest extends TestBaseCluster {
         int elementCount = 1500;
         int payloadSize = 8192; // 8KB per element
 
-        List<Payload> largePayloads = new ArrayList<>(elementCount);
+        List<Variant> largePayloads = new ArrayList<>(elementCount);
         for (int i = 0; i < elementCount; i++) {
-            largePayloads.add(Variant.ofBytes(createLargePayload(payloadSize)));
+            largePayloads.add(createLargePayload(payloadSize));
         }
 
         // Create large list
@@ -134,14 +133,14 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(1500); // replication wait
 
         // Verify on MASTER: streamList returns 1500 elements
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(elementCount, masterStream.size(), "Expected " + elementCount + " elements on master");
 
         // Verify on BACKUP: streamList returns 1500 elements
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -160,7 +159,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("Stream list on master, verify replication and write on backup")
     void testStreamList() throws ExecutionException, InterruptedException {
         String key = "streamListTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("a".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("b".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("c".getBytes(StandardCharsets.UTF_8))
@@ -173,14 +172,14 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Verify on MASTER: streamList returns 3 elements [a, b, c]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(masterStream);
         assertEquals(3, masterStream.size());
 
         // Verify on BACKUP: streamList returns 3 elements [a, b, c]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -194,7 +193,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns 4 elements
-        List<Payload> backupAfterWrite = client.setMode(Mode.BACKUP)
+        List<Variant> backupAfterWrite = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, backupAfterWrite.size());
@@ -202,7 +201,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns 4 elements
-        List<Payload> masterAfterWrite = client.setMode(Mode.MASTER)
+        List<Variant> masterAfterWrite = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, masterAfterWrite.size());
@@ -212,7 +211,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("GetAndRemoveFront on master, verify replication and write on backup")
     void testGetAndRemoveFront() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveFrontTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("head".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("middle".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("tail".getBytes(StandardCharsets.UTF_8))
@@ -225,7 +224,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getAndRemoveFront returns "head"
-        Payload removed = client.setMode(Mode.BACKUP)
+        Variant removed = client.setMode(Mode.BACKUP)
                 .getAndDeleteHead(key, keyHint)
                 .get();
         assertNotNull(removed);
@@ -234,13 +233,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getHead returns "middle", streamList returns [middle, tail]
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHead);
         assertEquals("middle", new String(backupHead.bytesValue(), StandardCharsets.UTF_8));
 
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
@@ -248,14 +247,14 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [middle, tail]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
         assertEquals("middle", new String(masterStream.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Write on MASTER: getAndRemoveFront returns "middle"
-        Payload removedMaster = client.setMode(Mode.MASTER)
+        Variant removedMaster = client.setMode(Mode.MASTER)
                 .getAndDeleteHead(key, keyHint)
                 .get();
         assertNotNull(removedMaster);
@@ -264,7 +263,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getHead returns "tail"
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHead);
@@ -273,7 +272,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getHead returns "tail"
-        Payload backupHeadAfter = client.setMode(Mode.BACKUP)
+        Variant backupHeadAfter = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHeadAfter);
@@ -284,7 +283,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("GetHead on master, verify replication and write on backup")
     void testGetHead() throws ExecutionException, InterruptedException {
         String key = "getHeadTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         );
@@ -303,7 +302,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getHead returns "first"
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHead);
@@ -312,7 +311,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getHead returns "first"
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHead);
@@ -326,7 +325,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getHead returns "zero"
-        Payload masterHeadAfter = client.setMode(Mode.MASTER)
+        Variant masterHeadAfter = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHeadAfter);
@@ -335,7 +334,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getHead returns "zero"
-        Payload backupHeadAfter = client.setMode(Mode.BACKUP)
+        Variant backupHeadAfter = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHeadAfter);
@@ -346,7 +345,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("GetTail on master, verify replication and write on backup")
     void testGetTail() throws ExecutionException, InterruptedException {
         String key = "getTailTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
         );
@@ -365,7 +364,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getTail returns "second"
-        Payload backupTail = client.setMode(Mode.BACKUP)
+        Variant backupTail = client.setMode(Mode.BACKUP)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTail);
@@ -374,7 +373,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getTail returns "second"
-        Payload masterTail = client.setMode(Mode.MASTER)
+        Variant masterTail = client.setMode(Mode.MASTER)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTail);
@@ -388,7 +387,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getTail returns "last"
-        Payload masterTailAfter = client.setMode(Mode.MASTER)
+        Variant masterTailAfter = client.setMode(Mode.MASTER)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTailAfter);
@@ -397,7 +396,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getTail returns "last"
-        Payload backupTailAfter = client.setMode(Mode.BACKUP)
+        Variant backupTailAfter = client.setMode(Mode.BACKUP)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTailAfter);
@@ -408,7 +407,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("GetElementAtPosition on master, verify replication and write on backup")
     void testGetElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "getElementAtPositionTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("pos0".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("pos1".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("pos2".getBytes(StandardCharsets.UTF_8))
@@ -421,7 +420,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getElementAtPosition(key, 1) returns "pos1"
-        Payload pos1 = client.setMode(Mode.BACKUP)
+        Variant pos1 = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(pos1);
@@ -430,7 +429,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getElementAtPosition(key, 0) returns "pos0"
-        Payload pos0 = client.setMode(Mode.BACKUP)
+        Variant pos0 = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(pos0);
@@ -439,7 +438,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getElementAtPosition(key, 1) returns "pos1"
-        Payload masterPos1 = client.setMode(Mode.MASTER)
+        Variant masterPos1 = client.setMode(Mode.MASTER)
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(masterPos1);
@@ -453,7 +452,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getElementAtPosition(key, 2) returns "new"
-        Payload masterNew = client.setMode(Mode.MASTER)
+        Variant masterNew = client.setMode(Mode.MASTER)
                 .getElementAtPosition(key, keyHint, 2)
                 .get();
         assertNotNull(masterNew);
@@ -462,7 +461,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getElementAtPosition(key, 2) returns "new"
-        Payload backupNew = client.setMode(Mode.BACKUP)
+        Variant backupNew = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(key, keyHint, 2)
                 .get();
         assertNotNull(backupNew);
@@ -473,7 +472,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("StreamElementInRangeUnordered on master, verify replication and write on backup")
     void testStreamElementInRangeUnordered() throws ExecutionException, InterruptedException {
         String key = "streamRangeTest" + UUID.randomUUID();
-        List<Payload> initialData = new ArrayList<>();
+        List<Variant> initialData = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             initialData.add(Variant.ofBytes(String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
         }
@@ -485,7 +484,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: streamElementInRangeUnordered(key, LIST, 2, 5) returns 4 elements [2,3,4,5]
-        List<Payload> rangeData = client.setMode(Mode.BACKUP)
+        List<Variant> rangeData = client.setMode(Mode.BACKUP)
                 .streamElementInRangeUnordered(key, keyHint, ContainerType.LIST, 2, 5)
                 .get();
         assertNotNull(rangeData);
@@ -494,7 +493,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamElementInRangeUnordered returns 4 elements
-        List<Payload> masterRange = client.setMode(Mode.MASTER)
+        List<Variant> masterRange = client.setMode(Mode.MASTER)
                 .streamElementInRangeUnordered(key, keyHint, ContainerType.LIST, 2, 5)
                 .get();
         assertNotNull(masterRange);
@@ -508,7 +507,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamElementInRangeUnordered still returns 4 elements (range 2-5)
-        List<Payload> masterRangeAfter = client.setMode(Mode.MASTER)
+        List<Variant> masterRangeAfter = client.setMode(Mode.MASTER)
                 .streamElementInRangeUnordered(key, keyHint, ContainerType.LIST, 2, 5)
                 .get();
         assertEquals(4, masterRangeAfter.size());
@@ -516,7 +515,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamElementInRangeUnordered still returns 4 elements
-        List<Payload> backupRangeAfter = client.setMode(Mode.BACKUP)
+        List<Variant> backupRangeAfter = client.setMode(Mode.BACKUP)
                 .streamElementInRangeUnordered(key, keyHint, ContainerType.LIST, 2, 5)
                 .get();
         assertEquals(4, backupRangeAfter.size());
@@ -528,7 +527,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("GetAndRemoveTail on master, verify replication and write on backup")
     void testGetAndRemoveTail() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveTailTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("head".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("middle".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("tail".getBytes(StandardCharsets.UTF_8))
@@ -541,7 +540,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getAndRemoveTail returns "tail"
-        Payload removed = client.setMode(Mode.BACKUP)
+        Variant removed = client.setMode(Mode.BACKUP)
                 .getAndDeleteTail(key, keyHint)
                 .get();
         assertNotNull(removed);
@@ -550,13 +549,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getTail returns "middle", streamList returns [head, middle]
-        Payload backupTail = client.setMode(Mode.BACKUP)
+        Variant backupTail = client.setMode(Mode.BACKUP)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTail);
         assertEquals("middle", new String(backupTail.bytesValue(), StandardCharsets.UTF_8));
 
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
@@ -564,13 +563,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [head, middle]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
 
         // Write on MASTER: getAndRemoveTail returns "middle"
-        Payload removedMaster = client.setMode(Mode.MASTER)
+        Variant removedMaster = client.setMode(Mode.MASTER)
                 .getAndDeleteTail(key, keyHint)
                 .get();
         assertNotNull(removedMaster);
@@ -579,7 +578,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getTail returns "head"
-        Payload masterTail = client.setMode(Mode.MASTER)
+        Variant masterTail = client.setMode(Mode.MASTER)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTail);
@@ -588,7 +587,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getTail returns "head"
-        Payload backupTailAfter = client.setMode(Mode.BACKUP)
+        Variant backupTailAfter = client.setMode(Mode.BACKUP)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(backupTailAfter);
@@ -599,7 +598,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("GetAndRemoveElementAtPosition on master, verify replication and write on backup")
     void testGetAndRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "getAndRemoveElementAtPositionTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("pos0".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("pos1".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("pos2".getBytes(StandardCharsets.UTF_8))
@@ -612,7 +611,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getAndDeleteElementAtPosition(key, 1) returns "pos1"
-        Payload removed = client.setMode(Mode.BACKUP)
+        Variant removed = client.setMode(Mode.BACKUP)
                 .getAndDeleteElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(removed);
@@ -621,13 +620,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getElementAtPosition(key, 1) returns "pos2", streamList returns [pos0, pos2]
-        Payload pos1 = client.setMode(Mode.BACKUP)
+        Variant pos1 = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(pos1);
         assertEquals("pos2", new String(pos1.bytesValue(), StandardCharsets.UTF_8));
 
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
@@ -635,13 +634,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [pos0, pos2]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
 
         // Write on MASTER: getAndDeleteElementAtPosition(key, 0) returns "pos0"
-        Payload removedMaster = client.setMode(Mode.MASTER)
+        Variant removedMaster = client.setMode(Mode.MASTER)
                 .getAndDeleteElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(removedMaster);
@@ -650,7 +649,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getElementAtPosition(key, 0) returns "pos2"
-        Payload masterPos0 = client.setMode(Mode.MASTER)
+        Variant masterPos0 = client.setMode(Mode.MASTER)
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(masterPos0);
@@ -659,7 +658,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getElementAtPosition(key, 0) returns "pos2"
-        Payload backupPos0 = client.setMode(Mode.BACKUP)
+        Variant backupPos0 = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(backupPos0);
@@ -670,7 +669,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("AddElementToPosition on master, verify replication and write on backup")
     void testAddElementToPosition() throws ExecutionException, InterruptedException {
         String key = "addElementToPositionTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
         );
@@ -691,7 +690,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [first, second, third]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -700,7 +699,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [first, second, third]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -714,7 +713,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [zero, first, second, third]
-        List<Payload> masterStreamAfter = client.setMode(Mode.MASTER)
+        List<Variant> masterStreamAfter = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, masterStreamAfter.size());
@@ -723,7 +722,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [zero, first, second, third]
-        List<Payload> backupStreamAfter = client.setMode(Mode.BACKUP)
+        List<Variant> backupStreamAfter = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, backupStreamAfter.size());
@@ -734,7 +733,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("RemoveElementAtPosition on master, verify replication and write on backup")
     void testRemoveElementAtPosition() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("0".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("1".getBytes(StandardCharsets.UTF_8)),
                 Variant.ofBytes("2".getBytes(StandardCharsets.UTF_8)),
@@ -748,15 +747,15 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: deleteElementAtPosition(key, 1)
-        Boolean removed = client.setMode(Mode.BACKUP)
+        Integer removed = client.setMode(Mode.BACKUP)
                 .deleteElementAtPosition(key, keyHint, 1)
                 .get();
-        assertTrue(removed);
+        assertTrue(removed > 0);
 
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [0, 2, 3]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -764,21 +763,21 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [0, 2, 3]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
 
         // Write on MASTER: deleteElementAtPosition(key, 0, 1) - removes range [0, 1]
-        Boolean rangeRemoved = client.setMode(Mode.MASTER)
+        Integer rangeRemoved = client.setMode(Mode.MASTER)
                 .deleteElementAtPosition(key, keyHint, 0, 1)
                 .get();
-        assertTrue(rangeRemoved);
+        assertTrue(rangeRemoved > 0);
 
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [3] (removed 0, 2, left 3)
-        List<Payload> masterStreamAfter = client.setMode(Mode.MASTER)
+        List<Variant> masterStreamAfter = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(1, masterStreamAfter.size());
@@ -787,7 +786,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [3]
-        List<Payload> backupStreamAfter = client.setMode(Mode.BACKUP)
+        List<Variant> backupStreamAfter = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(1, backupStreamAfter.size());
@@ -798,7 +797,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("AddElementToPositionBefore on master, verify replication and write on backup")
     void testAddElementToPositionBefore() throws ExecutionException, InterruptedException {
         String key = "addElementToPositionBeforeTest" + UUID.randomUUID();
-        List<Payload> initialData = List.of(Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8)));
+        List<Variant> initialData = List.of(Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8)));
 
         // Create list
         KeyHintData keyHint = client.createList(key, initialData)
@@ -821,7 +820,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [before1, before2, pivot]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -830,7 +829,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [before1, before2, pivot]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -846,7 +845,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [before3, before1, before2, pivot]
-        List<Payload> masterStreamAfter = client.setMode(Mode.MASTER)
+        List<Variant> masterStreamAfter = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, masterStreamAfter.size());
@@ -855,7 +854,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [before3, before1, before2, pivot]
-        List<Payload> backupStreamAfter = client.setMode(Mode.BACKUP)
+        List<Variant> backupStreamAfter = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, backupStreamAfter.size());
@@ -866,7 +865,7 @@ public class ListOperationsTest extends TestBaseCluster {
     @DisplayName("AddElementToPositionAfter on master, verify replication and write on backup")
     void testAddElementToPositionAfter() throws ExecutionException, InterruptedException {
         String key = "addElementToPositionAfterTest" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
+        List<Variant> initialData = Arrays.asList(
                 Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8))
         );
 
@@ -891,7 +890,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [pivot, after1, after2]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -900,7 +899,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [pivot, after1, after2]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -916,7 +915,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [pivot, after1, after3, after2]
-        List<Payload> masterStreamAfter = client.setMode(Mode.MASTER)
+        List<Variant> masterStreamAfter = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, masterStreamAfter.size());
@@ -925,7 +924,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [pivot, after1, after3, after2]
-        List<Payload> backupStreamAfter = client.setMode(Mode.BACKUP)
+        List<Variant> backupStreamAfter = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(4, backupStreamAfter.size());
@@ -1217,7 +1216,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: client 1 can read (getHead)
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(backupHead);
@@ -1225,13 +1224,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: client 1 can read (getHead)
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(masterHead);
 
         // Write on BACKUP: client 2 tries to read (should succeed with READ_LOCK)
-        Payload backupHead2 = client.setMode(Mode.BACKUP)
+        Variant backupHead2 = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint, 2)
                 .get();
         assertNotNull(backupHead2);
@@ -1301,7 +1300,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: client 1 can read (getHead)
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(masterHead);
@@ -1375,7 +1374,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: client 1 can read (getHead)
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(backupHead);
@@ -1383,7 +1382,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: client 1 can read (getHead)
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(masterHead);
@@ -1506,7 +1505,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList shows lock is replicated (clientId=1)
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key.getBytes(StandardCharsets.UTF_8), keyHint, 1, Duration.ofSeconds(5))
                 .get();
         assertEquals(2, backupStream.size());
@@ -1515,7 +1514,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(3500);
 
         // Verify on MASTER: getHead succeeds (lock expired, data accessible)
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(masterHead);
@@ -1523,13 +1522,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: getHead succeeds (lock expired, data replicated)
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(backupHead);
 
         // Verify on BACKUP: client 2 can read/write (lock no longer active)
-        Payload backupHead2 = client.setMode(Mode.BACKUP)
+        Variant backupHead2 = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint, 2)
                 .get();
         assertNotNull(backupHead2);
@@ -1563,7 +1562,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList shows lock is replicated (clientId=1)
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key.getBytes(StandardCharsets.UTF_8), keyHint, 1, Duration.ofSeconds(5))
                 .get();
         assertEquals(2, masterStream.size());
@@ -1572,7 +1571,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(3500);
 
         // Verify on BACKUP: getHead succeeds (lock expired, data accessible)
-        Payload backupHead = client.setMode(Mode.BACKUP)
+        Variant backupHead = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(backupHead);
@@ -1580,13 +1579,13 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getHead succeeds (lock expired, data replicated)
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint, 1)
                 .get();
         assertNotNull(masterHead);
 
         // Verify on MASTER: client 2 can read/write (lock no longer active)
-        Payload masterHead2 = client.setMode(Mode.MASTER)
+        Variant masterHead2 = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint, 2)
                 .get();
         assertNotNull(masterHead2);
@@ -1606,7 +1605,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getAndRemoveFront
-        Payload removed = client.setMode(Mode.BACKUP)
+        Variant removed = client.setMode(Mode.BACKUP)
                 .getAndDeleteHead(key, keyHint)
                 .get();
         assertNotNull(removed);
@@ -1615,7 +1614,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns empty list
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1624,7 +1623,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns empty list
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(masterStream);
@@ -1643,7 +1642,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getHead
-        Payload head = client.setMode(Mode.BACKUP)
+        Variant head = client.setMode(Mode.BACKUP)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(head);
@@ -1652,7 +1651,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getHead returns same element
-        Payload masterHead = client.setMode(Mode.MASTER)
+        Variant masterHead = client.setMode(Mode.MASTER)
                 .getHead(key, keyHint)
                 .get();
         assertNotNull(masterHead);
@@ -1671,7 +1670,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getTail
-        Payload tail = client.setMode(Mode.BACKUP)
+        Variant tail = client.setMode(Mode.BACKUP)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(tail);
@@ -1680,7 +1679,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getTail returns same element
-        Payload masterTail = client.setMode(Mode.MASTER)
+        Variant masterTail = client.setMode(Mode.MASTER)
                 .getTail(key, keyHint)
                 .get();
         assertNotNull(masterTail);
@@ -1699,7 +1698,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getAndRemoveTail
-        Payload removed = client.setMode(Mode.BACKUP)
+        Variant removed = client.setMode(Mode.BACKUP)
                 .getAndDeleteTail(key, keyHint)
                 .get();
         assertNotNull(removed);
@@ -1708,7 +1707,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns empty list
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(backupStream);
@@ -1717,7 +1716,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns empty list
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertNotNull(masterStream);
@@ -1738,7 +1737,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getElementAtPosition(key, 0)
-        Payload pos0 = client.setMode(Mode.BACKUP)
+        Variant pos0 = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(pos0);
@@ -1747,7 +1746,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getElementAtPosition(key, 0)
-        Payload masterPos0 = client.setMode(Mode.MASTER)
+        Variant masterPos0 = client.setMode(Mode.MASTER)
                 .getElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(masterPos0);
@@ -1768,7 +1767,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getElementAtPosition(key, 1)
-        Payload last = client.setMode(Mode.BACKUP)
+        Variant last = client.setMode(Mode.BACKUP)
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(last);
@@ -1777,7 +1776,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: getElementAtPosition(key, 1)
-        Payload masterLast = client.setMode(Mode.MASTER)
+        Variant masterLast = client.setMode(Mode.MASTER)
                 .getElementAtPosition(key, keyHint, 1)
                 .get();
         assertNotNull(masterLast);
@@ -1799,7 +1798,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: getAndDeleteElementAtPosition(key, 0)
-        Payload removed = client.setMode(Mode.BACKUP)
+        Variant removed = client.setMode(Mode.BACKUP)
                 .getAndDeleteElementAtPosition(key, keyHint, 0)
                 .get();
         assertNotNull(removed);
@@ -1808,7 +1807,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [second, third]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, backupStream.size());
@@ -1817,7 +1816,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [second, third]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(2, masterStream.size());
@@ -1847,7 +1846,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [first, second, last]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -1856,7 +1855,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [first, second, last]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -1888,7 +1887,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [inserted, first, second]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -1897,7 +1896,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [inserted, first, second]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -1929,7 +1928,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on BACKUP: streamList returns [first, last, inserted]
-        List<Payload> backupStream = client.setMode(Mode.BACKUP)
+        List<Variant> backupStream = client.setMode(Mode.BACKUP)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, backupStream.size());
@@ -1938,7 +1937,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamList returns [first, last, inserted]
-        List<Payload> masterStream = client.setMode(Mode.MASTER)
+        List<Variant> masterStream = client.setMode(Mode.MASTER)
                 .streamList(key, keyHint)
                 .get();
         assertEquals(3, masterStream.size());
@@ -1951,7 +1950,7 @@ public class ListOperationsTest extends TestBaseCluster {
         String key = "streamRangeFullRange" + UUID.randomUUID();
 
         // Create list with 5 elements
-        List<Payload> initialData = new ArrayList<>();
+        List<Variant> initialData = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             initialData.add(Variant.ofBytes(String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
         }
@@ -1961,7 +1960,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(500); // replication wait
 
         // Write on BACKUP: streamElementInRangeUnordered(key, LIST, 0, 4)
-        List<Payload> rangeData = client.setMode(Mode.BACKUP)
+        List<Variant> rangeData = client.setMode(Mode.BACKUP)
                 .streamElementInRangeUnordered(key, keyHint, ContainerType.LIST, 0, 4)
                 .get();
         assertNotNull(rangeData);
@@ -1970,7 +1969,7 @@ public class ListOperationsTest extends TestBaseCluster {
         Thread.sleep(300); // replication delay
 
         // Verify on MASTER: streamElementInRangeUnordered returns 5 elements
-        List<Payload> masterRange = client.setMode(Mode.MASTER)
+        List<Variant> masterRange = client.setMode(Mode.MASTER)
                 .streamElementInRangeUnordered(key, keyHint, ContainerType.LIST, 0, 4)
                 .get();
         assertNotNull(masterRange);
@@ -2376,78 +2375,5 @@ public class ListOperationsTest extends TestBaseCluster {
             Thread.currentThread().interrupt();
             fail(e.getMessage());
         }
-    }
-
-    @Test
-    @DisplayName("RemoveFromContainer removes element by value from list")
-    void testRemoveFromContainer() throws ExecutionException, InterruptedException {
-        String vecKey = "list_remove" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
-                Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("item3".getBytes(StandardCharsets.UTF_8))
-        );
-
-        // Create list
-        KeyHintData hint = client.createList(vecKey, initialData)
-                .get();
-        assertNotNull(hint);
-
-        Thread.sleep(500); // replication wait
-
-        // Write on BACKUP: removeFromContainer
-        Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint,
-                        "item1".getBytes(StandardCharsets.UTF_8))
-                .get();
-        assertEquals(1, removed, "1 element should be removed");
-
-        Thread.sleep(300); // replication delay
-
-        // Verify on BACKUP: streamList returns 2 elements
-        List<Payload> result = client.setMode(Mode.BACKUP)
-                .streamList(vecKey, hint)
-                .get();
-        assertEquals(2, result.size(), "List must contain 2 elements");
-
-        Thread.sleep(300); // replication delay
-
-        // Verify on MASTER: streamList returns 2 elements
-        List<Payload> masterResult = client.setMode(Mode.MASTER)
-                .streamList(vecKey, hint)
-                .get();
-        assertEquals(2, masterResult.size(), "List must contain 2 elements on master");
-    }
-
-    @Test
-    @DisplayName("RemoveFromContainer returns 0 if element does not exist")
-    void testRemoveFromContainerNonExistent() throws ExecutionException, InterruptedException {
-        String vecKey = "list_remove_nonexistent" + UUID.randomUUID();
-        List<Payload> initialData = Arrays.asList(
-                Variant.ofBytes("item1".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("item2".getBytes(StandardCharsets.UTF_8))
-        );
-
-        // Create list
-        KeyHintData hint = client.createList(vecKey, initialData)
-                .get();
-        assertNotNull(hint);
-
-        Thread.sleep(500); // replication wait
-
-        // Write on BACKUP: removeFromContainer non-existent element
-        Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint,
-                        "item123".getBytes(StandardCharsets.UTF_8))
-                .get();
-        assertEquals(0, removed, "0 elements should be removed (element not found)");
-
-        Thread.sleep(300); // replication delay
-
-        // Verify on BACKUP: streamList returns 2 elements (unchanged)
-        List<Payload> result = client.setMode(Mode.BACKUP)
-                .streamList(vecKey, hint)
-                .get();
-        assertEquals(2, result.size());
     }
 }

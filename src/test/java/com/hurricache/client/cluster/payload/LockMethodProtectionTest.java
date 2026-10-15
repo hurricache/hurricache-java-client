@@ -35,7 +35,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("GLOBAL Lock: Blocks Unary Get/Update/Remove from others - Create on Master")
     void testGlobalLockUnaryProtectionCreateOnMaster() throws Exception {
         // Ensure object exists - Create on master
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
@@ -61,7 +61,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
 
         // Ensure object exists - Create on backup
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
@@ -84,12 +84,12 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @Test
     @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Master")
     void testGlobalLockCollectionProtectionCreateOnMaster() throws Exception {
-        byte[] listKey = createLargePayload(KEY_SIZE);
+        byte[] listKey = createLargePayloadKey(KEY_SIZE);
 
         // Create on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createList(listKey,
-                            List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5) )
+                            List.of(createLargePayload(VALUE_SIZE)), Duration.ofMinutes(5) )
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -102,19 +102,19 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList(Payload.of(createLargePayload(VALUE_SIZE))),
+                                                                                  Collections.singletonList(createLargePayload(VALUE_SIZE)),
                                                                                   intruderId, Duration.ofSeconds(30)).get());
     }
 
     @Test
     @DisplayName("GLOBAL Lock: Blocks Collection operations from others - Create on Backup")
     void testGlobalLockCollectionProtectionCreateOnBackup() throws Exception {
-        byte[] listKey = createLargePayload(KEY_SIZE);
+        byte[] listKey = createLargePayloadKey(KEY_SIZE);
 
         // Create on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createList(listKey,
-                            List.of(Payload.of(createLargePayload(VALUE_SIZE))), Duration.ofMinutes(5) )
+                            List.of(createLargePayload(VALUE_SIZE)), Duration.ofMinutes(5) )
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -127,7 +127,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList(Payload.of(createLargePayload(VALUE_SIZE))),
+                                                                                  Collections.singletonList(createLargePayload(VALUE_SIZE)),
                                                                                   intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
     }
 
@@ -137,7 +137,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Master")
     void testWriteLockProtectionCreateOnMaster() throws Exception {
         // Create on master
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
@@ -148,14 +148,14 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get();
+        byte[] data = client.setMode(Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get().requireBytes();
         assertNotNull(data);
 
         // 2. Intruder Write - SHOULD FAIL
         assertPermissionDenied(() -> client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get();
+        byte[] ownerUpdate = client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get().requireBytes();
         assertNotNull(ownerUpdate);
     }
 
@@ -163,7 +163,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write - Create on Backup")
     void testWriteLockProtectionCreateOnBackup() throws Exception {
         // Create on backup
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
@@ -174,14 +174,14 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(Mode.MASTER).getValue(testKey1, keyHint, intruderId).get();
+        byte[] data = client.setMode(Mode.MASTER).getValue(testKey1, keyHint, intruderId).get().requireBytes();
         assertNotNull(data);
 
         // 2. Intruder Write - SHOULD FAIL
         assertPermissionDenied(() -> client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get();
+        byte[] ownerUpdate = client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get().requireBytes();
         assertNotNull(ownerUpdate);
     }
 
@@ -191,7 +191,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Master")
     void testReadLockProtectionCreateOnMaster() throws Exception {
         // Create on master
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
@@ -202,7 +202,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get());
+        assertNotNull(client.setMode(Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get().requireBytes());
 
         // 2. Intruder Write - SHOULD FAIL
         assertPermissionDenied(() -> client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
@@ -215,7 +215,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("READ Lock: Blocks all Writes but allows all Reads - Create on Backup")
     void testReadLockProtectionCreateOnBackup() throws Exception {
         // Create on backup
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
@@ -226,7 +226,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(Mode.MASTER).getValue(testKey1, keyHint, intruderId).get());
+        assertNotNull(client.setMode(Mode.MASTER).getValue(testKey1, keyHint, intruderId).get().requireBytes());
 
         // 2. Intruder Write - SHOULD FAIL
         assertPermissionDenied(() -> client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
@@ -242,7 +242,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     void testLockCompatibilityCreateOnMaster() throws Exception {
 
         // Create on master
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
@@ -265,7 +265,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
     @DisplayName("Compatibility: Cannot acquire WRITE if READ exists - Create on Backup")
     void testLockCompatibilityCreateOnBackup() throws Exception {
         // Create on backup
-        byte[] testKey1 = createLargePayload(KEY_SIZE);
+        byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
                 .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
                 .get();

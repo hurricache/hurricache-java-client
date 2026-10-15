@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceCommon,HurriCacheClientMapBased,HurriCacheClientWeightBasedContainers{
     /**
-     * Creates an OrderedMap container where keys are instance of {@link OrderedPayload}.
+     * Creates an OrderedMap container where keys are instance of {@link OrderedVariant}.
      *
      * @param key          target container key in byte array form.
      * @param keyHint      optional key routing hint.

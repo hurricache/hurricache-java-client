@@ -32,7 +32,7 @@ public class RawValuesTestImproved extends AdvancedTest {
             }
         }, (pair, goodCounter) -> {
             Pair<String, String> p = (Pair<String, String>) pair;
-            client.createKeyValue(p.first, Variant.ofBytes(p.second.getBytes())))).thenAccept(keyhint -> {
+            client.createKeyValue(p.first, Variant.ofBytes(p.second.getBytes())).thenAccept(keyhint -> {
                 keyValueMap.put(p.first, Pair.of(p.second, keyhint));
                 goodCounter.incrementAndGet();
             });

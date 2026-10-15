@@ -238,7 +238,6 @@ message AddToValRequest {
 
 message RemoveFromContainerRequest {
   Key key = 1;
-  optional ContainerType type = 2;
   repeated Value values = 3;                 // List of values to remove
   repeated Key keys = 4;                     // List of keys to remove
 }
@@ -343,7 +342,7 @@ message BatchCommand {
   optional KeyRangeRequest key_range_request = 10;
   optional AddToRequest add_to_list_request = 11;
   optional AddToValRequest add_to_pos_by_val = 14;
-  optional RemoveFromContainerRequest remove_from_container = 15;
+  optional RemoveFromContainerRequest remove_from_container_by_key_value = 15;
   optional ContainerGetRequest remove_from_container_by_key = 16;
   optional UpdateContainerRequest update_in_container_by_key = 17;
 }
@@ -457,7 +456,7 @@ service HurriCacheGrpcService {
   rpc deleteTail(GetRequest) returns (IntResponse) {}          // VECTOR, LIST
   rpc deleteElementAtPosition(KeyPositionRequest) returns (IntResponse) {} // VECTOR, LIST, ORDERED_SET
   rpc deleteFromContainerByKeyValue(RemoveFromContainerRequest) returns (IntResponse) {} // SET, VECTOR, LIST
-  rpc removeInContainerByKey(ContainerGetRequest) returns (IntResponse) {} // MAP, ORDERED_MAP, SET, ORDERED_SET
+  rpc deleteFromContainerByKey(ContainerGetRequest) returns (IntResponse) {} // MAP, ORDERED_MAP, SET, ORDERED_SET
 
   // --------------------------------------------------------------------------
   // Insertion Operations

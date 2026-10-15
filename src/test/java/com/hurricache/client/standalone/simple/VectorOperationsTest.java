@@ -1330,7 +1330,7 @@ public class VectorOperationsTest extends TestBase {
         assertNotNull(hint);
 
         // Remove all elements matching key "item1" (3 items)
-        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, "item1".getBytes(StandardCharsets.UTF_8)).get();
+        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, v("item1")).get();
         assertEquals(3, removed, "3 elements with the same key must be removed");
 
         List<Variant> result = client.streamVector(vecKey, hint).get();
@@ -1350,7 +1350,7 @@ public class VectorOperationsTest extends TestBase {
         KeyHintData hint = client.createVector(vecKey, initialData).get();
         assertNotNull(hint);
 
-        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, "item123".getBytes(StandardCharsets.UTF_8)).get();
+        Integer removed = client.removeFromContainer(vecKey.getBytes(StandardCharsets.UTF_8), hint, v("item123")).get();
         assertEquals(0, removed, "0 elements should be removed (element not found)");
     }
 }

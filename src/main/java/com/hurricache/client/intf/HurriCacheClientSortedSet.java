@@ -11,7 +11,7 @@ import com.hurricache.client.intf.Variant;
 
 public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceCommon{
     /**
-     * Creates an OrderedSet container containing weight/score-ranked {@link OrderedPayload} elements.
+     * Creates an OrderedSet container containing weight/score-ranked {@link OrderedVariant} elements.
      *
      * @param key          target container key in byte array form.
      * @param keyHint      optional key routing hint.
@@ -21,24 +21,24 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
      */
-    CompletableFuture<KeyHintData> createOrderedSet(byte[] key, KeyHintData keyHint, List<OrderedPayload> initialValue,
+    CompletableFuture<KeyHintData> createOrderedSet(byte[] key, KeyHintData keyHint, List<OrderedVariant> initialValue,
                                                     Duration ttl,
                                                     int clientId,
                                                     Duration timeout);
 
     default CompletableFuture<KeyHintData> createOrderedSet(String key, KeyHintData keyHint,
-                                                            List<OrderedPayload> initialValue,
+                                                            List<OrderedVariant> initialValue,
                                                             Duration ttl, int clientId, Duration timeout) {
         return createOrderedSet(serializeKey(key), keyHint, initialValue, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<KeyHintData> createOrderedSet(String key, List<OrderedPayload> initialValue) {
+    default CompletableFuture<KeyHintData> createOrderedSet(String key, List<OrderedVariant> initialValue) {
         return createOrderedSet(serializeKey(key), null, initialValue == null
         ? Collections.emptyList()
         : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createOrderedSet(byte[] key, List<OrderedPayload> initialValue) {
+    default CompletableFuture<KeyHintData> createOrderedSet(byte[] key, List<OrderedVariant> initialValue) {
         return createOrderedSet(key, null, initialValue == null
         ? Collections.emptyList()
         : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
@@ -58,7 +58,7 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} containing list of ordered payload elements in range.
      */
-    CompletableFuture<List<OrderedPayload>> streamElementInRangeOrderedSet(byte[] key,
+    CompletableFuture<List<OrderedVariant>> streamElementInRangeOrderedSet(byte[] key,
                                                                            KeyHintData hint,
                                                                            long startWeight,
                                                                            long endWeight,
@@ -66,7 +66,7 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
                                                                            int clientId,
                                                                            Duration timeout);
 
-    default CompletableFuture<List<OrderedPayload>> streamElementInRangeOrderedSet(String key,
+    default CompletableFuture<List<OrderedVariant>> streamElementInRangeOrderedSet(String key,
                                                                                    KeyHintData hint,
                                                                                    long startWeight,
                                                                                    long endWeight,
@@ -76,7 +76,7 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
         return streamElementInRangeOrderedSet(serializeKey(key), hint, startWeight, endWeight, reverse, clientId, timeout);
     }
 
-    default CompletableFuture<List<OrderedPayload>> streamElementInRangeOrdered(String key,
+    default CompletableFuture<List<OrderedVariant>> streamElementInRangeOrdered(String key,
                                                                                 ContainerType containerType,
                                                                                 long startWeight,
                                                                                 long endWeight) {
@@ -89,7 +89,7 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
                                               getDefaultTimeout());
     }
 
-    default CompletableFuture<List<OrderedPayload>> streamElementInRangeOrderedSet(byte[] key,
+    default CompletableFuture<List<OrderedVariant>> streamElementInRangeOrderedSet(byte[] key,
                                                                                    KeyHintData hint,
                                                                                    long startWeight,
                                                                                    long endWeight,
@@ -98,7 +98,7 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
                                               getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<OrderedPayload>> streamElementInRangeOrderedSet(String key,
+    default CompletableFuture<List<OrderedVariant>> streamElementInRangeOrderedSet(String key,
                                                                                    KeyHintData hint,
                                                                                    long startWeight,
                                                                                    long endWeight,
@@ -107,7 +107,7 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
                                               getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<OrderedPayload>> streamElementInRangeOrderedSet(byte[] key,
+    default CompletableFuture<List<OrderedVariant>> streamElementInRangeOrderedSet(byte[] key,
                                                                                    KeyHintData hint,
                                                                                    long startWeight,
                                                                                    long endWeight,
@@ -126,35 +126,35 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing list of all ordered payload elements.
      */
-    CompletableFuture<List<Variant>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId,
+    CompletableFuture<List<OrderedVariant>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId,
                                                       Duration timeout);
 
-    default CompletableFuture<List<Variant>> streamOrderedSet(String key, KeyHintData hint, int clientId,
+    default CompletableFuture<List<OrderedVariant>> streamOrderedSet(String key, KeyHintData hint, int clientId,
                                                               Duration timeout) {
         return streamOrderedSet(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<List<Variant>> streamOrderedSet(String key) {
+    default CompletableFuture<List<OrderedVariant>> streamOrderedSet(String key) {
         return streamOrderedSet(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamOrderedSet(byte[] key) {
+    default CompletableFuture<List<OrderedVariant>> streamOrderedSet(byte[] key) {
         return streamOrderedSet(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamOrderedSet(String key, KeyHintData hint) {
+    default CompletableFuture<List<OrderedVariant>> streamOrderedSet(String key, KeyHintData hint) {
         return streamOrderedSet(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamOrderedSet(byte[] key, KeyHintData hint) {
+    default CompletableFuture<List<OrderedVariant>> streamOrderedSet(byte[] key, KeyHintData hint) {
         return streamOrderedSet(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamOrderedSet(String key, KeyHintData hint, int clientId) {
+    default CompletableFuture<List<OrderedVariant>> streamOrderedSet(String key, KeyHintData hint, int clientId) {
         return streamOrderedSet(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId) {
+    default CompletableFuture<List<OrderedVariant>> streamOrderedSet(byte[] key, KeyHintData hint, int clientId) {
         return streamOrderedSet(key, hint, clientId, getDefaultTimeout());
     }
 }

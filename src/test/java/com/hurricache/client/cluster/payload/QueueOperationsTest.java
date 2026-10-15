@@ -21,13 +21,13 @@ public class QueueOperationsTest extends TestBaseCluster {
 
     @Test
     void testQueueLifecycleCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] qKey = createLargePayload(KEY_SIZE);
-        byte[] first = createLargePayload(VALUE_SIZE);
-        byte[] second = createLargePayload(VALUE_SIZE);
+        byte[] qKey = createLargePayloadKey(KEY_SIZE);
+        byte[] first = createLargePayloadKey(VALUE_SIZE);
+        byte[] second = createLargePayloadKey(VALUE_SIZE);
 
         // 1. createQueue with initial value on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createQueue(qKey, List.of(Payload.of(first)))
+                .createQueue(qKey, List.of(Variant.ofBytes(first)))
                 .get();
         Assertions.assertNotNull(keyHint);
         // Allow cache to replicate data inside cluster
@@ -35,41 +35,41 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // 2. addElementToTail on backup
         Integer added = client.setMode(Mode.BACKUP)
-                .addElementToTail(qKey, keyHint, List.of(Payload.of(second)))
+                .addElementToTail(qKey, keyHint, List.of(Variant.ofBytes(second)))
                 .get();
 
         Assertions.assertTrue(added == 1);
 
         // 3. getHead (Peek without removing) on backup
-        Payload headData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
+        Variant headData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head) on backup
-        Payload popped = client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get();
+        Variant popped = client.setMode(Mode.BACKUP).getAndDeleteHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message on backup
-        Payload newHeadData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
+        Variant newHeadData = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data) on backup
-        boolean removed = client.setMode(Mode.BACKUP).deleteHead(qKey, keyHint).get();
-        Assertions.assertTrue(removed);
+        Integer removed = client.setMode(Mode.BACKUP).deleteHead(qKey, keyHint).get();
+        Assertions.assertEquals(1, removed);
 
         // 7. Verify Queue is now empty or key doesn't exist on backup
-        Payload empty = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
+        Variant empty = client.setMode(Mode.BACKUP).getHead(qKey, keyHint).get();
         Assertions.assertTrue(empty == null || empty.bytesValue() == null || empty.bytesValue().length == 0);
     }
 
     @Test
     void testQueueLifecycleCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] qKey = createLargePayload(KEY_SIZE);
-        byte[] first = createLargePayload(VALUE_SIZE);
-        byte[] second = createLargePayload(VALUE_SIZE);
+        byte[] qKey = createLargePayloadKey(KEY_SIZE);
+        byte[] first = createLargePayloadKey(VALUE_SIZE);
+        byte[] second = createLargePayloadKey(VALUE_SIZE);
 
         // 1. createQueue with initial value on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createQueue(qKey, List.of(Payload.of(first)))
+                .createQueue(qKey, List.of(Variant.ofBytes(first)))
                 .get();
         Assertions.assertNotNull(keyHint);
         // Allow cache to replicate data inside cluster
@@ -77,47 +77,47 @@ public class QueueOperationsTest extends TestBaseCluster {
 
         // 2. addElementToTail on master
         Integer added = client.setMode(Mode.MASTER)
-                .addElementToTail(qKey, keyHint, List.of(Payload.of(second)))
+                .addElementToTail(qKey, keyHint, List.of(Variant.ofBytes(second)))
                 .get();
 
         Assertions.assertTrue(added == 1);
 
         // 3. getHead (Peek without removing) on master
-        Payload headData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
+        Variant headData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, headData.bytesValue());
 
         // 4. getAndRemoveFront (Atomic pop from head) on master
-        Payload popped = client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get();
+        Variant popped = client.setMode(Mode.MASTER).getAndDeleteHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(first, popped.bytesValue());
 
         // 5. Verify the new head is the second message on master
-        Payload newHeadData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
+        Variant newHeadData = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertArrayEquals(second, newHeadData.bytesValue());
 
         // 6. removeHead (Delete without returning data) on master
-        boolean removed = client.setMode(Mode.MASTER).deleteHead(qKey, keyHint).get();
-        Assertions.assertTrue(removed);
+        Integer removed = client.setMode(Mode.MASTER).deleteHead(qKey, keyHint).get();
+        Assertions.assertEquals(1, removed);
 
         // 7. Verify Queue is now empty or key doesn't exist on master
-        Payload empty = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
+        Variant empty = client.setMode(Mode.MASTER).getHead(qKey, keyHint).get();
         Assertions.assertTrue(empty == null || empty.bytesValue() == null || empty.bytesValue().length == 0);
     }
 
     @Test
     void testQueueOrderPersistenceCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] qKey = createLargePayload(KEY_SIZE);
+        byte[] qKey = createLargePayloadKey(KEY_SIZE);
         // Create on master
-        byte[] initial = createLargePayload(VALUE_SIZE);
+        byte[] initial = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createQueue(qKey, List.of(Payload.of(initial)))
+                .createQueue(qKey, List.of(Variant.ofBytes(initial)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on backup
-        byte[] first = createLargePayload(VALUE_SIZE);
-        byte[] second = createLargePayload(VALUE_SIZE);
+        byte[] first = createLargePayloadKey(VALUE_SIZE);
+        byte[] second = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.BACKUP)
-                .addElementToTail(qKey, keyHint, Arrays.asList(Payload.of(first), Payload.of(second)))
+                .addElementToTail(qKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
                 .get();
 
         // FIFO verification: 1 -> 2 -> 3
@@ -128,19 +128,19 @@ public class QueueOperationsTest extends TestBaseCluster {
 
     @Test
     void testQueueOrderPersistenceCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] qKey = createLargePayload(KEY_SIZE);
+        byte[] qKey = createLargePayloadKey(KEY_SIZE);
         // Create on backup
-        byte[] initial = createLargePayload(VALUE_SIZE);
+        byte[] initial = createLargePayloadKey(VALUE_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createQueue(qKey, List.of(Payload.of(initial)))
+                .createQueue(qKey, List.of(Variant.ofBytes(initial)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
         // Add on master
-        byte[] first = createLargePayload(VALUE_SIZE);
-        byte[] second = createLargePayload(VALUE_SIZE);
+        byte[] first = createLargePayloadKey(VALUE_SIZE);
+        byte[] second = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.MASTER)
-                .addElementToTail(qKey, keyHint, Arrays.asList(Payload.of(first), Payload.of(second)))
+                .addElementToTail(qKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
                 .get();
 
         // FIFO verification: 1 -> 2 -> 3
@@ -151,11 +151,11 @@ public class QueueOperationsTest extends TestBaseCluster {
 
     @Test
     void testQueueOperationsOnMissingKey() {
-        byte[] qKey = createLargePayload(KEY_SIZE);
+        byte[] qKey = createLargePayloadKey(KEY_SIZE);
 
         // Test addElementToTail on non-existent key
         try {
-            client.addElementToTail(qKey, null, List.of(Payload.of(createLargePayload(VALUE_SIZE)))).get();
+            client.addElementToTail(qKey, null, List.of(createLargePayload(VALUE_SIZE))).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());

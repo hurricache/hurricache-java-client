@@ -1,6 +1,7 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
@@ -33,14 +34,16 @@ public class AtomicOperationsTest extends TestBase {
         String testKey = "atomicCreateStoreKey" + UUID.randomUUID();
         byte[] keyBytes = testKey.getBytes(StandardCharsets.UTF_8);
 
-        Assertions.assertNotNull(client.atomicCreate(keyBytes, 42L).get());
+        long value = 100L;
+        Assertions.assertNotNull(client.createKeyValue(keyBytes, Variant.ofInt(value)).get());
         Thread.sleep(150);
+        Variant variant = client.getValue(keyBytes).get();
 
-        Assertions.assertNotNull(client.atomicStore(keyBytes, 100L).get());
+        Assertions.assertEquals(variant.longValue(), value);
 
         Thread.sleep(150);
         long current = client.atomicOr(keyBytes, null, 0L).get();
-        Assertions.assertEquals(100L, current);
+        Assertions.assertEquals(value, current);
     }
 
     @Test
@@ -48,11 +51,12 @@ public class AtomicOperationsTest extends TestBase {
         String testKey = "atomicExchangeKey" + UUID.randomUUID();
         byte[] keyBytes = testKey.getBytes(StandardCharsets.UTF_8);
 
-        Assertions.assertNotNull(client.atomicCreate(keyBytes, 10L).get());
+        long value = 10L;
+        Assertions.assertNotNull(client.createKeyValue(keyBytes, Variant.ofInt(value)).get());
         Thread.sleep(150);
 
-        long oldValue = client.atomicExchange(keyBytes, 20L).get();
-        Assertions.assertEquals(10L, oldValue);
+        Number oldValue = client.atomicExchange(keyBytes, 20L).get();
+        Assertions.assertEquals(value, oldValue.longValue());
 
         Thread.sleep(150);
         long current = client.atomicOr(keyBytes, null, 0L).get();
@@ -64,14 +68,16 @@ public class AtomicOperationsTest extends TestBase {
         String testKey = "atomicAddSubKey" + UUID.randomUUID();
         byte[] keyBytes = testKey.getBytes(StandardCharsets.UTF_8);
 
-        Assertions.assertNotNull(client.atomicCreate(keyBytes, 50L).get());
+        long value = 50L;
+        Assertions.assertNotNull(client.createKeyValue(keyBytes, Variant.ofInt(value)).get());
+        Thread.sleep(150);
         Thread.sleep(150);
 
-        long afterAdd = client.atomicAdd(keyBytes, 25L).get();
-        Assertions.assertEquals(50L, afterAdd);
+        Number afterAdd = client.atomicAdd(keyBytes, 25L).get();
+        Assertions.assertEquals(50L, afterAdd.longValue());
 
-        long afterSub = client.atomicSub(keyBytes, 10L).get();
-        Assertions.assertEquals(75L, afterSub);
+        Number afterSub = client.atomicSub(keyBytes, 10L).get();
+        Assertions.assertEquals(75L, afterSub.longValue());
 
         Thread.sleep(150);
         long backupValue = client.atomicOr(keyBytes, null, 0L).get();

@@ -1,5 +1,8 @@
 package com.hurricache.client.intf;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 /**
  * Variant — универсальный тип возврата, может содержать int, double или byte[].
  * Тип определяется на основе ValueType из протокола.
@@ -62,7 +65,7 @@ public final class Variant {
         return bytesValue;
     }
 
-    public long intValue() {
+    public long longValue() {
         return intValue;
     }
 
@@ -112,5 +115,22 @@ public final class Variant {
             default:
                 return "Variant{unknown}";
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Variant variant = (Variant) o;
+        return intValue == variant.intValue
+               && Double.compare(doubleValue, variant.doubleValue) == 0
+               && type == variant.type
+               && Objects.deepEquals(bytesValue, variant.bytesValue);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, Arrays.hashCode(bytesValue), intValue, doubleValue);
     }
 }

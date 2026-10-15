@@ -4,8 +4,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import com.hurricache.client.intf.Variant;
-
 public interface HurriCacheClientWeightBasedContainers extends HurriCacheClientInterfaceCommon{
     /**
      * Retrieves an element located at a specific index/position.
@@ -67,33 +65,33 @@ public interface HurriCacheClientWeightBasedContainers extends HurriCacheClientI
      */
     CompletableFuture<Integer> addElementWithWeight(byte[] key,
                                                     KeyHintData hint,
-                                                    List<OrderedPayload> data,
+                                                    List<OrderedVariant> data,
                                                     int clientId,
                                                     Duration timeout);
 
     default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint,
-                                                            List<OrderedPayload> data,
+                                                            List<OrderedVariant> data,
                                                             int clientId, Duration timeout) {
         return addElementWithWeight(serializeKey(key), hint, data,  clientId, timeout);
     }
 
     default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint,
-                                                            List<OrderedPayload> data) {
+                                                            List<OrderedVariant> data) {
         return addElementWithWeight(serializeKey(key), hint, data,  getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint,
-                                                            List<OrderedPayload> data) {
+                                                            List<OrderedVariant> data) {
         return addElementWithWeight(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint,
-                                                            List<OrderedPayload> data, int clientId) {
+                                                            List<OrderedVariant> data, int clientId) {
         return addElementWithWeight(serializeKey(key), hint, data,  clientId, getDefaultTimeout());
     }
 
     default CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint,
-                                                            List<OrderedPayload> data, int clientId) {
+                                                            List<OrderedVariant> data, int clientId) {
         return addElementWithWeight(key, hint, data, clientId, getDefaultTimeout());
     }
 
@@ -115,7 +113,7 @@ public interface HurriCacheClientWeightBasedContainers extends HurriCacheClientI
                                                                   int clientId,
                                                                   Duration timeout) {
         // Default implementation: add keys without explicit values (ORDERED_SET behavior)
-        return addElementWithWeight(key, hint, keys, clientId, timeout);
+        return addElementWithWeightValues(key, hint, keys,values, clientId, timeout);
     }
 
     default CompletableFuture<Integer> addElementWithWeightValues(String key, KeyHintData hint,

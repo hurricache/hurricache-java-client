@@ -34,19 +34,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     private static final int INTRUDER_CLIENT_ID = 200;
     private static final long REPLICATION_DELAY_MS = 150;
 
-    private OrderedPayload op(Long order, String val) {
-        return OrderedVariant.ofBytes(order, val.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private Payload p(String val) {
-        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private String str(Payload payload) {
-        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
-    }
-
-    // =========================================================================
+    
+        // =========================================================================
     // 1. CREATE ORDERED MAP OPERATIONS
     // =========================================================================
 
@@ -81,9 +70,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testCreateOrderedMapWithData() throws ExecutionException, InterruptedException {
         String key = "orderedMapWithData" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3")
         );
 
         // Create ordered map
@@ -99,23 +88,23 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         assertEquals(3, masterSize);
 
         // Verify on MASTER: getContainerValue returns correct values
-        byte[] masterVal1 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant masterVal1 = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
         assertNotNull(masterVal1);
-        assertEquals("v1", new String(masterVal1, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(masterVal1.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] masterVal2 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k2"))
+        Variant masterVal2 = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k2"))
                 .get();
         assertNotNull(masterVal2);
-        assertEquals("v2", new String(masterVal2, StandardCharsets.UTF_8));
+        assertEquals("v2", new String(masterVal2.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] masterVal3 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k3"))
+        Variant masterVal3 = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k3"))
                 .get();
         assertNotNull(masterVal3);
-        assertEquals("v3", new String(masterVal3, StandardCharsets.UTF_8));
+        assertEquals("v3", new String(masterVal3.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getSize returns 3
         Integer backupSize = client.setMode(Mode.BACKUP)
@@ -124,23 +113,23 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         assertEquals(3, backupSize);
 
         // Verify on BACKUP: getContainerValue returns correct values
-        byte[] backupVal1 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant backupVal1 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
         assertNotNull(backupVal1);
-        assertEquals("v1", new String(backupVal1, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(backupVal1.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] backupVal2 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k2"))
+        Variant backupVal2 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k2"))
                 .get();
         assertNotNull(backupVal2);
-        assertEquals("v2", new String(backupVal2, StandardCharsets.UTF_8));
+        assertEquals("v2", new String(backupVal2.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] backupVal3 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k3"))
+        Variant backupVal3 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k3"))
                 .get();
         assertNotNull(backupVal3);
-        assertEquals("v3", new String(backupVal3, StandardCharsets.UTF_8));
+        assertEquals("v3", new String(backupVal3.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -151,7 +140,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         Map<OrderedPayload, Variant> payloads = new java.util.LinkedHashMap<>();
         for (int i = 0; i < elementCount; i++) {
-            payloads.put(op((long) i, "key_" + i), p("value_" + i));
+            payloads.put(op((long) i, "key_" + i), v("value_" + i));
         }
 
         // Create large ordered map
@@ -173,30 +162,30 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         assertEquals(elementCount, backupSize, "Expected " + elementCount + " elements on backup");
 
         // Verify integrity: first and last elements match on MASTER
-        byte[] masterFirst = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("key_0"))
+        Variant masterFirst = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("key_0"))
                 .get();
         assertNotNull(masterFirst);
-        assertEquals("value_0", new String(masterFirst, StandardCharsets.UTF_8));
+        assertEquals("value_0", new String(masterFirst.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] masterLast = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("key_" + (elementCount - 1)))
+        Variant masterLast = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("key_" + (elementCount - 1)))
                 .get();
         assertNotNull(masterLast);
-        assertEquals("value_" + (elementCount - 1), new String(masterLast, StandardCharsets.UTF_8));
+        assertEquals("value_" + (elementCount - 1), new String(masterLast.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify integrity: first and last elements match on BACKUP
-        byte[] backupFirst = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("key_0"))
+        Variant backupFirst = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("key_0"))
                 .get();
         assertNotNull(backupFirst);
-        assertEquals("value_0", new String(backupFirst, StandardCharsets.UTF_8));
+        assertEquals("value_0", new String(backupFirst.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] backupLast = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("key_" + (elementCount - 1)))
+        Variant backupLast = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("key_" + (elementCount - 1)))
                 .get();
         assertNotNull(backupLast);
-        assertEquals("value_" + (elementCount - 1), new String(backupLast, StandardCharsets.UTF_8));
+        assertEquals("value_" + (elementCount - 1), new String(backupLast.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -208,7 +197,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testAddElementOrderedMapOnMaster() throws ExecutionException, InterruptedException {
         String key = "addElementMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -233,9 +222,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
                 op(2L, "k2"),
                 op(3L, "k3")
         );
-        List<Payload> newValues = List.of(
-                p("v2"),
-                p("v3")
+        List<Variant> newValues = List.of(
+                v("v2"),
+                v("v3")
         );
 
         Integer added = client.setMode(Mode.MASTER)
@@ -258,17 +247,17 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         assertEquals(3, backupSize);
 
         // Verify values on BACKUP
-        byte[] backupVal2 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k2"))
+        Variant backupVal2 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k2"))
                 .get();
         assertNotNull(backupVal2);
-        assertEquals("v2", new String(backupVal2, StandardCharsets.UTF_8));
+        assertEquals("v2", new String(backupVal2.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] backupVal3 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k3"))
+        Variant backupVal3 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k3"))
                 .get();
         assertNotNull(backupVal3);
-        assertEquals("v3", new String(backupVal3, StandardCharsets.UTF_8));
+        assertEquals("v3", new String(backupVal3.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -276,7 +265,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testAddElementOrderedMapOnBackup() throws ExecutionException, InterruptedException {
         String key = "addElementBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -301,9 +290,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
                 op(2L, "k2"),
                 op(3L, "k3")
         );
-        List<Payload> newValues = List.of(
-                p("v2"),
-                p("v3")
+        List<Variant> newValues = List.of(
+                v("v2"),
+                v("v3")
         );
 
         Integer added = client.setMode(Mode.BACKUP)
@@ -326,17 +315,17 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         assertEquals(3, masterSize);
 
         // Verify values on MASTER
-        byte[] masterVal2 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k2"))
+        Variant masterVal2 = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k2"))
                 .get();
         assertNotNull(masterVal2);
-        assertEquals("v2", new String(masterVal2, StandardCharsets.UTF_8));
+        assertEquals("v2", new String(masterVal2.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] masterVal3 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k3"))
+        Variant masterVal3 = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k3"))
                 .get();
         assertNotNull(masterVal3);
-        assertEquals("v3", new String(masterVal3, StandardCharsets.UTF_8));
+        assertEquals("v3", new String(masterVal3.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -348,8 +337,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testUpdateContainerValueOnMaster() throws ExecutionException, InterruptedException {
         String key = "updateContainerValueOnMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2")
         );
 
         // Create ordered map
@@ -359,35 +348,35 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify initial state on both nodes
-        byte[] masterVal1 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant masterVal1 = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("v1", new String(masterVal1, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(masterVal1.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] backupVal1 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant backupVal1 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("v1", new String(backupVal1, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(backupVal1.bytesValue(), StandardCharsets.UTF_8));
 
         // updateContainerValue on MASTER
-        byte[] oldVal = client.setMode(Mode.MASTER)
-                .updateContainerValue(bytes(key), keyHint, bytes("k1"), bytes("updated_v1"))
+        Variant oldVal = client.setMode(Mode.MASTER)
+                .updateContainerValue(bytes(key), keyHint, bytes("k1"), Variant.ofBytes(bytes("updated_v1")))
                 .get();
-        assertEquals("v1", new String(oldVal, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(oldVal.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getContainerValue returns updated value
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] masterUpdated = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant masterUpdated = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("updated_v1", new String(masterUpdated, StandardCharsets.UTF_8));
+        assertEquals("updated_v1", new String(masterUpdated.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getContainerValue returns updated value (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] backupUpdated = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant backupUpdated = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("updated_v1", new String(backupUpdated, StandardCharsets.UTF_8));
+        assertEquals("updated_v1", new String(backupUpdated.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -395,8 +384,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testUpdateContainerValueOnBackup() throws ExecutionException, InterruptedException {
         String key = "updateContainerValueOnBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2")
         );
 
         // Create ordered map
@@ -406,35 +395,35 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify initial state on both nodes
-        byte[] masterVal1 = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant masterVal1 = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("v1", new String(masterVal1, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(masterVal1.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] backupVal1 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant backupVal1 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("v1", new String(backupVal1, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(backupVal1.bytesValue(), StandardCharsets.UTF_8));
 
         // updateContainerValue on BACKUP
-        byte[] oldVal = client.setMode(Mode.BACKUP)
-                .updateContainerValue(bytes(key), keyHint, bytes("k1"), bytes("updated_v1"))
+        Variant oldVal = client.setMode(Mode.BACKUP)
+                .updateContainerValue(bytes(key), keyHint, bytes("k1"), Variant.ofBytes(bytes("updated_v1")))
                 .get();
-        assertEquals("v1", new String(oldVal, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(oldVal.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: getContainerValue returns updated value
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] backupUpdated = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant backupUpdated = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("updated_v1", new String(backupUpdated, StandardCharsets.UTF_8));
+        assertEquals("updated_v1", new String(backupUpdated.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: getContainerValue returns updated value (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] masterUpdated = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant masterUpdated = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
-        assertEquals("updated_v1", new String(masterUpdated, StandardCharsets.UTF_8));
+        assertEquals("updated_v1", new String(masterUpdated.bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -442,7 +431,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testUpdateContainerValueNotFound() throws ExecutionException, InterruptedException {
         String key = "updateContainerValueNotFound" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -454,7 +443,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // updateContainerValue for non-existent key on BACKUP
         try {
             client.setMode(Mode.BACKUP)
-                    .updateContainerValue(bytes(key), keyHint, bytes("nonexistent"), bytes("new_value"))
+                    .updateContainerValue(bytes(key), keyHint, bytes("nonexistent"), Variant.ofBytes(bytes("new_value")))
                     .get();
             fail("Expected NOT_FOUND for non-existent key");
         } catch (ExecutionException e) {
@@ -466,7 +455,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
         try {
             client.setMode(Mode.MASTER)
-                    .updateContainerValue(bytes(key), keyHint, bytes("nonexistent"), bytes("new_value"))
+                    .updateContainerValue(bytes(key), keyHint, bytes("nonexistent"), Variant.ofBytes(bytes("new_value")))
                     .get();
             fail("Expected NOT_FOUND for non-existent key");
         } catch (ExecutionException e) {
@@ -484,8 +473,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testContainsContainerKeyOnMaster() throws ExecutionException, InterruptedException {
         String key = "containsKeyMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2")
         );
 
         // Create ordered map
@@ -496,26 +485,26 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // containsContainerKey on MASTER
         Boolean existsMaster = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, bytes("k1"))
+                .existInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
         assertTrue(existsMaster);
 
         // containsContainerKey on BACKUP (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
         Boolean existsBackup = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, bytes("k1"))
+                .existInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
         assertTrue(existsBackup);
 
         // Non-existent key on both nodes
         Boolean notExistsMaster = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, bytes("nonexistent"))
+                .existInContainerByKey(bytes(key), keyHint, bytes("nonexistent"))
                 .get();
         assertFalse(notExistsMaster);
 
         Thread.sleep(REPLICATION_DELAY_MS);
         Boolean notExistsBackup = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, bytes("nonexistent"))
+                .existInContainerByKey(bytes(key), keyHint, bytes("nonexistent"))
                 .get();
         assertFalse(notExistsBackup);
     }
@@ -525,8 +514,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testContainsContainerKeyOnBackup() throws ExecutionException, InterruptedException {
         String key = "containsKeyBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2")
         );
 
         // Create ordered map
@@ -537,142 +526,20 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // containsContainerKey on BACKUP
         Boolean existsBackup = client.setMode(Mode.BACKUP)
-                .containsContainerKey(bytes(key), keyHint, bytes("k1"))
+                .existInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
         assertTrue(existsBackup);
 
         // containsContainerKey on MASTER (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
         Boolean existsMaster = client.setMode(Mode.MASTER)
-                .containsContainerKey(bytes(key), keyHint, bytes("k1"))
+                .existInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
         assertTrue(existsMaster);
     }
 
     // =========================================================================
-    // 5. REMOVE FROM CONTAINER OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("removeFromContainer on master, verify replication to backup")
-    void testRemoveFromContainerOnMaster() throws ExecutionException, InterruptedException {
-        String key = "removeFromContainerMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3")
-        );
-
-        // Create ordered map
-        KeyHintData keyHint = client.createOrderedMap(key, initialData)
-                .get();
-
-        Thread.sleep(REPLICATION_DELAY_MS);
-
-        // Verify initial state
-        Integer masterInitial = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(3, masterInitial);
-
-        Integer backupInitial = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(3, backupInitial);
-
-        // removeFromContainer on MASTER
-        Integer removed = client.setMode(Mode.MASTER)
-                .removeFromContainer(bytes(key), keyHint, bytes("k1"))
-                .get();
-        assertTrue(removed >= 1);
-
-        // Verify on MASTER: getSize returns 2
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer masterSize = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, masterSize);
-
-        // Verify on BACKUP: getSize returns 2 (replicated)
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer backupSize = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, backupSize);
-
-        // Verify k1 is gone on BACKUP
-        try {
-            client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
-                    .get();
-            fail("Expected NOT_FOUND for removed key");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
-    }
-
-    @Test
-    @DisplayName("removeFromContainer on backup, verify replication to master")
-    void testRemoveFromContainerOnBackup() throws ExecutionException, InterruptedException {
-        String key = "removeFromContainerBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3")
-        );
-
-        // Create ordered map
-        KeyHintData keyHint = client.createOrderedMap(key, initialData)
-                .get();
-
-        Thread.sleep(REPLICATION_DELAY_MS);
-
-        // Verify initial state
-        Integer masterInitial = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(3, masterInitial);
-
-        Integer backupInitial = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(3, backupInitial);
-
-        // removeFromContainer on BACKUP
-        Integer removed = client.setMode(Mode.BACKUP)
-                .removeFromContainer(bytes(key), keyHint, bytes("k1"))
-                .get();
-        assertTrue(removed >= 1);
-
-        // Verify on BACKUP: getSize returns 2
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer backupSize = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, backupSize);
-
-        // Verify on MASTER: getSize returns 2 (replicated)
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer masterSize = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, masterSize);
-
-        // Verify k1 is gone on MASTER
-        try {
-            client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
-                    .get();
-            fail("Expected NOT_FOUND for removed key");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
-    }
-
-    // =========================================================================
-    // 6. REMOVE ELEMENT AT POSITION OPERATIONS
+    // 5. REMOVE ELEMENT AT POSITION OPERATIONS
     // =========================================================================
 
     @Test
@@ -680,10 +547,10 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPositionOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3"),
-                op(4L, "k4"), p("v4")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3"),
+                op(4L, "k4"), v("v4")
         );
 
         // Create ordered map
@@ -725,7 +592,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify k2, k3 are gone on BACKUP
         try {
             client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), keyHint, bytes("k2"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k2"))
                     .get();
             fail("Expected NOT_FOUND for removed element");
         } catch (ExecutionException e) {
@@ -739,10 +606,10 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPositionOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeElementAtPositionBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3"),
-                op(4L, "k4"), p("v4")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3"),
+                op(4L, "k4"), v("v4")
         );
 
         // Create ordered map
@@ -784,7 +651,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify k2, k3 are gone on MASTER
         try {
             client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), keyHint, bytes("k2"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k2"))
                     .get();
             fail("Expected NOT_FOUND for removed element");
         } catch (ExecutionException e) {
@@ -802,10 +669,10 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOnMaster() throws ExecutionException, InterruptedException {
         String key = "streamElementInRangeMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3"),
-                op(4L, "k4"), p("v4")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3"),
+                op(4L, "k4"), v("v4")
         );
 
         // Create ordered map
@@ -837,10 +704,10 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOnBackup() throws ExecutionException, InterruptedException {
         String key = "streamElementInRangeBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3"),
-                op(4L, "k4"), p("v4")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3"),
+                op(4L, "k4"), v("v4")
         );
 
         // Create ordered map
@@ -868,129 +735,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     }
 
     // =========================================================================
-    // 8. GET AND REMOVE CONTAINER VALUE OPERATIONS (write!)
-    // =========================================================================
-
-    @Test
-    @DisplayName("getAndRemoveContainerValue on master, verify replication to backup")
-    void testGetAndRemoveContainerValueOnMaster() throws ExecutionException, InterruptedException {
-        String key = "getAndRemoveMaster" + UUID.randomUUID();
-        Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
-        );
-
-        // Create ordered map
-        KeyHintData keyHint = client.createOrderedMap(key, initialData)
-                .get();
-
-        Thread.sleep(REPLICATION_DELAY_MS);
-
-        // Verify initial state
-        Integer masterInitial = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, masterInitial);
-
-        Integer backupInitial = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, backupInitial);
-
-        // getAndRemoveContainerValue on MASTER
-        byte[] removedValue = client.setMode(Mode.MASTER)
-                .getAndRemoveContainerValue(bytes(key), keyHint, bytes("k1"))
-                .get();
-        assertNotNull(removedValue);
-        assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
-
-        // Verify on MASTER: getSize returns 1
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer masterSize = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(1, masterSize);
-
-        // Verify on BACKUP: getSize returns 1 (replicated)
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer backupSize = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(1, backupSize);
-
-        // Verify k1 is gone on BACKUP
-        try {
-            client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
-                    .get();
-            fail("Expected NOT_FOUND for removed key");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
-    }
-
-    @Test
-    @DisplayName("getAndRemoveContainerValue on backup, verify replication to master")
-    void testGetAndRemoveContainerValueOnBackup() throws ExecutionException, InterruptedException {
-        String key = "getAndRemoveBackup" + UUID.randomUUID();
-        Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
-        );
-
-        // Create ordered map
-        KeyHintData keyHint = client.createOrderedMap(key, initialData)
-                .get();
-
-        Thread.sleep(REPLICATION_DELAY_MS);
-
-        // Verify initial state
-        Integer masterInitial = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, masterInitial);
-
-        Integer backupInitial = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(2, backupInitial);
-
-        // getAndRemoveContainerValue on BACKUP
-        byte[] removedValue = client.setMode(Mode.BACKUP)
-                .getAndRemoveContainerValue(bytes(key), keyHint, bytes("k1"))
-                .get();
-        assertNotNull(removedValue);
-        assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
-
-        // Verify on BACKUP: getSize returns 1
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer backupSize = client.setMode(Mode.BACKUP)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(1, backupSize);
-
-        // Verify on MASTER: getSize returns 1 (replicated)
-        Thread.sleep(REPLICATION_DELAY_MS);
-        Integer masterSize = client.setMode(Mode.MASTER)
-                .getSize(key, keyHint)
-                .get();
-        assertEquals(1, masterSize);
-
-        // Verify k1 is gone on MASTER
-        try {
-            client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
-                    .get();
-            fail("Expected NOT_FOUND for removed key");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
-    }
-
-    // =========================================================================
-    // 9. REMOVE CONTAINER OPERATIONS (write!)
+    // 8. REMOVE CONTAINER OPERATIONS (write!)
     // =========================================================================
 
     @Test
@@ -998,8 +743,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testRemoveContainerOnMaster() throws ExecutionException, InterruptedException {
         String key = "removeContainerMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2")
         );
 
         // Create ordered map
@@ -1052,7 +797,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify getContainerValue throws NOT_FOUND on BACKUP
         try {
             client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                     .get();
             fail("Expected NOT_FOUND for removed container");
         } catch (ExecutionException e) {
@@ -1066,8 +811,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testRemoveContainerOnBackup() throws ExecutionException, InterruptedException {
         String key = "removeContainerBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2")
         );
 
         // Create ordered map
@@ -1120,7 +865,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify getContainerValue throws NOT_FOUND on MASTER
         try {
             client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                     .get();
             fail("Expected NOT_FOUND for removed container");
         } catch (ExecutionException e) {
@@ -1138,9 +883,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testGetSizeOnMaster() throws ExecutionException, InterruptedException {
         String key = "getSizeMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3")
         );
 
         // Create ordered map
@@ -1168,9 +913,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testGetSizeOnBackup() throws ExecutionException, InterruptedException {
         String key = "getSizeBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3")
         );
 
         // Create ordered map
@@ -1202,7 +947,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testSetTtlOnMaster() throws ExecutionException, InterruptedException {
         String key = "setTtlOnMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1239,7 +984,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testSetTtlOnBackup() throws ExecutionException, InterruptedException {
         String key = "setTtlOnBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1280,7 +1025,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testTtlExpirationOnMaster() throws ExecutionException, InterruptedException {
         String key = "ttlExpOnMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1318,7 +1063,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify on MASTER: getContainerValue throws NOT_FOUND
         try {
             client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                     .get();
             fail("Expected NOT_FOUND on master after TTL expiry");
         } catch (ExecutionException e) {
@@ -1330,7 +1075,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
         try {
             client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                     .get();
             fail("Expected NOT_FOUND on backup after TTL expiry");
         } catch (ExecutionException e) {
@@ -1344,7 +1089,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testTtlExpirationOnBackup() throws ExecutionException, InterruptedException {
         String key = "ttlExpOnBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1382,7 +1127,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify on BACKUP: getContainerValue throws NOT_FOUND
         try {
             client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                     .get();
             fail("Expected NOT_FOUND on backup after TTL expiry");
         } catch (ExecutionException e) {
@@ -1394,7 +1139,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
         try {
             client.setMode(Mode.MASTER)
-                    .getContainerValue(bytes(key), keyHint, bytes("k1"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                     .get();
             fail("Expected NOT_FOUND on master after TTL expiry");
         } catch (ExecutionException e) {
@@ -1412,7 +1157,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testLockObjectOnMaster() throws ExecutionException, InterruptedException {
         String key = "lockOnMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1429,16 +1174,16 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: owner can read
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] masterVal = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant masterVal = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterVal);
-        assertEquals("v1", new String(masterVal, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(masterVal.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
 
         // Unlock by owner
         LockStatus unlockStatus = client.setMode(Mode.MASTER)
@@ -1452,7 +1197,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testLockObjectOnBackup() throws ExecutionException, InterruptedException {
         String key = "lockOnBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1469,16 +1214,16 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on BACKUP: owner can read
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] backupVal = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant backupVal = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupVal);
-        assertEquals("v1", new String(backupVal, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(backupVal.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on MASTER: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
 
         // Unlock by owner
         LockStatus unlockStatus = client.setMode(Mode.BACKUP)
@@ -1496,7 +1241,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testLockExpirationOnMaster() throws ExecutionException, InterruptedException {
         String key = "lockExpOnMaster" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1514,29 +1259,29 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify on MASTER: owner can read
-        byte[] masterVal = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant masterVal = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterVal);
 
         // Verify on BACKUP: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
 
         // Wait for lock TTL to expire
         Thread.sleep(3000);
 
         // Verify on MASTER: lock expired, intruder can read
-        byte[] masterValAfter = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant masterValAfter = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterValAfter);
 
         // Verify on BACKUP: lock expired, intruder can read (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] backupValAfter = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant backupValAfter = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupValAfter);
     }
@@ -1546,7 +1291,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testLockExpirationOnBackup() throws ExecutionException, InterruptedException {
         String key = "lockExpOnBackup" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1564,29 +1309,29 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify on BACKUP: owner can read
-        byte[] backupVal = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant backupVal = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupVal);
 
         // Verify on MASTER: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
 
         // Wait for lock TTL to expire
         Thread.sleep(3000);
 
         // Verify on BACKUP: lock expired, intruder can read
-        byte[] backupValAfter = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant backupValAfter = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupValAfter);
 
         // Verify on MASTER: lock expired, intruder can read (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] masterValAfter = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant masterValAfter = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterValAfter);
     }
@@ -1600,7 +1345,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testIntruderCannotUnlock() throws ExecutionException, InterruptedException {
         String key = "intruderUnlock" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1617,8 +1362,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Verify on MASTER: owner can read
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] masterVal = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant masterVal = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterVal);
 
@@ -1657,7 +1402,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testLockExpirationAccess() throws ExecutionException, InterruptedException {
         String key = "lockExpAccess" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1677,25 +1422,25 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify on BACKUP: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
 
         // Wait for lock TTL to expire
         Thread.sleep(2000);
 
         // Verify on MASTER: lock expired, intruder can read
-        byte[] masterValAfter = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant masterValAfter = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(masterValAfter);
-        assertEquals("v1", new String(masterValAfter, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(masterValAfter.bytesValue(), StandardCharsets.UTF_8));
 
         // Verify on BACKUP: lock expired, intruder can read (replicated)
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] backupValAfter = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant backupValAfter = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupValAfter);
-        assertEquals("v1", new String(backupValAfter, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(backupValAfter.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -1707,7 +1452,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testMultipleReadLocks() throws ExecutionException, InterruptedException {
         String key = "multiReadLock" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1730,25 +1475,25 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
 
         // Both can read on MASTER
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] ownerVal = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant ownerVal = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(ownerVal);
 
-        byte[] intruderVal = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant intruderVal = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(intruderVal);
 
         // Verify on BACKUP: lock is replicated
         Thread.sleep(REPLICATION_DELAY_MS);
-        byte[] backupOwnerVal = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant backupOwnerVal = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(backupOwnerVal);
 
-        byte[] backupIntruderVal = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
+        Variant backupIntruderVal = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID)
                 .get();
         assertNotNull(backupIntruderVal);
 
@@ -1773,7 +1518,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testReadLockExpirationToWrite() throws ExecutionException, InterruptedException {
         String key = "readLockExpWrite" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1827,7 +1572,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testReadLockOrderedMap() throws ExecutionException, InterruptedException {
         String key = "readLockOrderedMap" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -1860,7 +1605,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // But intruder CANNOT write - addElementOrderedMap should be denied
         assertDenied(client.setMode(Mode.BACKUP)
                 .addElementOrderedMap(bytes(key), keyHint,
-                        List.of(op(2L, "k2")), List.of(p("v2")), INTRUDER_CLIENT_ID));
+                        List.of(op(2L, "k2")), List.of(v("v2")), INTRUDER_CLIENT_ID));
 
         // Unlock
         LockStatus unlock = client.setMode(Mode.MASTER)
@@ -1878,10 +1623,10 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPositionEndIncluded() throws ExecutionException, InterruptedException {
         String key = "removePosEndIncluded" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(10L, "k1"), p("v1"),
-                op(20L, "k2"), p("v2"),
-                op(30L, "k3"), p("v3"),
-                op(40L, "k4"), p("v4")
+                op(10L, "k1"), v("v1"),
+                op(20L, "k2"), v("v2"),
+                op(30L, "k3"), v("v3"),
+                op(40L, "k4"), v("v4")
         );
 
         // Create ordered map
@@ -1921,17 +1666,17 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         assertEquals(2, backupSize);
 
         // Verify k1 and k4 remain on BACKUP
-        byte[] backupK1 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"))
+        Variant backupK1 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"))
                 .get();
         assertNotNull(backupK1);
-        assertEquals("v1", new String(backupK1, StandardCharsets.UTF_8));
+        assertEquals("v1", new String(backupK1.bytesValue(), StandardCharsets.UTF_8));
 
-        byte[] backupK4 = client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k4"))
+        Variant backupK4 = client.setMode(Mode.BACKUP)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k4"))
                 .get();
         assertNotNull(backupK4);
-        assertEquals("v4", new String(backupK4, StandardCharsets.UTF_8));
+        assertEquals("v4", new String(backupK4.bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================
@@ -1943,9 +1688,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testRemoveElementAtPositionSamePos() throws ExecutionException, InterruptedException {
         String key = "removePosSame" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(10L, "k1"), p("v1"),
-                op(20L, "k2"), p("v2"),
-                op(30L, "k3"), p("v3")
+                op(10L, "k1"), v("v1"),
+                op(20L, "k2"), v("v2"),
+                op(30L, "k3"), v("v3")
         );
 
         // Create ordered map
@@ -1982,7 +1727,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify k2 is gone on BACKUP
         try {
             client.setMode(Mode.BACKUP)
-                    .getContainerValue(bytes(key), keyHint, bytes("k2"))
+                    .getValueInContainerByKey(bytes(key), keyHint, bytes("k2"))
                     .get();
             fail("Expected NOT_FOUND for removed element");
         } catch (ExecutionException e) {
@@ -2000,9 +1745,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOrderedMapNoMatch() throws ExecutionException, InterruptedException {
         String key = "streamNoMatch" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(10L, "k1"), p("v1"),
-                op(20L, "k2"), p("v2"),
-                op(30L, "k3"), p("v3")
+                op(10L, "k1"), v("v1"),
+                op(20L, "k2"), v("v2"),
+                op(30L, "k3"), v("v3")
         );
 
         // Create ordered map
@@ -2036,11 +1781,11 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testStreamElementInRangeOrderedMapReverse() throws ExecutionException, InterruptedException {
         String key = "streamReverse" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(10L, "k1"), p("v1"),
-                op(20L, "k2"), p("v2"),
-                op(30L, "k3"), p("v3"),
-                op(40L, "k4"), p("v4"),
-                op(50L, "k5"), p("v5")
+                op(10L, "k1"), v("v1"),
+                op(20L, "k2"), v("v2"),
+                op(30L, "k3"), v("v3"),
+                op(40L, "k4"), v("v4"),
+                op(50L, "k5"), v("v5")
         );
 
         // Create ordered map
@@ -2079,7 +1824,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testUnsupportedMethodsForOrderedMap() throws ExecutionException, InterruptedException {
         String key = "unsupportedOrderedMap" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -2142,7 +1887,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testWriteLockExpiration() throws ExecutionException, InterruptedException {
         String key = "writeLockExp" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -2198,7 +1943,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testWriteLockIntruderDenied() throws ExecutionException, InterruptedException {
         String key = "writeLockDenied" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -2216,8 +1961,8 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         Thread.sleep(REPLICATION_DELAY_MS);
 
         // Verify on MASTER: owner can read
-        byte[] masterVal = client.setMode(Mode.MASTER)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
+        Variant masterVal = client.setMode(Mode.MASTER)
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), OWNER_CLIENT_ID)
                 .get();
         assertNotNull(masterVal);
 
@@ -2230,7 +1975,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
         // Verify on BACKUP: lock is replicated (intruder cannot read)
         Thread.sleep(REPLICATION_DELAY_MS);
         assertDenied(client.setMode(Mode.BACKUP)
-                .getContainerValue(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
+                .getValueInContainerByKey(bytes(key), keyHint, bytes("k1"), INTRUDER_CLIENT_ID));
 
         // Unlock by owner
         LockStatus unlock = client.setMode(Mode.MASTER)
@@ -2248,7 +1993,7 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testWriteLockOrderedMap() throws ExecutionException, InterruptedException {
         String key = "writeLockOrderedMap" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1")
+                op(1L, "k1"), v("v1")
         );
 
         // Create ordered map
@@ -2291,9 +2036,9 @@ public class OrderedMapOperationsTest extends TestBaseCluster {
     void testStreamOrderedMapWithClientId() throws ExecutionException, InterruptedException {
         String key = "streamWithClientId" + UUID.randomUUID();
         Map<OrderedPayload, Variant> initialData = Map.of(
-                op(1L, "k1"), p("v1"),
-                op(2L, "k2"), p("v2"),
-                op(3L, "k3"), p("v3")
+                op(1L, "k1"), v("v1"),
+                op(2L, "k2"), v("v2"),
+                op(3L, "k3"), v("v3")
         );
 
         // Create ordered map

@@ -67,7 +67,7 @@ public class AdvancedCollectionsTest extends TestBase {
         }
 
         Integer statusList = client.deleteElementAtPosition(key, null, 0, 2).get();
-        Assertions.assertTrue(statusList);
+        Assertions.assertTrue(statusList==1);
     }
 
     @Test

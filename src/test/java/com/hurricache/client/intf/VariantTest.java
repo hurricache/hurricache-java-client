@@ -29,7 +29,7 @@ class VariantTest {
 
         assertEquals(Variant.Type.INT, variant.type());
         assertTrue(variant.isInt());
-        assertEquals(42L, variant.intValue());
+        assertEquals(42L, variant.longValue());
         assertEquals(42L, variant.longValue());
     }
 
@@ -51,7 +51,7 @@ class VariantTest {
         assertEquals(Variant.Type.NONE, variant.type());
         assertTrue(variant.isNone());
         assertNull(variant.bytesValue());
-        assertEquals(0L, variant.intValue());
+        assertEquals(0L, variant.longValue());
         assertEquals(0.0, variant.doubleValue());
     }
 
@@ -114,7 +114,7 @@ class VariantTest {
     @DisplayName("intValue should return correct long value")
     void testIntValue() {
         Variant variant = Variant.ofInt(12345L);
-        assertEquals(12345L, variant.intValue());
+        assertEquals(12345L, variant.longValue());
     }
 
     @Test
@@ -243,7 +243,7 @@ class VariantTest {
     @DisplayName("should handle negative long values")
     void testNegativeLong() {
         Variant variant = Variant.ofInt(-12345L);
-        assertEquals(-12345L, variant.intValue());
+        assertEquals(-12345L, variant.longValue());
         assertEquals(-12345L, variant.requireLong());
     }
 
@@ -255,7 +255,7 @@ class VariantTest {
         Variant doubleV = Variant.ofDouble(0.0);
 
         assertEquals(Variant.Type.BYTES, bytes.type());
-        assertEquals(0L, integer.intValue());
+        assertEquals(0L, integer.longValue());
         assertEquals(0.0, doubleV.doubleValue(), 0.0001);
     }
 

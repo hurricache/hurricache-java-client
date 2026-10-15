@@ -1,7 +1,9 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
-import com.hurricache.client.FastCacheAsyncStandaloneClient;
+import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -46,7 +48,16 @@ public abstract class TestBaseCluster {
         return sb.toString();
     }
 
-    protected byte[] createLargePayload(int size) {
+    protected Variant createLargePayload(int size) {
+        byte[] bytes = UUID.randomUUID().toString().getBytes();
+        byte[] payload = new byte[size];
+        System.arraycopy(bytes, 0, payload, 0, bytes.length);
+        for (int i = bytes.length; i < size; i++) {
+            payload[i] = (byte) (i % 128);
+        }
+        return Variant.ofBytes(payload);
+    }
+    protected byte[] createLargePayloadKey(int size) {
         byte[] bytes = UUID.randomUUID().toString().getBytes();
         byte[] payload = new byte[size];
         System.arraycopy(bytes, 0, payload, 0, bytes.length);
@@ -55,6 +66,7 @@ public abstract class TestBaseCluster {
         }
         return payload;
     }
+
 
     @BeforeEach
     void setUp() throws IOException {
@@ -103,6 +115,28 @@ public abstract class TestBaseCluster {
             Thread.currentThread().interrupt();
             Assertions.fail(e.getMessage());
         }
+    }
+    protected Variant v(String val) {
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected Payload p(String val) {
+        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected Payload p(byte[] val) {
+        return Payload.of(val);
+    }
+
+    protected String str(Variant payload) {
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
+    }
+    protected String str(Payload payload) {
+        return new String(payload.getValue(), StandardCharsets.UTF_8);
+    }
+
+    protected OrderedPayload op(Long order, String val) {
+        return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
     }
 
 }

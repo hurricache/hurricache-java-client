@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.LockStatus;
@@ -22,10 +23,10 @@ public class LockingValuesTest extends TestBaseCluster {
     @Test
     void testUnanimousLockAndAnyUnlockCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
         // Ensure the object exists in the cache before testing locks
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -43,11 +44,11 @@ public class LockingValuesTest extends TestBaseCluster {
     @Test
     void testUnanimousLockAndAnyUnlockCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
         // Ensure the object exists in the cache before testing locks
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -68,9 +69,9 @@ public class LockingValuesTest extends TestBaseCluster {
         int intruderId = 200;
 
         // Create should be done on master
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -96,9 +97,9 @@ public class LockingValuesTest extends TestBaseCluster {
         int intruderId = 200;
 
         // Create should be done on backup
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -122,9 +123,9 @@ public class LockingValuesTest extends TestBaseCluster {
     void testLockingConflictCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
 
         // Create should be done on master
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -142,9 +143,9 @@ public class LockingValuesTest extends TestBaseCluster {
         // 1. Client A locks the object
 
         // Create should be done on backup
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -162,9 +163,9 @@ public class LockingValuesTest extends TestBaseCluster {
         // 1. Locked by 0
 
         // Create should be done on master
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -182,9 +183,9 @@ public class LockingValuesTest extends TestBaseCluster {
         // 1. Locked by 0
 
         // Create should be done on backup
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -202,9 +203,9 @@ public class LockingValuesTest extends TestBaseCluster {
         // 1. Lock with very short TTL
 
         // Create should be done on master
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -227,9 +228,9 @@ public class LockingValuesTest extends TestBaseCluster {
         // 1. Lock with very short TTL
 
         // Create should be done on backup
-        byte[] lockKey1 = createLargePayload(KEY_SIZE);
+        byte[] lockKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(lockKey1, createLargePayload(VALUE_SIZE))
+                .createKeyValue(lockKey1, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -249,14 +250,14 @@ public class LockingValuesTest extends TestBaseCluster {
 
     @Test
     void testGlobalLockBlocksDataAccessCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         int ownerId = 1;
         int intruderId = 2;
 
         // 1. Create and then Lock Globally
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(key, createLargePayload(VALUE_SIZE))
+                .createKeyValue(key, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -266,8 +267,8 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 2. Owner should be able to read (requires clientId in GetRequest)
         // Assuming your getValue is updated to pass clientId
-        byte[] data = client.setMode(Mode.BACKUP).getValue(key, keyHint, ownerId).get();
-        Assertions.assertNotNull(data);
+        Variant data = client.setMode(Mode.BACKUP).getValue(key, keyHint, ownerId).get();
+        Assertions.assertNotEquals(data,Variant.none());
 
         // 3. Intruder tries to read (Should fail)
         try {
@@ -281,14 +282,14 @@ public class LockingValuesTest extends TestBaseCluster {
 
     @Test
     void testGlobalLockBlocksDataAccessCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
         int ownerId = 1;
         int intruderId = 2;
 
         // 1. Create and then Lock Globally
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(key, createLargePayload(VALUE_SIZE))
+                .createKeyValue(key, Variant.ofBytes(createLargePayloadKey(VALUE_SIZE)))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -298,8 +299,8 @@ public class LockingValuesTest extends TestBaseCluster {
 
         // 2. Owner should be able to read (requires clientId in GetRequest)
         // Assuming your getValue is updated to pass clientId
-        byte[] data = client.setMode(Mode.MASTER).getValue(key, keyHint, ownerId).get();
-        Assertions.assertNotNull(data);
+        Variant data = client.setMode(Mode.MASTER).getValue(key, keyHint, ownerId).get();
+        Assertions.assertNotEquals(data,Variant.none());
 
         // 3. Intruder tries to read (Should fail)
         try {

@@ -1,10 +1,8 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -222,50 +220,93 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
     /**
      * Deletes matching values/keys from the given container type.
      *
+     * @param key      target container key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param keys     list of keys to match.
+     * @param values   list of values to match.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return count of successfully removed elements.
+     */
+    CompletableFuture<Integer> removeFromContainerByKeyAndValue(byte[] key,
+                                                                KeyHintData hint, List<Payload> keys,
+                                                                List<Variant> values,
+                                                                int clientId,
+                                                                Duration timeout);
+
+    default CompletableFuture<Integer> removeFromContainerByKeyAndValue(String key, KeyHintData hint, ContainerType type,
+                                                                        List<Payload> keys, List<Variant> values,
+                                                                        int clientId, Duration timeout) {
+        return removeFromContainerByKeyAndValue(serializeKey(key), hint, keys, values, clientId, timeout);
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKeyAndValue(String key, KeyHintData hint, ContainerType type,
+                                                                        List<Payload> keys, List<Variant> values) {
+        return removeFromContainerByKeyAndValue(serializeKey(key), hint, keys, values,
+                                                getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKeyAndValue(String key, ContainerType type,
+                                                                        List<Payload> keys, List<Variant> values) {
+        return removeFromContainerByKeyAndValue(serializeKey(key), null, keys, values,
+                                                getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKeyAndValue(byte[] key, KeyHintData hint, ContainerType type,
+                                                                        List<Payload> keys, List<Variant> values) {
+        return removeFromContainerByKeyAndValue(key, hint, keys, values,
+                                                getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKeyAndValue(byte[] key, ContainerType type,
+                                                                        List<Payload> keys, List<Variant> values) {
+        return removeFromContainerByKeyAndValue(key, null, keys, values,
+                                                getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Deletes matching keys from the given container.
+     *
      * @param key          target container key in byte array form.
      * @param hint         optional key routing hint.
-     * @param type         container type to operate on.
-     * @param values       list of values to match.
-     * @param keys         list of keys to match.
+     * @param containerKey
      * @param clientId     identifier of the issuing client.
      * @param timeout      execution timeout duration.
      * @return count of successfully removed elements.
      */
-    CompletableFuture<Integer> removeFromContainer(byte[] key,
-                                                   KeyHintData hint,
-                                                   ContainerType type,
-                                                   List<Payload> keys,
-                                                   List<Variant> values,
-                                                   int clientId,
-                                                   Duration timeout);
 
-    default CompletableFuture<Integer> removeFromContainer(String key, KeyHintData hint, ContainerType type,
-                                                           List<Payload> keys,List<Variant> values,
-                                                           int clientId, Duration timeout) {
-        return removeFromContainer(serializeKey(key), hint, type, keys,values, clientId, timeout);
+    CompletableFuture<Integer> removeFromContainerByKey(byte[] key,
+                                                        KeyHintData hint, Payload containerKey,
+                                                        int clientId,
+                                                        Duration timeout);
+
+    default CompletableFuture<Integer> removeFromContainerByKey(String key, KeyHintData hint,
+                                                                   Payload keys,
+                                                                   int clientId, Duration timeout) {
+        return removeFromContainerByKey(serializeKey(key), hint, keys,  clientId, timeout);
     }
 
-    default CompletableFuture<Integer> removeFromContainer(String key, KeyHintData hint, ContainerType type,
-                                                           List<Payload> keys, List<Variant> values) {
-        return removeFromContainer(serializeKey(key), hint, type, keys, values,
-                                   getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> removeFromContainerByKey(String key, KeyHintData hint,
+                                                                   Payload keys) {
+        return removeFromContainerByKey(serializeKey(key), hint, keys,
+                                           getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> removeFromContainer(String key, ContainerType type,
-                                                           List<Payload> keys, List<Variant> values) {
-        return removeFromContainer(serializeKey(key), null, type, keys, values,
-                                   getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> removeFromContainerByKey(String key,
+                                                                   Payload keys) {
+        return removeFromContainerByKey(serializeKey(key), null, keys,
+                                           getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> removeFromContainer(byte[] key, KeyHintData hint, ContainerType type,
-                                                           List<Payload> keys, List<Variant> values) {
-        return removeFromContainer(key, hint, type, keys, values,
-                                   getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> removeFromContainerByKey(byte[] key, KeyHintData hint,
+                                                                   Payload keys) {
+        return removeFromContainerByKey(key, hint, keys,
+                                           getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> removeFromContainer(byte[] key, ContainerType type,
-                                                           List<Payload> keys, List<Variant> values) {
-        return removeFromContainer(key, null, type, keys, values,
-                                   getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> removeFromContainerByKey(byte[] key,
+                                                                   Payload keys) {
+        return removeFromContainerByKey(key, null, keys,
+                                           getDefaultClientId(), getDefaultTimeout());
     }
 }

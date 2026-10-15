@@ -65,7 +65,7 @@ public class KeyValueUtils {
     public static   Value buildValueFromVariant(Variant variant, Duration ttl) {
         Value.Builder b = switch (variant.type()) {
             case INT -> Value.newBuilder()
-                    .setValue(BinaryPayload.newBuilder().setIntPayload(variant.intValue()))
+                    .setValue(BinaryPayload.newBuilder().setIntPayload(variant.longValue()))
                     .setValueType(ValueType.INT);
             case DOUBLE -> Value.newBuilder()
                     .setValue(BinaryPayload.newBuilder().setDoublePayload(variant.doubleValue()))
@@ -89,7 +89,7 @@ public class KeyValueUtils {
         switch (variant.type()) {
             case INT:
                 builder = Value.newBuilder()
-                        .setValue(BinaryPayload.newBuilder().setIntPayload(variant.intValue()))
+                        .setValue(BinaryPayload.newBuilder().setIntPayload(variant.longValue()))
                         .setValueType(ValueType.INT);
                 break;
 
@@ -175,7 +175,7 @@ public class KeyValueUtils {
         switch (variant.type()) {
             case INT:
                 builder = OrderedValue.newBuilder()
-                        .setValue(BinaryPayload.newBuilder().setIntPayload(variant.intValue()))
+                        .setValue(BinaryPayload.newBuilder().setIntPayload(variant.longValue()))
                         .setValueType(ValueType.INT)
                         .setOrder(order);
                 break;

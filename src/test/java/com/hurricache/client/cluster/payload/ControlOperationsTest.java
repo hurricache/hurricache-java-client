@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.LockStatus;
@@ -18,7 +19,7 @@ public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testTtlMethodsCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
@@ -38,7 +39,7 @@ public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testTtlMethodsCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
@@ -58,7 +59,7 @@ public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testLockingMechanismCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] lockKey = createLargePayload(KEY_SIZE);
+        byte[] lockKey = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
@@ -79,7 +80,7 @@ public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testLockingMechanismCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] lockKey = createLargePayload(KEY_SIZE);
+        byte[] lockKey = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)

@@ -1,6 +1,8 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncStandaloneClient;
+import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -104,6 +106,27 @@ public abstract class TestBase {
             Assertions.fail(e.getMessage());
         }
     }
+
+    protected Variant v(String val) {
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected Payload p(String val) {
+        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected Payload p(byte[] val) {
+        return Payload.of(val);
+    }
+
+    protected String str(Variant payload) {
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
+    }
+
+    protected String str(Payload payload) {
+        return new String(payload.getValue(), StandardCharsets.UTF_8);
+    }
+
     protected byte[] bytes(String val) {
         return val.getBytes(StandardCharsets.UTF_8);
     }
