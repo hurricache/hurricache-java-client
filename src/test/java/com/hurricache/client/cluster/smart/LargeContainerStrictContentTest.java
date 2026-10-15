@@ -4,6 +4,7 @@ import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
@@ -226,11 +227,11 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
     @DisplayName("OrderedSet: weight and binary data preservation check with replication")
     void testCreateLargeOrderedSetStrict() throws ExecutionException, InterruptedException {
         String key = "strict_orderedset_" + UUID.randomUUID();
-        List<OrderedPayload> expectedPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
+        List<OrderedVariant> expectedPayloads = new ArrayList<>(LARGE_ELEMENT_COUNT);
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
             byte[] rawData = createDeterministicPayload(i, PAYLOAD_SIZE);
-            expectedPayloads.add(new OrderedPayload(rawData, (long) i * 10));
+            expectedPayloads.add(OrderedVariant.ofBytes(rawData, (long) i * 10));
         }
 
         // Create WITHOUT setMode
@@ -241,28 +242,28 @@ public class LargeContainerStrictContentTest extends TestBaseCluster {
         Thread.sleep(1000);
 
         // Verify on MASTER: stream all elements with weights
-        List<OrderedPayload> masterStream = client.setMode(Mode.MASTER)
+        List<OrderedVariant> masterStream = client.setMode(Mode.MASTER)
                 .streamElementInRangeOrderedSet(bytes(key), hint, 0, LARGE_ELEMENT_COUNT * 10L, false).get();
         assertEquals(LARGE_ELEMENT_COUNT, masterStream.size());
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            OrderedPayload expected = expectedPayloads.get(i);
-            OrderedPayload actual = masterStream.get(i);
+            OrderedVariant expected = expectedPayloads.get(i);
+            OrderedVariant actual = masterStream.get(i);
             assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at step: " + i);
-            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at step: " + i);
+            assertEquals(expected, actual, "OrderedSet binary content does not match at step: " + i);
         }
 
         // Replication delay → verify BACKUP
         Thread.sleep((int) REPLICATION_DELAY_MS);
-        List<OrderedPayload> backupStream = client.setMode(Mode.BACKUP)
+        List<OrderedVariant> backupStream = client.setMode(Mode.BACKUP)
                 .streamElementInRangeOrderedSet(bytes(key), hint, 0, LARGE_ELEMENT_COUNT * 10L, false).get();
         assertEquals(LARGE_ELEMENT_COUNT, backupStream.size());
 
         for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            OrderedPayload expected = expectedPayloads.get(i);
-            OrderedPayload actual = backupStream.get(i);
+            OrderedVariant expected = expectedPayloads.get(i);
+            OrderedVariant actual = backupStream.get(i);
             assertEquals(expected.getOrder(), actual.getOrder(), "OrderedSet weight does not match at BACKUP step: " + i);
-            assertArrayEquals(expected.getValue(), actual.getValue(), "OrderedSet binary content does not match at BACKUP step: " + i);
+            assertEquals(expected, actual, "OrderedSet binary content does not match at BACKUP step: " + i);
         }
     }
 

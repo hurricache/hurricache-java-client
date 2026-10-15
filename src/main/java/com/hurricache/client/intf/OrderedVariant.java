@@ -1,5 +1,7 @@
 package com.hurricache.client.intf;
 
+import java.util.Objects;
+
 /**
  * OrderedVariant — Variant с порядковым весом (order) для сортированных структур.
  * Наследует всю функциональность Variant и добавляет long order.
@@ -114,5 +116,19 @@ public final class OrderedVariant {
     @Override
     public String toString() {
         return "OrderedVariant{variant=" + variant + ", order=" + order + "}";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        OrderedVariant that = (OrderedVariant) o;
+        return Objects.equals(variant, that.variant) && Objects.equals(order, that.order);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(variant, order);
     }
 }
