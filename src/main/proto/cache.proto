@@ -295,6 +295,13 @@ message AtomicCasRes {
   bool result = 1;                           // true if exchange succeeded
   optional ValueResponse expected = 2;         // Actual value read in case of failure
 }
+// Structure for Compare-And-Swap (CAS) operation.
+message AtomicCas {
+  Key key = 1;
+  Value expected = 2;                  // Expected value
+  Value toSet = 3;                     // New value to set
+}
+
 
 // ============================================================================
 // Replication & Internal Commands (Replication and WAL binlog)
@@ -478,6 +485,6 @@ service HurriCacheGrpcService {
   rpc atomicOr(CreateRequest) returns (ValueResponse) {}
   rpc atomicAnd(CreateRequest) returns (ValueResponse) {}
   rpc atomicXor(CreateRequest) returns (ValueResponse) {}
-  rpc atomicCompareAndSet(CreateRequest) returns (AtomicCasRes) {}
+  rpc atomicCompareAndSet(AtomicCas) returns (AtomicCasRes) {}
 
 }

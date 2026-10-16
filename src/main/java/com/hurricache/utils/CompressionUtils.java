@@ -95,6 +95,18 @@ public class CompressionUtils {
     }
 
     /**
+     * Decompresses a Value (unordered) and returns a Variant.
+     * Handles BinaryPayload.oneof: bytes → decompress, int → intPayload, double → doublePayload.
+     */
+    public static Variant decompressIfNeededToVariant(Value responseValue) {
+        if (IS_GZIP) {
+            return GZIPCompressionUtils.decompressIfNeededToVariant(responseValue);
+        } else {
+            return LZ4CompressionUtils.decompressIfNeededToVariant(responseValue);
+        }
+    }
+
+    /**
      * Decompresses an OrderedValue and returns a Variant (without order).
      * Handles BinaryPayload.oneof: bytes → decompress, int → intPayload, double → doublePayload.
      */

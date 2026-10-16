@@ -26,10 +26,10 @@ public class KeyValueUtils {
         ValueType vt = val.hasValueType() ? val.getValueType() : ValueType.AUTO;
         BinaryPayload bp = val.getValue();
         switch (vt) {
-            case INT: return Variant.ofInt(bp.getIntPayload());
+            case INT: return Variant.ofLong(bp.getIntPayload());
             case DOUBLE: return Variant.ofDouble(bp.getDoublePayload());
             case BYTES: case AUTO: default:
-                if (bp.hasIntPayload()) return Variant.ofInt(bp.getIntPayload());
+                if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
                 if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
                 if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
                 return Variant.none();
@@ -44,7 +44,7 @@ public class KeyValueUtils {
         return GetRequest.newBuilder().setKey(buildKey(key, hint, clientId,compressionThreshold)).build();
     }
 
-    public static   CreateRequest buildAtomicIntCreateRequest(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId,
+    public static   CreateRequest buildAtomicCreateRequest(byte[] key, KeyHintData hint, long value, Duration ttl, int clientId,
                                                               int compressionThreshold) {
         Value.Builder vb = Value.newBuilder()
                 .setValue(BinaryPayload.newBuilder().setIntPayload(value))
@@ -53,7 +53,7 @@ public class KeyValueUtils {
         return CreateRequest.newBuilder().setKey(buildKey(key, hint, clientId,compressionThreshold)).setValue(vb).build();
     }
 
-    public static   CreateRequest buildAtomicIntCreateRequest(byte[] key, KeyHintData hint, double value, Duration ttl, int clientId,
+    public static   CreateRequest buildAtomicCreateRequest(byte[] key, KeyHintData hint, double value, Duration ttl, int clientId,
                                                               int compressionThreshold) {
         Value.Builder vb = Value.newBuilder()
                 .setValue(BinaryPayload.newBuilder().setDoublePayload(value))

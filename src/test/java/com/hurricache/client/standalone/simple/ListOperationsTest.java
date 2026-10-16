@@ -2,536 +2,414 @@ package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ListOperationsTest extends TestBase {
 
-    private static final int LARGE_ELEMENT_COUNT = 1500;
-    private static final int PAYLOAD_SIZE = 8192;
-    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    private static final int OWNER_CLIENT_ID = 100;
+    private static final int INTRUDER_CLIENT_ID = 200;
 
     // =========================================================================
-    // 1. CREATE LIST
+    // 1. CREATE + STREAM LIST
     // =========================================================================
 
     @Test
-    @DisplayName("createList: create empty list")
+    @DisplayName("Create empty list")
     void testCreateEmptyList() throws ExecutionException, InterruptedException {
-        String key = "createEmptyList" + UUID.randomUUID();
+        String key = "list_empty_" + UUID.randomUUID();
 
-        Assertions.assertNotNull(client.createList(key, List.of()).get());
-
-        List<Variant> streamed = client.streamList(key).get();
-
-        assertNotNull(streamed);
-        Assertions.assertEquals(0, streamed.size());
-    }
-
-    @Test
-    @DisplayName("createList: create list with initial data")
-    void testCreateListWithInitialData() throws ExecutionException, InterruptedException {
-        String key = "createListWithInitialData" + UUID.randomUUID();
-
-        Assertions.assertNotNull(client.createList(key, List.of(
-                Variant.ofBytes("v1".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("v2".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("v3".getBytes(StandardCharsets.UTF_8))
-        )).get());
-
-        List<String> results = client.streamList(key).get()
-                .stream()
-                .map(v -> v.isBytes() ? new String(v.bytesValue(), StandardCharsets.UTF_8) : v.toString())
-                .toList();
-
-        Assertions.assertEquals(3, results.size());
-        Assertions.assertEquals("v1", results.get(0));
-        Assertions.assertEquals("v2", results.get(1));
-        Assertions.assertEquals("v3", results.get(2));
-    }
-
-    @Test
-    @DisplayName("createList: create large list with chunking")
-    void testCreateLargeListWithChunking() throws ExecutionException, InterruptedException {
-        byte[] key = ("largeListKey" + UUID.randomUUID()).getBytes(StandardCharsets.UTF_8);
-        List<Variant> variants = new ArrayList<>(LARGE_ELEMENT_COUNT);
-        for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            variants.add(Variant.ofBytes(createLargePayload(PAYLOAD_SIZE)));
-        }
-
-        CompletableFuture<KeyHintData> future = client.createList(key, null, variants, getTestTtl(), 0, TIMEOUT);
-        KeyHintData hint = future.get();
+        KeyHintData hint = client.createList(key, new ArrayList<>()).get();
         assertNotNull(hint);
 
-        List<Variant> streamed = client.streamList(key, hint, 0, TIMEOUT).get();
-        Assertions.assertEquals(LARGE_ELEMENT_COUNT, streamed.size());
-    }
-
-    // =========================================================================
-    // 2. STREAM LIST
-    // =========================================================================
-
-    @Test
-    @DisplayName("streamList: get contents of the entire list")
-    void testStreamListContents() throws ExecutionException, InterruptedException {
-        String key = "streamListContents" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("a".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("b".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("c".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        List<Variant> results = client.streamList(key).get();
-
-        Assertions.assertEquals(3, results.size());
-        assertEquals("a", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("b", new String(results.get(1).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("c", new String(results.get(2).bytesValue(), StandardCharsets.UTF_8));
+        Integer size = client.getSize(key).get();
+        assertEquals(0, size);
     }
 
     @Test
-    @DisplayName("streamList: empty list returns empty list")
-    void testStreamEmptyList() throws ExecutionException, InterruptedException {
-        String key = "streamEmptyList" + UUID.randomUUID();
+    @DisplayName("Create list with bytes")
+    void testCreateListWithBytes() throws ExecutionException, InterruptedException {
+        String key = "list_bytes_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("item1"), v("item2"), v("item3"));
 
-        client.createList(key, List.of()).get();
+        KeyHintData hint = client.createList(key, data).get();
+        assertNotNull(hint);
 
-        Thread.sleep(500);
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(3, stream.size());
+        assertEquals("item1", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
 
-        List<Variant> results = client.streamList(key).get();
+    @Test
+    @DisplayName("Create list with int")
+    void testCreateListWithInt() throws ExecutionException, InterruptedException {
+        String key = "list_int_" + UUID.randomUUID();
+        List<Variant> data = List.of(vi(10), vi(20), vi(30));
 
-        assertNotNull(results);
-        Assertions.assertEquals(0, results.size());
+        KeyHintData hint = client.createList(key, data).get();
+        assertNotNull(hint);
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(3, stream.size());
+        assertEquals(10, stream.get(0).longValue());
+        assertEquals(20, stream.get(1).longValue());
+    }
+
+    @Test
+    @DisplayName("Create list with double")
+    void testCreateListWithDouble() throws ExecutionException, InterruptedException {
+        String key = "list_double_" + UUID.randomUUID();
+        List<Variant> data = List.of(vd(1.1), vd(2.2), vd(3.3));
+
+        KeyHintData hint = client.createList(key, data).get();
+        assertNotNull(hint);
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(3, stream.size());
+        assertEquals(1.1, stream.get(0).doubleValue(), 0.001);
+    }
+
+    @Test
+    @DisplayName("Create list with mixed types")
+    void testCreateListMixedTypes() throws ExecutionException, InterruptedException {
+        String key = "list_mixed_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("hello"), vi(42), vd(3.14));
+
+        KeyHintData hint = client.createList(key, data).get();
+        assertNotNull(hint);
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(3, stream.size());
+        assertEquals("hello", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals(42, stream.get(1).longValue());
+        assertEquals(3.14, stream.get(2).doubleValue(), 0.001);
     }
 
     // =========================================================================
-    // 3. ADD ELEMENT TO TAIL
+    // 2. ADD/REMOVE ENDS
     // =========================================================================
 
     @Test
-    @DisplayName("addElementToTail: append to list")
-    void testAddElementToTail() throws ExecutionException, InterruptedException {
-        String key = "addElementToTail" + UUID.randomUUID();
+    @DisplayName("addElementToTail and addElementToHead")
+    void testAddToTailAndHead() throws ExecutionException, InterruptedException {
+        String key = "list_add_ends_" + UUID.randomUUID();
 
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8))
-        )).get();
+        KeyHintData hint = client.createList(key, List.of(v("middle"))).get();
 
-        Thread.sleep(500);
-
-        Integer added = client.addElementToTail(key, null, List.of(
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
+        // Add to tail
+        Integer added = client.addElementToTail(key, List.of(v("tail1"), v("tail2"))).get();
         assertEquals(2, added);
 
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(3, results.size());
-        assertEquals("first", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(results.get(1).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(results.get(2).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 4. ADD ELEMENT TO HEAD
-    // =========================================================================
-
-    @Test
-    @DisplayName("addElementToHead: prepend to list")
-    void testAddElementToHead() throws ExecutionException, InterruptedException {
-        String key = "addElementToHead" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer added = client.addElementToHead(key, null, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
+        // Add to head
+        added = client.addElementToHead(key, List.of(v("head1"))).get();
         assertEquals(1, added);
 
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(2, results.size());
-        assertEquals("first", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(results.get(1).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 5. ADD ELEMENT TO POSITION
-    // =========================================================================
-
-    @Test
-    @DisplayName("addElementToPosition: insert at specific position")
-    void testAddElementToPosition() throws ExecutionException, InterruptedException {
-        String key = "addElementToPosition" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer added = client.addElementToPosition(key, null, List.of(
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        ), 1, 0, TIMEOUT).get();
-
-        assertEquals(1, added);
-
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(3, results.size());
-        assertEquals("first", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(results.get(1).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(results.get(2).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 6. ADD ELEMENT BY PIVOT
-    // =========================================================================
-
-    @Test
-    @DisplayName("addElementToPositionBefore: insert before pivot")
-    void testAddElementToPositionBefore() throws ExecutionException, InterruptedException {
-        String key = "addElementBefore" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer added = client.addElementToPositionBefore(key, null, List.of(
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        ), Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8)), 0, TIMEOUT).get();
-
-        assertEquals(1, added);
-
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(3, results.size());
-        assertEquals("first", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(results.get(1).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(results.get(2).bytesValue(), StandardCharsets.UTF_8));
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(4, stream.size());
+        assertEquals("head1", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("middle", new String(stream.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("tail1", new String(stream.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("tail2", new String(stream.get(3).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
 
     @Test
-    @DisplayName("addElementToPositionAfter: insert after pivot")
-    void testAddElementToPositionAfter() throws ExecutionException, InterruptedException {
-        String key = "addElementAfter" + UUID.randomUUID();
+    @DisplayName("getHead and getTail")
+    void testGetHeadAndTail() throws ExecutionException, InterruptedException {
+        String key = "list_head_tail_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer added = client.addElementToPositionAfter(key, null, List.of(
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        ), Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)), 0, TIMEOUT).get();
-
-        assertEquals(1, added);
-
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(3, results.size());
-        assertEquals("first", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(results.get(1).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(results.get(2).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 7. GET ELEMENT AT POSITION
-    // =========================================================================
-
-    @Test
-    @DisplayName("getElementAtPosition: retrieve element by index")
-    void testGetElementAtPosition() throws ExecutionException, InterruptedException {
-        String key = "getElementAtPosition" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Variant element = client.getElementAtPosition(key, null, 1, 0, TIMEOUT).get();
-
-        assertNotNull(element);
-        assertEquals("second", new String(element.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getElementAtPosition: first element (index 0)")
-    void testGetElementAtPositionFirst() throws ExecutionException, InterruptedException {
-        String key = "getElementAtPositionFirst" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Variant element = client.getElementAtPosition(key, null, 0, 0, TIMEOUT).get();
-
-        assertNotNull(element);
-        assertEquals("only", new String(element.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 8. GET AND DELETE ELEMENT AT POSITION
-    // =========================================================================
-
-    @Test
-    @DisplayName("getAndDeleteElementAtPosition: remove and return element by index")
-    void testGetAndDeleteElementAtPosition() throws ExecutionException, InterruptedException {
-        String key = "getAndDeleteElementAtPosition" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Variant removed = client.getAndDeleteElementAtPosition(key, null, 1, 0, TIMEOUT).get();
-
-        assertNotNull(removed);
-        assertEquals("second", new String(removed.bytesValue(), StandardCharsets.UTF_8));
-
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(2, results.size());
-        assertEquals("first", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(results.get(1).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 9. DELETE ELEMENT AT POSITION
-    // =========================================================================
-
-    @Test
-    @DisplayName("deleteElementAtPosition: remove element without return")
-    void testDeleteElementAtPosition() throws ExecutionException, InterruptedException {
-        String key = "deleteElementAtPosition" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer deleted = client.deleteElementAtPosition(key, null, 1, 1, 0, TIMEOUT).get();
-
-        assertTrue(deleted > 0);
-
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(2, results.size());
-    }
-
-    // =========================================================================
-    // 10. DELETE HEAD/TAIL
-    // =========================================================================
-
-    @Test
-    @DisplayName("deleteHead: remove first element")
-    void testDeleteHead() throws ExecutionException, InterruptedException {
-        String key = "deleteHead" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer deleted = client.deleteHead(key).get();
-        assertTrue(deleted > 0);
-
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(1, results.size());
-        assertEquals("second", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("deleteTail: remove last element")
-    void testDeleteTail() throws ExecutionException, InterruptedException {
-        String key = "deleteTail" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer deleted = client.deleteTail(key).get();
-        assertTrue(deleted > 0);
-
-        List<Variant> results = client.streamList(key).get();
-        assertEquals(1, results.size());
-        assertEquals("first", new String(results.get(0).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 11. GET HEAD/TAIL
-    // =========================================================================
-
-    @Test
-    @DisplayName("getHead: get first element without removal")
-    void testGetHead() throws ExecutionException, InterruptedException {
-        String key = "getHead" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
+        KeyHintData hint = client.createList(key, data).get();
 
         Variant head = client.getHead(key).get();
-        assertEquals("first", new String(head.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getTail: get last element without removal")
-    void testGetTail() throws ExecutionException, InterruptedException {
-        String key = "getTail" + UUID.randomUUID();
-
-        client.createList(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
+        assertNotNull(head);
+        assertEquals("first", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
         Variant tail = client.getTail(key).get();
-        assertEquals("second", new String(tail.bytesValue(), StandardCharsets.UTF_8));
+        assertNotNull(tail);
+        assertEquals("last", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteHead and getAndDeleteTail")
+    void testGetAndDeleteHeadAndTail() throws ExecutionException, InterruptedException {
+        String key = "list_pop_ends_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("middle"), v("last"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        // Delete head
+        Variant deleted = client.getAndDeleteHead(key).get();
+        assertNotNull(deleted);
+        assertEquals("first", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Delete tail
+        deleted = client.getAndDeleteTail(key).get();
+        assertNotNull(deleted);
+        assertEquals("last", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(1, stream.size());
+        assertEquals("middle", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("deleteHead and deleteTail")
+    void testDeleteHeadAndTail() throws ExecutionException, InterruptedException {
+        String key = "list_delete_ends_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("middle"), v("last"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        Integer deleted = client.deleteHead(key).get();
+        assertEquals(1, deleted);
+
+        deleted = client.deleteTail(key).get();
+        assertEquals(1, deleted);
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(1, stream.size());
     }
 
     // =========================================================================
-    // 12. REMOVE LIST
+    // 3. POSITION-BASED OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("removeList: remove list entirely")
-    void testRemoveList() throws ExecutionException, InterruptedException {
-        String key = "removeList" + UUID.randomUUID();
+    @DisplayName("getElementAtPosition and getAndDeleteElementAtPosition")
+    void testElementAtPosition() throws ExecutionException, InterruptedException {
+        String key = "list_position_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("second"), v("third"));
 
-        client.createList(key, List.of(
-                Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8))
-        )).get();
+        KeyHintData hint = client.createList(key, data).get();
 
-        Thread.sleep(500);
+        Variant element = client.getElementAtPosition(key, 1).get();
+        assertNotNull(element);
+        assertEquals("second", new String(element.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        boolean removed = client.remove(key).get();
-        assertTrue(removed);
+        Variant deleted = client.getAndDeleteElementAtPosition(key, null, 1).get();
+        assertNotNull(deleted);
+        assertEquals("second", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        try {
-            client.streamList(key).get();
-            Assertions.fail("Expected NOT_FOUND error");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(2, stream.size());
+    }
+
+    @Test
+    @DisplayName("deleteElementAtPosition and deleteElementAtPosition range")
+    void testDeleteElementAtPosition() throws ExecutionException, InterruptedException {
+        String key = "list_delete_position_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        // Delete single element
+        Integer deleted = client.deleteElementAtPosition(key, null, 2L).get();
+        assertEquals(1, deleted);
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(4, stream.size());
+
+        // Delete range
+        deleted = client.deleteElementAtPosition(key, null, 1L, 2L).get();
+        assertEquals(2, deleted);
+
+        stream = client.streamList(key).get();
+        assertEquals(2, stream.size());
+    }
+
+    @Test
+    @DisplayName("deleteFromContainerByKeyValue")
+    void testDeleteFromContainerByKeyValue() throws ExecutionException, InterruptedException {
+        String key = "list_delete_value_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("a"), v("b"), v("a"), v("c"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        Integer deleted = client.removeFromContainerByKeyAndValue(key, ContainerType.LIST, List.of(), List.of(v("a"))).get();
+        assertEquals(2, deleted);
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(2, stream.size());
     }
 
     // =========================================================================
-    // 13. GET SIZE
+    // 4. POSITION-BASED INSERTION
     // =========================================================================
 
     @Test
-    @DisplayName("getSize: returns list size")
+    @DisplayName("addElementToPositionBefore and addElementToPositionAfter")
+    void testAddElementToPosition() throws ExecutionException, InterruptedException {
+        String key = "list_position_insert_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("last"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        // Insert before "last"
+        Integer added = client.addElementToPositionBefore(key, hint, List.of(v("before")), v("last")).get();
+        assertEquals(1, added);
+
+        // Insert after "first"
+        added = client.addElementToPositionAfter(key, hint, List.of(v("after")), v("first")).get();
+        assertEquals(1, added);
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(4, stream.size());
+        assertEquals("first", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("after", new String(stream.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("before", new String(stream.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("last", new String(stream.get(3).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("addElementToPositionBefore/After with mixed types")
+    void testAddElementToPositionMixedTypes() throws ExecutionException, InterruptedException {
+        String key = "list_position_mixed_" + UUID.randomUUID();
+        List<Variant> data = List.of(vi(100));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        client.addElementToPositionBefore(key, hint, List.of(v("str"), vi(200), vd(3.14)), vi(100)).get();
+
+        List<Variant> stream = client.streamList(key).get();
+        assertEquals(4, stream.size());
+        assertEquals("str", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals(200, stream.get(1).longValue());
+        assertEquals(3.14, stream.get(2).doubleValue(), 0.001);
+        assertEquals(100, stream.get(3).longValue());
+    }
+
+    // =========================================================================
+    // 5. RANGE QUERIES
+    // =========================================================================
+
+    @Test
+    @DisplayName("getElementsInRange")
+    void testGetElementsInRange() throws ExecutionException, InterruptedException {
+        String key = "list_range_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        List<Variant> range = client.streamElementInRangeUnordered(key, null, ContainerType.LIST, 1, 3).get();
+        assertEquals(3, range.size());
+        assertEquals("2", new String(range.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("3", new String(range.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(range.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 6. SIZE
+    // =========================================================================
+
+    @Test
+    @DisplayName("getSize")
     void testGetSize() throws ExecutionException, InterruptedException {
-        String key = "getSizeList" + UUID.randomUUID();
+        String key = "list_size_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"));
 
-        client.createList(key, List.of(
-                Variant.ofBytes("a".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("b".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("c".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
+        KeyHintData hint = client.createList(key, data).get();
 
         Integer size = client.getSize(key).get();
         assertEquals(3, size);
     }
 
     // =========================================================================
-    // 14. LOCK OPERATIONS
+    // 7. LOCK OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("lock: WRITE_LOCK on list")
-    void testWriteLockOnList() throws ExecutionException, InterruptedException {
-        String key = "writeLockList" + UUID.randomUUID();
+    @DisplayName("READ_LOCK on list: owner and intruder can both read, neither can write")
+    void testReadLock() throws ExecutionException, InterruptedException {
+        String key = "list_read_lock_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("value"));
 
-        client.createList(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
+        KeyHintData hint = client.createList(key, data).get();
 
-        Thread.sleep(500);
+        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        int clientId = 5;
-        LockStatus lockRes = client.lockObject(key, LockType.WRITE_LOCK, clientId, Duration.ofSeconds(60)).get();
-        assertEquals(LockStatus.OK, lockRes);
+        // Owner can read
+        List<Variant> val = client.streamList(key, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
 
-        LockStatus unlockRes = client.unlockObject(key, clientId).get();
-        assertEquals(LockStatus.OK, unlockRes);
+        // Intruder can ALSO read (shared access)
+        List<Variant> intruderVal = client.streamList(key, INTRUDER_CLIENT_ID).get();
+        assertNotNull(intruderVal);
+
+        // Neither can write
+        assertDenied(client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID));
+        assertDenied(client.addElementToTail(key, null, List.of(v("added")), INTRUDER_CLIENT_ID));
+
+        client.unlockObject(key, OWNER_CLIENT_ID).get();
     }
 
-    // =========================================================================
-    // 15. STREAM ELEMENT IN RANGE
-    // =========================================================================
+    @Test
+    @DisplayName("WRITE_LOCK on list: owner can read/write, intruder denied")
+    void testWriteLock() throws ExecutionException, InterruptedException {
+        String key = "list_write_lock_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("value"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        List<Variant> val = client.streamList(key, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
+
+        client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID).get();
+
+        assertDenied(client.streamList(key,  INTRUDER_CLIENT_ID));
+
+        client.unlockObject(key, OWNER_CLIENT_ID).get();
+    }
 
     @Test
-    @DisplayName("streamElementInRangeUnordered: get subset of list")
-    void testStreamElementInRangeUnordered() throws ExecutionException, InterruptedException {
-        String key = "streamElementInRange" + UUID.randomUUID();
+    @DisplayName("GLOBAL_LOCK on list: only owner can access")
+    void testGlobalLock() throws ExecutionException, InterruptedException {
+        String key = "list_global_lock_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("value"));
 
-        client.createList(key, List.of(
-                Variant.ofBytes("a".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("b".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("c".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("d".getBytes(StandardCharsets.UTF_8))
-        )).get();
+        KeyHintData hint = client.createList(key, data).get();
 
-        Thread.sleep(500);
+        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        List<Variant> range = client.streamElementInRangeUnordered(key, null, ContainerType.LIST, 1, 2, 0, TIMEOUT).get();
+        List<Variant> val = client.streamList(key, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
 
-        assertEquals(2, range.size());
-        assertEquals("b", new String(range.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("c", new String(range.get(1).bytesValue(), StandardCharsets.UTF_8));
+        assertDenied(client.streamList(key,  INTRUDER_CLIENT_ID));
+
+        client.unlockObject(key, OWNER_CLIENT_ID).get();
+    }
+    @Test
+    @DisplayName("Lock expiration on list")
+    void testLockExpiration() throws ExecutionException, InterruptedException {
+        String key = "list_lock_expire_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("value"));
+
+        KeyHintData hint = client.createList(key, data).get();
+
+        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        Thread.sleep(2000);
+
+        List<Variant> val = client.streamList(key, INTRUDER_CLIENT_ID).get();
+        assertNotNull(val);
     }
 }

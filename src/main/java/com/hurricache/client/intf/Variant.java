@@ -15,13 +15,13 @@ public final class Variant {
 
     private final Type type;
     private final byte[] bytesValue;
-    private final long intValue;
+    private final long longValue;
     private final double doubleValue;
 
     private Variant(Type type, byte[] bytesValue, long intValue, double doubleValue) {
         this.type = type;
         this.bytesValue = bytesValue;
-        this.intValue = intValue;
+        this.longValue = intValue;
         this.doubleValue = doubleValue;
     }
 
@@ -29,7 +29,7 @@ public final class Variant {
         return new Variant(Type.BYTES, value, 0L, 0.0);
     }
 
-    public static Variant ofInt(long value) {
+    public static Variant ofLong(long value) {
         return new Variant(Type.INT, null, value, 0.0);
     }
 
@@ -66,7 +66,7 @@ public final class Variant {
     }
 
     public long longValue() {
-        return intValue;
+        return longValue;
     }
 
     public double doubleValue() {
@@ -77,7 +77,7 @@ public final class Variant {
      * Returns the value as a Number (Long for INT, Double for DOUBLE).
      */
     public Number numberValue() {
-        return (type == Type.DOUBLE) ? doubleValue : intValue;
+        return (type == Type.DOUBLE) ? doubleValue : longValue;
     }
 
     public byte[] requireBytes() {
@@ -91,7 +91,7 @@ public final class Variant {
         if (type != Type.INT) {
             throw new IllegalStateException("Expected INT, got " + type);
         }
-        return intValue;
+        return longValue;
     }
 
     public double requireDouble() {
@@ -109,7 +109,7 @@ public final class Variant {
             case BYTES:
                 return "Variant{bytes=" + (bytesValue != null ? bytesValue.length : 0) + "B}";
             case INT:
-                return "Variant{int=" + intValue + "}";
+                return "Variant{int=" + longValue + "}";
             case DOUBLE:
                 return "Variant{double=" + doubleValue + "}";
             default:
@@ -123,7 +123,7 @@ public final class Variant {
             return false;
         }
         Variant variant = (Variant) o;
-        return intValue == variant.intValue
+        return longValue == variant.longValue
                && Double.compare(doubleValue, variant.doubleValue) == 0
                && type == variant.type
                && Objects.deepEquals(bytesValue, variant.bytesValue);
@@ -131,6 +131,6 @@ public final class Variant {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, Arrays.hashCode(bytesValue), intValue, doubleValue);
+        return Objects.hash(type, Arrays.hashCode(bytesValue), longValue, doubleValue);
     }
 }

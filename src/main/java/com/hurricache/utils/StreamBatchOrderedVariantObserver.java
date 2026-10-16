@@ -1,14 +1,11 @@
 package com.hurricache.utils;
 
-import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.BatchValueResponse;
 import io.grpc.stub.StreamObserver;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -47,13 +44,13 @@ public class StreamBatchOrderedVariantObserver implements StreamObserver<BatchVa
 
         switch (vt) {
             case INT:
-                return Variant.ofInt(bp.getIntPayload());
+                return Variant.ofLong(bp.getIntPayload());
             case DOUBLE:
                 return Variant.ofDouble(bp.getDoublePayload());
             case BYTES:
             case AUTO:
             default:
-                if (bp.hasIntPayload()) return Variant.ofInt(bp.getIntPayload());
+                if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
                 if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
                 if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
                 return Variant.none();

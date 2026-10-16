@@ -1,6 +1,5 @@
 package com.hurricache.utils;
 
-import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.BatchValueResponse;
@@ -18,7 +17,7 @@ public class StreamBatchOrderedObserver extends CompletableFutureObserver<BatchV
                         return switch (orderedValue.getValueType()){
                             case AUTO -> OrderedVariant.of(Variant.none());
                             case BYTES -> OrderedVariant.of(Variant.ofBytes(CompressionUtils.decompressIfNeeded(orderedValue)), orderedValue.getOrder());
-                            case INT -> OrderedVariant.of(Variant.ofInt(orderedValue.getValue().getIntPayload()), orderedValue.getOrder());
+                            case INT -> OrderedVariant.of(Variant.ofLong(orderedValue.getValue().getIntPayload()), orderedValue.getOrder());
                             case DOUBLE -> OrderedVariant.of(Variant.ofDouble(orderedValue.getValue().getDoublePayload()), orderedValue.getOrder());
                             case UNRECOGNIZED -> OrderedVariant.of(Variant.none());
                         };

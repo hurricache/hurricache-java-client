@@ -25,7 +25,7 @@ class VariantTest {
     @Test
     @DisplayName("ofInt should create Variant with INT type")
     void testOfInt() {
-        Variant variant = Variant.ofInt(42L);
+        Variant variant = Variant.ofLong(42L);
 
         assertEquals(Variant.Type.INT, variant.type());
         assertTrue(variant.isInt());
@@ -63,7 +63,7 @@ class VariantTest {
     @DisplayName("type() should return correct type for each variant")
     void testType() {
         assertEquals(Variant.Type.BYTES, Variant.ofBytes(new byte[0]).type());
-        assertEquals(Variant.Type.INT, Variant.ofInt(0).type());
+        assertEquals(Variant.Type.INT, Variant.ofLong(0).type());
         assertEquals(Variant.Type.DOUBLE, Variant.ofDouble(0.0).type());
         assertEquals(Variant.Type.NONE, Variant.none().type());
     }
@@ -72,7 +72,7 @@ class VariantTest {
     @DisplayName("isNone/isBytes/isInt/isDouble should work correctly")
     void testTypeChecks() {
         Variant bytes = Variant.ofBytes(new byte[1]);
-        Variant integer = Variant.ofInt(1);
+        Variant integer = Variant.ofLong(1);
         Variant doubleV = Variant.ofDouble(1.0);
         Variant none = Variant.none();
 
@@ -113,7 +113,7 @@ class VariantTest {
     @Test
     @DisplayName("intValue should return correct long value")
     void testIntValue() {
-        Variant variant = Variant.ofInt(12345L);
+        Variant variant = Variant.ofLong(12345L);
         assertEquals(12345L, variant.longValue());
     }
 
@@ -131,7 +131,7 @@ class VariantTest {
     @Test
     @DisplayName("numberValue should return Long for INT type")
     void testNumberValueInt() {
-        Variant variant = Variant.ofInt(42L);
+        Variant variant = Variant.ofLong(42L);
         Number number = variant.numberValue();
 
         assertNotNull(number);
@@ -175,7 +175,7 @@ class VariantTest {
     @Test
     @DisplayName("requireBytes should throw for non-BYTES type")
     void testRequireBytesThrows() {
-        Variant integer = Variant.ofInt(42);
+        Variant integer = Variant.ofLong(42);
         Variant none = Variant.none();
 
         assertThrows(IllegalStateException.class, () -> integer.requireBytes());
@@ -185,7 +185,7 @@ class VariantTest {
     @Test
     @DisplayName("requireLong should return long for INT type")
     void testRequireLong() {
-        Variant variant = Variant.ofInt(99L);
+        Variant variant = Variant.ofLong(99L);
         assertEquals(99L, variant.requireLong());
     }
 
@@ -210,7 +210,7 @@ class VariantTest {
     @DisplayName("requireDouble should throw for non-DOUBLE type")
     void testRequireDoubleThrows() {
         Variant bytes = Variant.ofBytes(new byte[1]);
-        Variant integer = Variant.ofInt(42);
+        Variant integer = Variant.ofLong(42);
         Variant none = Variant.none();
 
         assertThrows(IllegalStateException.class, () -> bytes.requireDouble());
@@ -242,7 +242,7 @@ class VariantTest {
     @Test
     @DisplayName("should handle negative long values")
     void testNegativeLong() {
-        Variant variant = Variant.ofInt(-12345L);
+        Variant variant = Variant.ofLong(-12345L);
         assertEquals(-12345L, variant.longValue());
         assertEquals(-12345L, variant.requireLong());
     }
@@ -251,7 +251,7 @@ class VariantTest {
     @DisplayName("should handle zero values for all types")
     void testZeroValues() {
         Variant bytes = Variant.ofBytes(new byte[]{0});
-        Variant integer = Variant.ofInt(0L);
+        Variant integer = Variant.ofLong(0L);
         Variant doubleV = Variant.ofDouble(0.0);
 
         assertEquals(Variant.Type.BYTES, bytes.type());
@@ -267,7 +267,7 @@ class VariantTest {
     @DisplayName("toString should include type information")
     void testToString() {
         Variant bytes = Variant.ofBytes(new byte[]{1, 2, 3});
-        Variant integer = Variant.ofInt(42);
+        Variant integer = Variant.ofLong(42);
         Variant doubleV = Variant.ofDouble(3.14);
         Variant none = Variant.none();
 

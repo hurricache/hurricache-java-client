@@ -66,6 +66,10 @@ public interface HurriCacheClientVector  extends HurriCacheClientInterfaceCommon
      */
     CompletableFuture<List<Variant>> streamVector(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
+    default CompletableFuture<List<Variant>> streamVector(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return streamVector(serializeKey(key), hint, clientId, timeout);
+    }
+
     default CompletableFuture<List<Variant>> streamVector(String key) {
         return streamVector(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }

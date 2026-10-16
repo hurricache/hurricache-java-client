@@ -2,7 +2,6 @@ package com.hurricache.client;
 
 import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Variant;
-import com.hurricache.grpc.BinaryPayload;
 import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueType;
@@ -36,7 +35,7 @@ class KeyValueUtilsVariantTest {
     @Test
     @DisplayName("buildValueFromVariant should create Value from INT Variant")
     void testBuildValueFromVariantInt() {
-        Variant variant = Variant.ofInt(42L);
+        Variant variant = Variant.ofLong(42L);
         Duration ttl = Duration.ofSeconds(60);
 
         Value value = KeyValueUtils.buildValueFromVariant(variant, ttl);
@@ -76,7 +75,7 @@ class KeyValueUtilsVariantTest {
     @Test
     @DisplayName("buildValueFromVariantCompressed should handle INT Variant without compression")
     void testBuildValueFromVariantCompressedInt() {
-        Variant variant = Variant.ofInt(12345L);
+        Variant variant = Variant.ofLong(12345L);
 
         Value.Builder builder = KeyValueUtils.buildValueFromVariantCompressed(variant, 10);
 
@@ -117,7 +116,7 @@ class KeyValueUtilsVariantTest {
     @Test
     @DisplayName("buildOrderedValueFromVariant should handle INT with order")
     void testBuildOrderedValueFromVariantInt() {
-        Variant variant = Variant.ofInt(999L);
+        Variant variant = Variant.ofLong(999L);
         OrderedVariant ordered = OrderedVariant.of(variant, 200L);
 
         OrderedValue value = KeyValueUtils.buildOrderedValueFromVariant(ordered, null, 10).build();
@@ -143,7 +142,7 @@ class KeyValueUtilsVariantTest {
     @Test
     @DisplayName("buildOrderedValueFromVariant should handle null order")
     void testBuildOrderedValueFromVariantNullOrder() {
-        Variant variant = Variant.ofInt(42);
+        Variant variant = Variant.ofLong(42);
         OrderedVariant ordered = OrderedVariant.of(variant);
 
         OrderedValue value = KeyValueUtils.buildOrderedValueFromVariant(ordered, null, 10).build();

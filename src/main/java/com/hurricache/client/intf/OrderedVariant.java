@@ -41,7 +41,7 @@ public final class OrderedVariant {
      * Creates an OrderedVariant from an int value with a specific order.
      */
     public static OrderedVariant ofInt(long value, long order) {
-        return new OrderedVariant(Variant.ofInt(value), order);
+        return new OrderedVariant(Variant.ofLong(value), order);
     }
 
     /**

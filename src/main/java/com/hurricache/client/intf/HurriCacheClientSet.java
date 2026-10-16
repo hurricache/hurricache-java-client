@@ -110,4 +110,12 @@ public interface HurriCacheClientSet extends HurriCacheClientInterfaceCommon{
     default CompletableFuture<List<Variant>> streamSet(byte[] key) {
         return streamSet(key, null, getDefaultClientId(), getDefaultTimeout());
     }
+
+    default CompletableFuture<List<Variant>> streamSet(String key, int clientId) {
+        return streamSet(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> streamSet(byte[] key, int clientId) {
+        return streamSet(key, null, clientId, getDefaultTimeout());
+    }
 }

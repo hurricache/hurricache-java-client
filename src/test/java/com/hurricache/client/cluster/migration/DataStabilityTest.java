@@ -110,7 +110,7 @@ public class DataStabilityTest extends TestBaseCluster {
                     case "scalar" ->
                         client.createKeyValue(key, Variant.ofBytes(("value_" + objNum).getBytes(StandardCharsets.UTF_8))).join();
                     case "atomic" ->
-                        client.createKeyValue(key, Variant.ofInt(objNum));
+                        client.createKeyValue(key, Variant.ofLong(objNum));
                     case "vector" ->
                         client.createVector(key, generatePayloads(elementsPerContainer)).join();
                     case "set" ->

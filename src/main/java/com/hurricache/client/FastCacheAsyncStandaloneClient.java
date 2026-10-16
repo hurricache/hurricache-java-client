@@ -849,6 +849,15 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
                                                                        Payload keys, int clientId, Duration timeout) {
         return delegate.removeFromContainerByKey(key, hint, keys, clientId, timeout);
     }
+
+    public CompletableFuture<Integer> removeFromContainerByKey(byte[] key,
+                                                               KeyHintData hint,
+                                                               Variant containerKey,
+                                                               int clientId,
+                                                               Duration timeout) {
+
+        return delegate.removeFromContainerByKey(key, hint, containerKey, clientId, timeout);
+    }
     // =========================================================================
     // LOCKING OPERATIONS
     // =========================================================================
@@ -873,12 +882,27 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     }
 
     @Override
+    public CompletableFuture<Number> atomicExchange(byte[] key, KeyHintData hint, double value, Duration ttl, int clientId, Duration timeout) {
+        return delegate.atomicExchange(key, hint, value, ttl, clientId, timeout);
+    }
+
+    @Override
     public CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
         return delegate.atomicAdd(key, hint, delta, ttl, clientId, timeout);
     }
 
     @Override
+    public CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.atomicAdd(key, hint, delta, ttl, clientId, timeout);
+    }
+
+    @Override
     public CompletableFuture<Number> atomicSub(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.atomicSub(key, hint, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> atomicSub(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
         return delegate.atomicSub(key, hint, delta, ttl, clientId, timeout);
     }
 
@@ -899,6 +923,11 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
 
     @Override
     public CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData hint, long expectedValue, long newValue, Duration ttl, int clientId, Duration timeout) {
+        return delegate.atomicCompareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData hint, double expectedValue, double newValue, Duration ttl, int clientId, Duration timeout) {
         return delegate.atomicCompareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout);
     }
 

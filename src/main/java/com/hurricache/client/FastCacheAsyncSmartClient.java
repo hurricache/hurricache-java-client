@@ -780,6 +780,14 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return executeWrite(hint, c -> c.removeFromContainerByKeyAndValue(key, hint, keys, values, clientId, timeout));
     }
 
+    public CompletableFuture<Integer> removeFromContainerByKey(byte[] key,
+                                                               KeyHintData hint,
+                                                               Variant containerKey,
+                                                               int clientId,
+                                                               Duration timeout) {
+
+        return executeWrite(hint,c -> c.removeFromContainerByKey(key, hint, containerKey, clientId, timeout));
+    }
     @Override
     public CompletableFuture<Integer> removeFromContainerByKey(byte[] key, KeyHintData hint,
                                                                Payload keys, int clientId, Duration timeout) {
@@ -1538,4 +1546,28 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
 
     private record RerouteTargets(String masterTarget, String backupTarget) {}
+
+    // =========================================================================
+    // DOUBLE OVERLOADS FOR ATOMIC OPERATIONS
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<Number> atomicExchange(byte[] key, KeyHintData hint, double value, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicExchange(key, hint, value, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicAdd(key, hint, delta, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Number> atomicSub(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicSub(key, hint, delta, ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData hint, double expectedValue, double newValue, Duration ttl, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.atomicCompareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout));
+    }
 }

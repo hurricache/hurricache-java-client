@@ -46,13 +46,13 @@ public class StreamBatchMapVariantObserver implements StreamObserver<BatchValueR
 
         switch (vt) {
             case INT:
-                return Variant.ofInt(bp.getIntPayload());
+                return Variant.ofLong(bp.getIntPayload());
             case DOUBLE:
                 return Variant.ofDouble(bp.getDoublePayload());
             case BYTES:
             case AUTO:
             default:
-                if (bp.hasIntPayload()) return Variant.ofInt(bp.getIntPayload());
+                if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
                 if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
                 if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
                 return Variant.none();

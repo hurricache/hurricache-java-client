@@ -25,7 +25,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("of(Variant) should create OrderedVariant without order (null)")
     void testOfWithoutOrder() {
-        Variant variant = Variant.ofInt(100);
+        Variant variant = Variant.ofLong(100);
         OrderedVariant ordered = OrderedVariant.of(variant);
 
         assertEquals(variant, ordered.variant());
@@ -70,7 +70,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("should delegate type() to variant")
     void testDelegateType() {
-        Variant variant = Variant.ofInt(42);
+        Variant variant = Variant.ofLong(42);
         OrderedVariant ordered = OrderedVariant.of(variant, 1L);
 
         assertEquals(variant.type(), ordered.type());
@@ -80,7 +80,7 @@ class OrderedVariantTest {
     @DisplayName("should delegate isNone/isBytes/isInt/isDouble to variant")
     void testDelegateTypeChecks() {
         Variant bytes = Variant.ofBytes(new byte[1]);
-        Variant integer = Variant.ofInt(1);
+        Variant integer = Variant.ofLong(1);
         Variant doubleV = Variant.ofDouble(1.0);
         Variant none = Variant.none();
 
@@ -108,7 +108,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("should delegate intValue to variant")
     void testDelegateIntValue() {
-        Variant variant = Variant.ofInt(999L);
+        Variant variant = Variant.ofLong(999L);
         OrderedVariant ordered = OrderedVariant.of(variant, 10L);
 
         assertEquals(999L, ordered.intValue());
@@ -126,7 +126,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("should delegate numberValue to variant")
     void testDelegateNumberValue() {
-        Variant intVariant = Variant.ofInt(42L);
+        Variant intVariant = Variant.ofLong(42L);
         OrderedVariant intOrdered = OrderedVariant.of(intVariant, 1L);
         assertEquals(42L, intOrdered.numberValue().longValue());
 
@@ -148,7 +148,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("should delegate requireLong to variant")
     void testDelegateRequireLong() {
-        Variant variant = Variant.ofInt(777L);
+        Variant variant = Variant.ofLong(777L);
         OrderedVariant ordered = OrderedVariant.of(variant, 1L);
 
         assertEquals(777L, ordered.requireLong());
@@ -170,7 +170,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("should handle zero order")
     void testZeroOrder() {
-        Variant variant = Variant.ofInt(0);
+        Variant variant = Variant.ofLong(0);
         OrderedVariant ordered = OrderedVariant.of(variant, 0L);
 
         assertTrue(ordered.hasOrder());
@@ -180,7 +180,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("should handle negative order")
     void testNegativeOrder() {
-        Variant variant = Variant.ofInt(1);
+        Variant variant = Variant.ofLong(1);
         OrderedVariant ordered = OrderedVariant.of(variant, -100L);
 
         assertEquals(-100L, ordered.getOrder());
@@ -189,7 +189,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("should handle large order values")
     void testLargeOrder() {
-        Variant variant = Variant.ofInt(1);
+        Variant variant = Variant.ofLong(1);
         long largeOrder = Long.MAX_VALUE;
         OrderedVariant ordered = OrderedVariant.of(variant, largeOrder);
 
@@ -212,7 +212,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("toString should include variant and order information")
     void testToString() {
-        Variant variant = Variant.ofInt(42);
+        Variant variant = Variant.ofLong(42);
         OrderedVariant ordered = OrderedVariant.of(variant, 100L);
 
         String str = ordered.toString();
@@ -224,7 +224,7 @@ class OrderedVariantTest {
     @Test
     @DisplayName("toString should show null order when not set")
     void testToStringNullOrder() {
-        OrderedVariant ordered = OrderedVariant.of(Variant.ofInt(42));
+        OrderedVariant ordered = OrderedVariant.of(Variant.ofLong(42));
 
         String str = ordered.toString();
         assertTrue(str.contains("order=null"));

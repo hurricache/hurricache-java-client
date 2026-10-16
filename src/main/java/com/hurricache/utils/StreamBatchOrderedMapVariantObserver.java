@@ -23,10 +23,13 @@ public class StreamBatchOrderedMapVariantObserver implements StreamObserver<Batc
 
     @Override
     public void onNext(BatchValueResponse response) {
-        for (int i = 0; i < response.getKeyOrderedCount(); i++) {
+        int count = response.getKeyOrderedCount();
+        
+        for (int i = 0; i < count; i++) {
             byte[] keyBytes = response.getKeyOrdered(i).getPayload().toByteArray();
             long weight = response.getKeyOrdered(i).getOrder();
-            Variant variant = extractVariant(response.getValueOrdered(i));
+            // Server sends values in value_unordered field
+            Variant variant = extractVariantFromValue(response.getValueUnordered(i));
             result.put(OrderedPayload.of(keyBytes, weight), variant);
         }
     }
@@ -47,13 +50,32 @@ public class StreamBatchOrderedMapVariantObserver implements StreamObserver<Batc
 
         switch (vt) {
             case INT:
-                return Variant.ofInt(bp.getIntPayload());
+                return Variant.ofLong(bp.getIntPayload());
             case DOUBLE:
                 return Variant.ofDouble(bp.getDoublePayload());
             case BYTES:
             case AUTO:
             default:
-                if (bp.hasIntPayload()) return Variant.ofInt(bp.getIntPayload());
+                if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
+                if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
+                if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
+                return Variant.none();
+        }
+    }
+
+    private Variant extractVariantFromValue(com.hurricache.grpc.Value val) {
+        com.hurricache.grpc.BinaryPayload bp = val.getValue();
+        com.hurricache.grpc.ValueType vt = val.hasValueType() ? val.getValueType() : com.hurricache.grpc.ValueType.AUTO;
+
+        switch (vt) {
+            case INT:
+                return Variant.ofLong(bp.getIntPayload());
+            case DOUBLE:
+                return Variant.ofDouble(bp.getDoublePayload());
+            case BYTES:
+            case AUTO:
+            default:
+                if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
                 if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
                 if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
                 return Variant.none();

@@ -76,6 +76,22 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
         return streamOrderedMap(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<Map<OrderedPayload, Variant>> streamOrderedMap(String key, KeyHintData hint, int clientId) {
+        return streamOrderedMap(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> streamOrderedMap(byte[] key, KeyHintData hint, int clientId) {
+        return streamOrderedMap(key, hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> streamOrderedMap(String key, int clientId) {
+        return streamOrderedMap(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> streamOrderedMap(byte[] key, int clientId) {
+        return streamOrderedMap(key, null, clientId, getDefaultTimeout());
+    }
+
     /**
      * Adds elements to an ordered map container.
      *

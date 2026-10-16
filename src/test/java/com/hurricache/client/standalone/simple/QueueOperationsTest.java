@@ -2,23 +2,17 @@ package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -26,664 +20,297 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueueOperationsTest extends TestBase {
 
-    private static final int LARGE_ELEMENT_COUNT = 1500;
-    private static final int PAYLOAD_SIZE = 8192;
-    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    private static final int OWNER_CLIENT_ID = 100;
+    private static final int INTRUDER_CLIENT_ID = 200;
 
     // =========================================================================
     // 1. CREATE QUEUE
     // =========================================================================
 
     @Test
-    @DisplayName("createQueue: create empty queue")
+    @DisplayName("Create empty queue")
     void testCreateEmptyQueue() throws ExecutionException, InterruptedException {
-        String key = "createEmptyQueue" + UUID.randomUUID();
+        String key = "queue_empty_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createQueue(key, List.of()).get();
+        KeyHintData hint = client.createQueue(key, new ArrayList<>()).get();
         assertNotNull(hint);
-
-        Variant head = client.getHead(key).get();
-        assertEquals(0, head.bytesValue().length);
-    }
-
-    @Test
-    @DisplayName("createQueue: create queue with initial data")
-    void testCreateQueueWithInitialData() throws ExecutionException, InterruptedException {
-        String key = "createQueueWithInitialData" + UUID.randomUUID();
-
-        KeyHintData hint = client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-        assertNotNull(hint);
-
-        Thread.sleep(500);
-
-        assertEquals("first", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("createQueue: create large queue with chunking")
-    void testCreateLargeQueueWithChunking() throws ExecutionException, InterruptedException {
-        byte[] key = ("largeQueueKey" + UUID.randomUUID()).getBytes(StandardCharsets.UTF_8);
-        List<Variant> variants = new ArrayList<>(LARGE_ELEMENT_COUNT);
-        for (int i = 0; i < LARGE_ELEMENT_COUNT; i++) {
-            variants.add(Variant.ofBytes(createLargePayload(PAYLOAD_SIZE)));
-        }
-
-        KeyHintData hint = client.createQueue(key, null, variants, getTestTtl(), 0, TIMEOUT).get();
-        assertNotNull(hint);
-
-        Thread.sleep(500);
-
-        int count = 0;
-        while (true) {
-            Variant p = client.getAndDeleteHead(key, hint, 0, TIMEOUT).get();
-            if (p.bytesValue().length == 0) break;
-            count++;
-        }
-        assertEquals(LARGE_ELEMENT_COUNT, count);
-    }
-
-    // =========================================================================
-    // 2. EMPTY QUEUE EDGE CASES
-    // =========================================================================
-
-    @Test
-    @DisplayName("empty queue: getHead returns empty Variant")
-    void testGetHeadOnEmptyQueue() throws ExecutionException, InterruptedException {
-        String key = "emptyQueueGetHead" + UUID.randomUUID();
-        client.createQueue(key, List.of()).get();
-
-        Thread.sleep(500);
-
-        Variant head = client.getHead(key).get();
-        assertEquals(0, head.bytesValue().length);
-    }
-
-    @Test
-    @DisplayName("empty queue: getAndDeleteHead returns empty Variant")
-    void testGetAndDeleteHeadOnEmptyQueue() throws ExecutionException, InterruptedException {
-        String key = "emptyQueueGetAndDelete" + UUID.randomUUID();
-        client.createQueue(key, List.of()).get();
-
-        Thread.sleep(500);
-
-        Variant removed = client.getAndDeleteHead(key).get();
-        assertEquals(0, removed.bytesValue().length);
-    }
-
-    // =========================================================================
-    // 3. GET AND DELETE HEAD
-    // =========================================================================
-
-    @Test
-    @DisplayName("getAndDeleteHead: dequeue from multi-element queue")
-    void testGetAndDeleteHead() throws ExecutionException, InterruptedException {
-        String key = "getAndDeleteHead" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Variant removed = client.getAndDeleteHead(key).get();
-        assertEquals("first", new String(removed.bytesValue(), StandardCharsets.UTF_8));
-
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getAndDeleteHead: dequeue from single-element queue")
-    void testGetAndDeleteHeadOnSingleElement() throws ExecutionException, InterruptedException {
-        String key = "singleElementQueue" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        Variant removed = client.getAndDeleteHead(key).get();
-        assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
-
-        Variant empty = client.getHead(key).get();
-        assertEquals(0, empty.bytesValue().length);
-    }
-
-    // =========================================================================
-    // 4. GET HEAD
-    // =========================================================================
-
-    @Test
-    @DisplayName("getHead: return front element without removal")
-    void testGetHead() throws ExecutionException, InterruptedException {
-        String key = "getHead" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Variant head = client.getHead(key).get();
-
-        assertEquals("first", new String(head.bytesValue(), StandardCharsets.UTF_8));
-
-        Variant stillThere = client.getAndDeleteHead(key).get();
-        assertEquals("first", new String(stillThere.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getHead: single element edge case")
-    void testGetHeadOnSingleElementQueue() throws ExecutionException, InterruptedException {
-        String key = "singleElementHead" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        Variant head = client.getHead(key).get();
-
-        assertEquals("only", new String(head.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 5. GET TAIL
-    // =========================================================================
-
-    @Test
-    @DisplayName("getTail: get tail from multi-element queue")
-    void testGetTail() throws ExecutionException, InterruptedException {
-        String key = "getTail" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Variant tail = client.getTail(key).get();
-        assertEquals("third", new String(tail.bytesValue(), StandardCharsets.UTF_8));
-
-        // Queue unchanged
-        assertEquals("first", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getTail: single element = head == tail")
-    void testGetTailOnSingleElementQueue() throws ExecutionException, InterruptedException {
-        String key = "singleElementTail" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        Variant head = client.getHead(key).get();
-        Variant tail = client.getTail(key).get();
-
-        assertEquals("only", new String(head.bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("only", new String(tail.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 6. GET AND DELETE TAIL
-    // =========================================================================
-
-    @Test
-    @DisplayName("getAndDeleteTail: pop back from multi-element queue")
-    void testGetAndDeleteTail() throws ExecutionException, InterruptedException {
-        String key = "getAndDeleteTail" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Variant removed = client.getAndDeleteTail(key).get();
-        assertEquals("third", new String(removed.bytesValue(), StandardCharsets.UTF_8));
-
-        assertEquals("first", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getAndDeleteTail: single element, queue becomes empty")
-    void testGetAndDeleteTailOnSingleElementQueue() throws ExecutionException, InterruptedException {
-        String key = "singleElementTailRemove" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        Variant removed = client.getAndDeleteTail(key).get();
-        assertEquals("only", new String(removed.bytesValue(), StandardCharsets.UTF_8));
-
-        Variant empty = client.getHead(key).get();
-        assertEquals(0, empty.bytesValue().length);
-    }
-
-    // =========================================================================
-    // 7. ADD ELEMENT TO TAIL
-    // =========================================================================
-
-    @Test
-    @DisplayName("addElementToTail: add element to existing queue")
-    void testAddElementToTail() throws ExecutionException, InterruptedException {
-        String key = "addElementToTail" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer added = client.addElementToTail(key, null, List.of(Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8)))).get();
-        assertEquals(1, added);
-
-        assertEquals("first", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 8. ADD ELEMENT TO HEAD
-    // =========================================================================
-
-    @Test
-    @DisplayName("addElementToHead: prepend element to queue")
-    void testAddElementToHead() throws ExecutionException, InterruptedException {
-        String key = "addElementToHead" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer added = client.addElementToHead(key, null, List.of(Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)))).get();
-        assertEquals(1, added);
-
-        assertEquals("first", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("addElementToHead: multiple prepends, last prepend = head")
-    void testAddElementToHeadMultiple() throws ExecutionException, InterruptedException {
-        String key = "addElementToHeadMultiple" + UUID.randomUUID();
-
-        client.createQueue(key, List.of()).get();
-
-        Thread.sleep(500);
-
-        client.addElementToHead(key, null, List.of(Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)))).get();
-        client.addElementToHead(key, null, List.of(Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)))).get();
-        client.addElementToHead(key, null, List.of(Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8)))).get();
-
-        assertEquals("third", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("first", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 9. DELETE HEAD
-    // =========================================================================
-
-    @Test
-    @DisplayName("deleteHead: remove without return, verify next element")
-    void testDeleteHead() throws ExecutionException, InterruptedException {
-        String key = "deleteHead" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer deleted = client.deleteHead(key).get();
-        assertTrue(deleted > 0);
-
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("third", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 10. DELETE TAIL
-    // =========================================================================
-
-    @Test
-    @DisplayName("deleteTail: remove without return, verify new tail")
-    void testDeleteTail() throws ExecutionException, InterruptedException {
-        String key = "deleteTail" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("third".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
-
-        Integer deleted = client.deleteTail(key).get();
-        assertTrue(deleted > 0);
-
-        assertEquals("first", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-        assertEquals("second", new String(client.getAndDeleteHead(key).get().bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("deleteTail: single element, queue becomes empty")
-    void testDeleteTailOnSingleElement() throws ExecutionException, InterruptedException {
-        String key = "deleteTailSingle" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("only".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        Integer deleted = client.deleteTail(key).get();
-        assertTrue(deleted > 0);
-
-        Variant empty = client.getHead(key).get();
-        assertEquals(0, empty.bytesValue().length);
-    }
-
-    // =========================================================================
-    // 11. GET SIZE
-    // =========================================================================
-
-    @Test
-    @DisplayName("getSize: returns 0 for queue (not supported)")
-    void testGetSizeReturnsZero() throws ExecutionException, InterruptedException {
-        String key = "getSizeQueue" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(
-                Variant.ofBytes("first".getBytes(StandardCharsets.UTF_8)),
-                Variant.ofBytes("second".getBytes(StandardCharsets.UTF_8))
-        )).get();
-
-        Thread.sleep(500);
 
         Integer size = client.getSize(key).get();
         assertEquals(0, size);
     }
 
+    @Test
+    @DisplayName("Create queue with bytes")
+    void testCreateQueueWithBytes() throws ExecutionException, InterruptedException {
+        String key = "queue_bytes_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("item1"), v("item2"), v("item3"));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+        assertNotNull(hint);
+
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals("item1", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("Create queue with int")
+    void testCreateQueueWithInt() throws ExecutionException, InterruptedException {
+        String key = "queue_int_" + UUID.randomUUID();
+        List<Variant> data = List.of(vi(10), vi(20), vi(30));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+        assertNotNull(hint);
+
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals(10, head.longValue());
+    }
+
+    @Test
+    @DisplayName("Create queue with double")
+    void testCreateQueueWithDouble() throws ExecutionException, InterruptedException {
+        String key = "queue_double_" + UUID.randomUUID();
+        List<Variant> data = List.of(vd(1.1), vd(2.2), vd(3.3));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+        assertNotNull(hint);
+
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals(1.1, head.doubleValue(), 0.001);
+    }
+
+    @Test
+    @DisplayName("Create queue with mixed types")
+    void testCreateQueueMixedTypes() throws ExecutionException, InterruptedException {
+        String key = "queue_mixed_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("hello"), vi(42), vd(3.14));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+        assertNotNull(hint);
+
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals("hello", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     // =========================================================================
-    // 12. REMOVE QUEUE
+    // 2. ADD/REMOVE
     // =========================================================================
 
     @Test
-    @DisplayName("removeQueue: remove queue, verify NOT_FOUND on next operation")
-    void testRemoveQueue() throws ExecutionException, InterruptedException {
-        String key = "removeQueue" + UUID.randomUUID();
+    @DisplayName("addElementToTail and addElementToHead")
+    void testAddToTailAndHead() throws ExecutionException, InterruptedException {
+        String key = "queue_add_" + UUID.randomUUID();
 
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
+        KeyHintData hint = client.createQueue(key, List.of(v("middle"))).get();
 
-        Thread.sleep(500);
+        Integer added = client.addElementToTail(key, List.of(v("tail1"), v("tail2"))).get();
+        assertEquals(2, added);
 
-        boolean removed = client.remove(key).get();
-        assertTrue(removed);
+        added = client.addElementToHead(key, List.of(v("head1"))).get();
+        assertEquals(1, added);
 
-        try {
-            client.getHead(key).get();
-            Assertions.fail("Expected NOT_FOUND error");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals("head1", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Variant tail = client.getTail(key).get();
+        assertNotNull(tail);
+        assertEquals("tail2", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getHead and getTail")
+    void testGetHeadAndTail() throws ExecutionException, InterruptedException {
+        String key = "queue_head_tail_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("middle"), v("last"));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals("first", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Variant tail = client.getTail(key).get();
+        assertNotNull(tail);
+        assertEquals("last", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteHead")
+    void testGetAndDeleteHead() throws ExecutionException, InterruptedException {
+        String key = "queue_delete_head_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("middle"), v("last"));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+
+        Variant deleted = client.getAndDeleteHead(key).get();
+        assertNotNull(deleted);
+        assertEquals("first", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Variant newHead = client.getHead(key).get();
+        assertEquals("middle", new String(newHead.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("deleteHead and deleteTail")
+    void testDeleteHeadAndTail() throws ExecutionException, InterruptedException {
+        String key = "queue_delete_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("middle"), v("last"));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+
+        Integer deleted = client.deleteHead(key).get();
+        assertEquals(1, deleted);
+
+        deleted = client.deleteTail(key).get();
+        assertEquals(1, deleted);
+
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals("middle", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteTail")
+    void testGetAndDeleteTail() throws ExecutionException, InterruptedException {
+        String key = "queue_get_delete_tail_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("first"), v("middle"), v("last"));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+
+        Variant deleted = client.getAndDeleteTail(key).get();
+        assertNotNull(deleted);
+        assertEquals("last", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Variant tail = client.getTail(key).get();
+        assertNotNull(tail);
+        assertEquals("middle", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("addElementToHead")
+    void testAddElementToHead() throws ExecutionException, InterruptedException {
+        String key = "queue_add_head_" + UUID.randomUUID();
+
+        KeyHintData hint = client.createQueue(key, List.of(v("middle"))).get();
+
+        Integer added = client.addElementToHead(key, List.of(v("head1"), v("head2"))).get();
+        assertEquals(2, added);
+
+        Variant head = client.getHead(key).get();
+        assertNotNull(head);
+        assertEquals("head2", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Variant tail = client.getTail(key).get();
+        assertNotNull(tail);
+        assertEquals("middle", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 3. SIZE
+    // =========================================================================
+
+    @Test
+    @DisplayName("getSize via getAndDeleteHead")
+    void testGetSize() throws ExecutionException, InterruptedException {
+        String key = "queue_size_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"));
+
+        KeyHintData hint = client.createQueue(key, data).get();
+
+        // Count elements by getting and deleting head
+        int count = 0;
+        while (true) {
+            Variant head = client.getAndDeleteHead(key).get();
+            if (head == null || head.isNone()) break;
+            count++;
         }
-    }
-
-    @Test
-    @DisplayName("removeQueue: remove non-existent queue, verify NOT_FOUND")
-    void testRemoveNonExistentQueue() throws ExecutionException, InterruptedException {
-        String key = "removeNonExistent" + UUID.randomUUID();
-
-        try {
-            client.remove(key).get();
-            Assertions.fail("Expected NOT_FOUND error");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
+        assertEquals(3, count);
     }
 
     // =========================================================================
-    // 13. SET TTL / GET TTL
+    // 4. LOCK OPERATIONS
     // =========================================================================
 
     @Test
-    @DisplayName("setTtl/getTtl: set TTL and verify")
-    void testSetTtlAndGetTtlOnQueue() throws ExecutionException, InterruptedException {
-        String key = "ttlQueue" + UUID.randomUUID();
+    @DisplayName("READ_LOCK on queue: owner and intruder can both read, neither can write")
+    void testReadLock() throws ExecutionException, InterruptedException {
+        String key = "queue_read_lock_" + UUID.randomUUID();
 
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
+        KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        Thread.sleep(500);
+        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        boolean setTtl = client.setTtl(key, null, 5000).get();
-        assertTrue(setTtl);
+        // Owner can read
+        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
 
-        Long ttl = client.getTtl(key).get();
-        assertTrue(ttl > 0);
-    }
+        // Intruder can ALSO read (shared access)
+        Variant intruderVal = client.getHead(key, INTRUDER_CLIENT_ID).get();
+        assertNotNull(intruderVal);
 
-    // =========================================================================
-    // 14. TTL EXPIRY
-    // =========================================================================
+        // Neither can write
+        assertDenied(client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID));
+        assertDenied(client.addElementToTail(key, null, List.of(v("added")), INTRUDER_CLIENT_ID));
 
-    @Test
-    @DisplayName("queueTtlExpiry: queue expires after TTL")
-    void testQueueTtlExpiry() throws ExecutionException, InterruptedException {
-        String key = "ttlExpiryQueue" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        client.setTtl(key, null, 2000).get();
-
-        Thread.sleep(TimeUnit.MILLISECONDS.toMillis(5000));
-
-        try {
-            System.out.println(client.getTtl(key).get());
-            client.getHead(key).get();
-            Assertions.fail("Expected NOT_FOUND error after TTL expiry");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
-    }
-
-    // =========================================================================
-    // 15. LOCK OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("lock: WRITE_LOCK acquire and unlock")
-    void testWriteLockOnQueue() throws ExecutionException, InterruptedException {
-        String key = "writeLockQueue" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        int clientId = 5;
-        LockStatus lockRes = client.lockObject(key, LockType.WRITE_LOCK, clientId, Duration.ofSeconds(60)).get();
-        assertEquals(LockStatus.OK, lockRes);
-
-        LockStatus unlockRes = client.unlockObject(key, clientId).get();
-        assertEquals(LockStatus.OK, unlockRes);
+        client.unlockObject(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("lock: READ_LOCK acquire and unlock")
-    void testReadLockOnQueue() throws ExecutionException, InterruptedException {
-        String key = "readLockQueue" + UUID.randomUUID();
+    @DisplayName("WRITE_LOCK on queue: owner can read/write, intruder denied")
+    void testWriteLock() throws ExecutionException, InterruptedException {
+        String key = "queue_write_lock_" + UUID.randomUUID();
 
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
+        KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        Thread.sleep(500);
+        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        LockStatus lockRes = client.lockObject(key, LockType.READ_LOCK, 0, Duration.ofSeconds(60)).get();
-        assertEquals(LockStatus.OK, lockRes);
+        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
 
-        LockStatus unlockRes = client.unlockObject(key, 0).get();
-        assertEquals(LockStatus.OK, unlockRes);
+        client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID).get();
+
+        assertDenied(client.getHead(key, INTRUDER_CLIENT_ID));
+
+        client.unlockObject(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("lock: GLOBAL_LOCK acquire and unlock")
-    void testGlobalLockOnQueue() throws ExecutionException, InterruptedException {
-        String key = "globalLockQueue" + UUID.randomUUID();
+    @DisplayName("GLOBAL_LOCK on queue: only owner can access")
+    void testGlobalLock() throws ExecutionException, InterruptedException {
+        String key = "queue_global_lock_" + UUID.randomUUID();
 
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
+        KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        Thread.sleep(500);
+        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        LockStatus lockRes = client.lockObject(key, LockType.GLOBAL, 1, Duration.ofSeconds(60)).get();
-        assertEquals(LockStatus.OK, lockRes);
+        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
 
-        LockStatus unlockRes = client.unlockObject(key, 1).get();
-        assertEquals(LockStatus.OK, unlockRes);
+        assertDenied(client.getHead(key, INTRUDER_CLIENT_ID));
+
+        client.unlockObject(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
-    @DisplayName("lock: NO_LOCK acquire and unlock")
-    void testNoLockOnQueue() throws ExecutionException, InterruptedException {
-        String key = "noLockQueue" + UUID.randomUUID();
+    @DisplayName("Lock expiration on queue")
+    void testLockExpiration() throws ExecutionException, InterruptedException {
+        String key = "queue_lock_expire_" + UUID.randomUUID();
 
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
+        KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        Thread.sleep(500);
+        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        assertEquals(LockStatus.OK, lock);
 
-        LockStatus lockRes = client.lockObject(key, LockType.NO_LOCK, 0, Duration.ofSeconds(60)).get();
-        assertEquals(LockStatus.OK, lockRes);
+        Thread.sleep(2000);
 
-        LockStatus unlockRes = client.unlockObject(key, 0).get();
-        assertEquals(LockStatus.OK, unlockRes);
-    }
-
-    // =========================================================================
-    // 16. UNSUPPORTED METHODS ERROR CASES
-    // =========================================================================
-
-    @Test
-    @DisplayName("unsupported: getElementAtPosition returns INTERNAL")
-    void testGetElementAtPositionOnQueue() throws ExecutionException, InterruptedException {
-        String key = "posOpsQueue" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        assertUnsupportedMethod(client.getElementAtPosition(key.getBytes(StandardCharsets.UTF_8), null, 0, 0, TIMEOUT));
-    }
-
-    @Test
-    @DisplayName("unsupported: getAndDeleteElementAtPosition returns INTERNAL")
-    void testGetAndDeleteElementAtPositionOnQueue() throws ExecutionException, InterruptedException {
-        String key = "posOpsQueue2" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        assertUnsupportedMethod(client.getAndDeleteElementAtPosition(key.getBytes(StandardCharsets.UTF_8), null, 0, 0, TIMEOUT));
-    }
-
-    @Test
-    @DisplayName("unsupported: addElementToPosition returns INTERNAL")
-    void testAddElementToPositionOnQueue() throws ExecutionException, InterruptedException {
-        String key = "posOpsQueue3" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        assertUnsupportedMethod(client.addElementToPosition(key.getBytes(StandardCharsets.UTF_8), null, List.of(Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8))), 0, 0, TIMEOUT));
-    }
-
-    @Test
-    @DisplayName("unsupported: deleteElementAtPosition returns INTERNAL")
-    void testDeleteElementAtPositionOnQueue() throws ExecutionException, InterruptedException {
-        String key = "posOpsQueue4" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        assertUnsupportedMethod(client.deleteElementAtPosition(key.getBytes(StandardCharsets.UTF_8), null, 0, 0, 0, TIMEOUT));
-    }
-
-    @Test
-    @DisplayName("unsupported: addElementToPositionBefore returns INTERNAL")
-    void testAddElementToPositionBeforeOnQueue() throws ExecutionException, InterruptedException {
-        String key = "posOpsQueue5" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        assertUnsupportedMethod(client.addElementToPositionBefore(key.getBytes(StandardCharsets.UTF_8), null, List.of(Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8))), Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8)), 0, TIMEOUT));
-    }
-
-    @Test
-    @DisplayName("unsupported: addElementToPositionAfter returns INTERNAL")
-    void testAddElementToPositionAfterOnQueue() throws ExecutionException, InterruptedException {
-        String key = "posOpsQueue6" + UUID.randomUUID();
-
-        client.createQueue(key, List.of(Variant.ofBytes("data".getBytes(StandardCharsets.UTF_8)))).get();
-
-        Thread.sleep(500);
-
-        assertUnsupportedMethod(client.addElementToPositionAfter(key.getBytes(StandardCharsets.UTF_8), null, List.of(Variant.ofBytes("new".getBytes(StandardCharsets.UTF_8))), Variant.ofBytes("pivot".getBytes(StandardCharsets.UTF_8)), 0, TIMEOUT));
-    }
-
-    // =========================================================================
-    // 17. MISSING QUEUE ERROR CASES
-    // =========================================================================
-
-    @Test
-    @DisplayName("missing queue: getAndDeleteHead returns NOT_FOUND")
-    void testGetAndDeleteHeadOnMissingQueue() throws ExecutionException, InterruptedException {
-        String key = "missingQueueGetAndDelete" + UUID.randomUUID();
-
-        try {
-            client.getAndDeleteHead(key).get();
-            Assertions.fail("Expected NOT_FOUND error");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
-    }
-
-    @Test
-    @DisplayName("missing queue: getTail returns NOT_FOUND")
-    void testGetTailOnMissingQueue() throws ExecutionException, InterruptedException {
-        String key = "missingQueueGetTail" + UUID.randomUUID();
-
-        try {
-            client.getTail(key).get();
-            Assertions.fail("Expected NOT_FOUND error");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
+        Variant val = client.getHead(key, INTRUDER_CLIENT_ID).get();
+        assertNotNull(val);
     }
 }

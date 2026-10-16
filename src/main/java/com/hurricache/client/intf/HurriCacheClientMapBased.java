@@ -205,16 +205,36 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
                                     getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<Integer> addElementHashMap(String key, KeyHintData hint,
+                                                         List<Payload> container_keys,
+                                                         List<Variant> container_values,int clientId) {
+        return addElementHashMap(serializeKey(key), hint, container_keys, container_values,
+                                 clientId, getDefaultTimeout());
+    }
+
+
     default CompletableFuture<Integer> addElementHashMap(byte[] key, List<Payload> container_keys,
                                                          List<Variant> container_values) {
         return addElementHashMap(key, null, container_keys, container_values,
                                     getDefaultClientId(), getDefaultTimeout());
     }
 
+    default CompletableFuture<Integer> addElementHashMap(byte[] key, List<Payload> container_keys,
+                                                         List<Variant> container_values,int clientId) {
+        return addElementHashMap(key, null, container_keys, container_values,
+                                 clientId, getDefaultTimeout());
+    }
+
+
     default CompletableFuture<Integer> addElementHashMap(String key, List<Payload> container_keys,
                                                          List<Variant> container_values) {
         return addElementHashMap(serializeKey(key), null, container_keys, container_values,
                                     getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Integer> addElementHashMap(String key, List<Payload> container_keys,
+                                                         List<Variant> container_values,int clientId) {
+        return addElementHashMap(serializeKey(key), null, container_keys, container_values,
+                                 clientId, getDefaultTimeout());
     }
 
     /**
@@ -308,5 +328,52 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
                                                                    Payload keys) {
         return removeFromContainerByKey(key, null, keys,
                                            getDefaultClientId(), getDefaultTimeout());
+    }
+
+
+    /**
+     * Deletes matching keys from the given container.
+     *
+     * @param key          target container key in byte array form.
+     * @param hint         optional key routing hint.
+     * @param containerKey
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return count of successfully removed elements.
+     */
+
+    CompletableFuture<Integer> removeFromContainerByKey(byte[] key,
+                                                        KeyHintData hint, Variant containerKey,
+                                                        int clientId,
+                                                        Duration timeout);
+
+    default CompletableFuture<Integer> removeFromContainerByKey(String key, KeyHintData hint,
+                                                                Variant keys,
+                                                                int clientId, Duration timeout) {
+        return removeFromContainerByKey(serializeKey(key), hint, keys,  clientId, timeout);
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKey(String key, KeyHintData hint,
+                                                                Variant keys) {
+        return removeFromContainerByKey(serializeKey(key), hint, keys,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKey(String key,
+                                                                Variant keys) {
+        return removeFromContainerByKey(serializeKey(key), null, keys,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKey(byte[] key, KeyHintData hint,
+                                                                Variant keys) {
+        return removeFromContainerByKey(key, hint, keys,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> removeFromContainerByKey(byte[] key,
+                                                                Variant keys) {
+        return removeFromContainerByKey(key, null, keys,
+                                        getDefaultClientId(), getDefaultTimeout());
     }
 }
