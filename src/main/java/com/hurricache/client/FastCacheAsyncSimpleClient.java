@@ -79,6 +79,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                       int defaultCompressionThreshold) {
         this.channel = NettyChannelBuilder.forAddress(host, port)
                 .flowControlWindow(4 * 1024 * 1024)
+                .maxInboundMessageSize(64 * 1024 * 1024)
                 .usePlaintext()
                 .build();
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
