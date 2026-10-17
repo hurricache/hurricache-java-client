@@ -273,4 +273,85 @@ public class SmartClientOrderedMapNoHintRoutingTest extends TestBaseCluster {
         Variant current = client.setMode(Mode.BACKUP).getInContainer(key, null, "key1".getBytes()).get();
         assertEquals(42, current.longValue());
     }
+
+    @Test
+    @DisplayName("Get element range in ordered map on MASTER without keyHint")
+    void testGetElementRangeInOrderedMapOnMasterWithoutKeyHint() throws ExecutionException, InterruptedException {
+        String key = "omap_no_hint_range_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new HashMap<>();
+        data.put(OrderedPayload.of("key1".getBytes(), 1L), v("val1"));
+        data.put(OrderedPayload.of("key2".getBytes(), 2L), v("val2"));
+        data.put(OrderedPayload.of("key3".getBytes(), 3L), v("val3"));
+        data.put(OrderedPayload.of("key4".getBytes(), 4L), v("val4"));
+        data.put(OrderedPayload.of("key5".getBytes(), 5L), v("val5"));
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+        Thread.sleep(500);
+
+        client.setMode(Mode.MASTER);
+        Map<OrderedPayload, Variant> range = client.getElementInRangeOrderedMap(key, null, 2, 4, false).get();
+        assertNotNull(range);
+        assertEquals(3, range.size());
+        assertTrue(range.containsKey(OrderedPayload.of("key2".getBytes(), 2L)));
+        assertTrue(range.containsKey(OrderedPayload.of("key3".getBytes(), 3L)));
+        assertTrue(range.containsKey(OrderedPayload.of("key4".getBytes(), 4L)));
+    }
+
+    @Test
+    @DisplayName("Get element range in ordered map on BACKUP without keyHint")
+    void testGetElementRangeInOrderedMapOnBackupWithoutKeyHint() throws ExecutionException, InterruptedException {
+        String key = "omap_no_hint_range_b_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new HashMap<>();
+        data.put(OrderedPayload.of("key1".getBytes(), 1L), v("val1"));
+        data.put(OrderedPayload.of("key2".getBytes(), 2L), v("val2"));
+        data.put(OrderedPayload.of("key3".getBytes(), 3L), v("val3"));
+        data.put(OrderedPayload.of("key4".getBytes(), 4L), v("val4"));
+        data.put(OrderedPayload.of("key5".getBytes(), 5L), v("val5"));
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+        Thread.sleep(500);
+
+        client.setMode(Mode.MASTER);
+        Thread.sleep(500);
+        Map<OrderedPayload, Variant> range = client.setMode(Mode.BACKUP).getElementInRangeOrderedMap(key, null, 1, 3, false).get();
+        assertNotNull(range);
+        assertEquals(3, range.size());
+    }
+
+    @Test
+    @DisplayName("Get element range in ordered map reverse on MASTER without keyHint")
+    void testGetElementRangeReverseInOrderedMapOnMasterWithoutKeyHint() throws ExecutionException, InterruptedException {
+        String key = "omap_no_hint_range_rev_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new HashMap<>();
+        data.put(OrderedPayload.of("key1".getBytes(), 1L), v("val1"));
+        data.put(OrderedPayload.of("key2".getBytes(), 2L), v("val2"));
+        data.put(OrderedPayload.of("key3".getBytes(), 3L), v("val3"));
+        data.put(OrderedPayload.of("key4".getBytes(), 4L), v("val4"));
+        data.put(OrderedPayload.of("key5".getBytes(), 5L), v("val5"));
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+        Thread.sleep(500);
+
+        client.setMode(Mode.MASTER);
+        Map<OrderedPayload, Variant> range = client.getElementInRangeOrderedMap(key, null, 3, 5, true).get();
+        assertNotNull(range);
+        assertEquals(3, range.size());
+        assertTrue(range.containsKey(OrderedPayload.of("key5".getBytes(), 5L)));
+        assertTrue(range.containsKey(OrderedPayload.of("key4".getBytes(), 4L)));
+        assertTrue(range.containsKey(OrderedPayload.of("key3".getBytes(), 3L)));
+    }
+
+    @Test
+    @DisplayName("Get element range in ordered map with clientId on MASTER without keyHint")
+    void testGetElementRangeInOrderedMapWithClientIdOnMasterWithoutKeyHint() throws ExecutionException, InterruptedException {
+        String key = "omap_no_hint_range_cid_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new HashMap<>();
+        data.put(OrderedPayload.of("key1".getBytes(), 1L), v("val1"));
+        data.put(OrderedPayload.of("key2".getBytes(), 2L), v("val2"));
+        data.put(OrderedPayload.of("key3".getBytes(), 3L), v("val3"));
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+        Thread.sleep(500);
+
+        client.setMode(Mode.MASTER);
+        Map<OrderedPayload, Variant> range = client.getElementInRangeOrderedMap(client.serializeKey(key), null, 1, 3, false, 100).get();
+        assertNotNull(range);
+        assertEquals(3, range.size());
+    }
 }

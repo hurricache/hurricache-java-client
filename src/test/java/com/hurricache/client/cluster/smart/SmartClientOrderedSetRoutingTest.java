@@ -534,4 +534,100 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         List<OrderedVariant> val = client.setMode(Mode.BACKUP).getOrderedSet(key, hint, 100).get();
         assertNotNull(val);
     }
+
+    // =========================================================================
+    // 9. CONTAINER OPERATIONS WITH ROUTING
+    // =========================================================================
+
+    @Test
+    @DisplayName("getValueInContainerByKey on MASTER then BACKUP")
+    void testGetValueInContainerByKeyOnMasterThenBackup() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_get_value_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("elem1".getBytes(), 1L),
+                OrderedVariant.ofBytes("elem2".getBytes(), 2L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        Thread.sleep(500);
+
+        Variant value = client.setMode(Mode.MASTER).getInContainer(key, hint, "elem1".getBytes()).get();
+        assertNotNull(value);
+        assertEquals("elem1", new String(value.bytesValue(), StandardCharsets.UTF_8));
+
+        value = client.setMode(Mode.BACKUP).getInContainer(key, hint, "elem1".getBytes()).get();
+        assertNotNull(value);
+        assertEquals("elem1", new String(value.bytesValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("updateValueInContainer on MASTER, verify on BACKUP")
+    void testUpdateValueInContainerOnMasterVerifyOnBackup() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_update_container_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("elem1".getBytes(), 1L),
+                OrderedVariant.ofBytes("elem2".getBytes(), 2L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        Thread.sleep(500);
+
+        // Update value in container on MASTER
+        client.setMode(Mode.MASTER);
+        Variant previous = client.update(key, hint, "elem1".getBytes(), v("updated_elem1")).get();
+        assertNotNull(previous);
+        assertEquals("elem1", new String(previous.bytesValue(), StandardCharsets.UTF_8));
+        Thread.sleep(500);
+
+        // Verify on BACKUP
+        Variant value = client.setMode(Mode.BACKUP).getInContainer(key, hint, "elem1".getBytes()).get();
+        assertNotNull(value);
+        assertEquals("updated_elem1", new String(value.bytesValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteValueInContainer on MASTER, verify on BACKUP")
+    void testGetAndDeleteValueInContainerOnMasterVerifyOnBackup() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_delete_container_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("elem1".getBytes(), 1L),
+                OrderedVariant.ofBytes("elem2".getBytes(), 2L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        Thread.sleep(500);
+
+        // GetAndDeleteValueInContainer on MASTER
+        client.setMode(Mode.MASTER);
+        Variant deleted = client.popInContainer(key, hint, "elem1".getBytes()).get();
+        assertNotNull(deleted);
+        assertEquals("elem1", new String(deleted.bytesValue(), StandardCharsets.UTF_8));
+        Thread.sleep(500);
+
+        // Verify on BACKUP - elem1 should be gone
+        Boolean exists = client.setMode(Mode.BACKUP).containsKey(key, hint, "elem1".getBytes()).get();
+        assertFalse(exists);
+    }
+
+    @Test
+    @DisplayName("deleteFromContainerByKeyValue on MASTER, verify on BACKUP")
+    void testDeleteFromContainerByKeyValueOnMasterVerifyOnBackup() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_delete_value_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("a".getBytes(), 1L),
+                OrderedVariant.ofBytes("b".getBytes(), 2L),
+                OrderedVariant.ofBytes("a".getBytes(), 3L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        Thread.sleep(500);
+
+        client.setMode(Mode.MASTER);
+        Integer deleted = client.removeFromContainerByKeyAndValue(key, com.hurricache.grpc.ContainerType.ORDERED_SET, List.of(), List.of(v("a"))).get();
+        assertTrue(deleted >= 1);
+        Thread.sleep(500);
+
+        Integer size = client.setMode(Mode.BACKUP).getSize(key, hint).get();
+        assertTrue(size < 3);
+    }
 }

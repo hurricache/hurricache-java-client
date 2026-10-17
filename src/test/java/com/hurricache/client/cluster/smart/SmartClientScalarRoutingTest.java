@@ -399,4 +399,24 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         Variant val = client.setMode(Mode.BACKUP).get(key, hint, 100).get();
         assertNotNull(val);
     }
+
+    // =========================================================================
+    // 7. SIZE WITH ROUTING
+    // =========================================================================
+
+    @Test
+    @DisplayName("getSize on MASTER then BACKUP with routing")
+    void testGetSizeOnMasterThenBackup() throws ExecutionException, InterruptedException {
+        String key = "scalar_size_" + UUID.randomUUID();
+
+        KeyHintData hint = client.create(key, v("test_value")).get();
+        Thread.sleep(500);
+
+        Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
+        assertNotNull(size);
+        assertTrue(size > 0);
+
+        Integer backupSize = client.setMode(Mode.BACKUP).getSize(key, hint).get();
+        assertEquals(size, backupSize);
+    }
 }

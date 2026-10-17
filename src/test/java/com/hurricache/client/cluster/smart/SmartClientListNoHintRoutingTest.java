@@ -229,4 +229,27 @@ public class SmartClientListNoHintRoutingTest extends TestBaseCluster {
         assertNotNull(tail);
         assertEquals("second", new String(tail.bytesValue()));
     }
+
+    // =========================================================================
+    // 8. ADD ELEMENT (UNORDERED) WITHOUT KEYHINT
+    // =========================================================================
+
+    @Test
+    @DisplayName("addElementUnordered on MASTER without keyHint")
+    void testAddElementUnorderedWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
+        String key = "list_no_hint_add_element_" + UUID.randomUUID();
+
+        KeyHintData hint = client.createList(key, List.of(v("first"))).get();
+        Thread.sleep(500);
+
+        // AddElement on MASTER without keyHint
+        client.setMode(Mode.MASTER);
+        Integer added = client.addElementUnordered(key, null, List.of(v("elem1"), v("elem2"))).get();
+        assertEquals(2, added);
+        Thread.sleep(500);
+
+        // Verify on BACKUP without keyHint
+        List<Variant> stream = client.setMode(Mode.BACKUP).getList(key).get();
+        assertEquals(3, stream.size());
+    }
 }

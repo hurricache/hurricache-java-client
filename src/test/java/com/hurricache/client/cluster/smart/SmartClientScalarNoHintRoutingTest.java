@@ -128,8 +128,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // Verify on BACKUP - should not exist
-        Variant backupValue = client.setMode(Mode.BACKUP).get(key).get();
-        assertNull(backupValue);
+        assertNotFound(client.setMode(Mode.BACKUP).get(key));
     }
 
     // =========================================================================
@@ -285,5 +284,22 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         // Lock expired, can access on BACKUP without keyHint
         Variant val = client.setMode(Mode.BACKUP).get(key, 100).get();
         assertNotNull(val);
+    }
+
+    // =========================================================================
+    // 7. SIZE WITHOUT KEYHINT
+    // =========================================================================
+
+    @Test
+    @DisplayName("getSize on MASTER without keyHint")
+    void testGetSizeWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
+        String key = "scalar_no_hint_size_" + UUID.randomUUID();
+
+        KeyHintData hint = client.create(key, v("test_value")).get();
+        Thread.sleep(500);
+
+        Integer size = client.setMode(Mode.MASTER).getSize(key).get();
+        assertNotNull(size);
+        assertTrue(size > 0);
     }
 }

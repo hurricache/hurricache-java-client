@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -164,5 +165,31 @@ public abstract class TestBaseCluster {
     }
     protected OrderedVariant ov(byte[] value, Long order) {
         return OrderedVariant.of(v(value), order);
+    }
+
+    protected void assertNotFound(CompletableFuture<?> future) {
+        try {
+            future.get();
+            Assertions.fail("Expected NOT_FOUND after TTL expiry");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    protected void assertInvalidArgument(CompletableFuture<?> future) {
+        try {
+            future.get();
+            Assertions.fail("Expected INVALID_ARGUMENT");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.INVALID_ARGUMENT, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
     }
 }

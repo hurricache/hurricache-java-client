@@ -337,10 +337,14 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         // Owner can read on BACKUP without keyHint
         List<Variant> val = client.setMode(Mode.BACKUP).getVector(key, 100).get();
         assertNotNull(val);
+        assertEquals(1, val.size());
+        assertEquals("value", new String(val.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Intruder can ALSO read on BACKUP (shared access)
         List<Variant> intruderVal = client.setMode(Mode.BACKUP).getVector(key, 999).get();
         assertNotNull(intruderVal);
+        assertEquals(1, intruderVal.size());
+        assertEquals("value", new String(intruderVal.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Unlock
         client.setMode(Mode.MASTER);
@@ -365,6 +369,8 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         // Owner can read on BACKUP without keyHint
         List<Variant> val = client.setMode(Mode.BACKUP).getVector(key, 100).get();
         assertNotNull(val);
+        assertEquals(1, val.size());
+        assertEquals("value", new String(val.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Owner can write on MASTER without keyHint
         client.pushTail(key, List.of(v("added")), 100).get();
@@ -397,6 +403,8 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         // Owner can read on BACKUP without keyHint
         List<Variant> val = client.setMode(Mode.BACKUP).getVector(key, 100).get();
         assertNotNull(val);
+        assertEquals(1, val.size());
+        assertEquals("value", new String(val.get(0).bytesValue(), StandardCharsets.UTF_8));
 
         // Unlock
         client.setMode(Mode.MASTER);
@@ -421,5 +429,30 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         // Lock expired, can access on BACKUP without keyHint
         List<Variant> val = client.setMode(Mode.BACKUP).getVector(key, 100).get();
         assertNotNull(val);
+        assertEquals(1, val.size());
+        assertEquals("value", new String(val.get(0).bytesValue(), StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
+    // 8. ADD ELEMENT (UNORDERED) WITHOUT KEYHINT
+    // =========================================================================
+
+    @Test
+    @DisplayName("addElementUnordered on MASTER without keyHint")
+    void testAddElementUnorderedWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
+        String key = "vector_no_hint_add_element_" + UUID.randomUUID();
+
+        KeyHintData hint = client.createVector(key, List.of(v("first"))).get();
+        Thread.sleep(500);
+
+        // AddElement on MASTER without keyHint
+        client.setMode(Mode.MASTER);
+        Integer added = client.addElementUnordered(key, null, List.of(v("elem1"), v("elem2"))).get();
+        assertEquals(2, added);
+        Thread.sleep(500);
+
+        // Verify on BACKUP without keyHint
+        List<Variant> stream = client.setMode(Mode.BACKUP).getVector(key).get();
+        assertEquals(3, stream.size());
     }
 }

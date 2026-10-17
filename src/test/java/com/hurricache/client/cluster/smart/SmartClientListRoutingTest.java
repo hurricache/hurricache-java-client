@@ -489,4 +489,27 @@ public class SmartClientListRoutingTest extends TestBaseCluster {
         List<Variant> val = client.setMode(Mode.BACKUP).getList(key, 100).get();
         assertNotNull(val);
     }
+
+    // =========================================================================
+    // 8. ADD ELEMENT (UNORDERED) WITH ROUTING
+    // =========================================================================
+
+    @Test
+    @DisplayName("addElementUnordered on MASTER then BACKUP with routing")
+    void testAddElementUnorderedOnMasterThenBackup() throws ExecutionException, InterruptedException {
+        String key = "list_add_element_" + UUID.randomUUID();
+
+        KeyHintData hint = client.createList(key, List.of(v("first"))).get();
+        Thread.sleep(500);
+
+        // AddElement on MASTER with hint
+        client.setMode(Mode.MASTER);
+        Integer added = client.addElementUnordered(key, hint, List.of(v("elem1"), v("elem2"))).get();
+        assertEquals(2, added);
+        Thread.sleep(500);
+
+        // Verify on BACKUP with hint
+        List<Variant> stream = client.setMode(Mode.BACKUP).getList(key, hint).get();
+        assertEquals(3, stream.size());
+    }
 }

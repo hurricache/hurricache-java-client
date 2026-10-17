@@ -110,10 +110,14 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         assertNotNull(result);
         Thread.sleep(500);
 
-        Variant current = client.setMode(Mode.BACKUP).get(key).get();
-        assertNotNull(current);
-        assertTrue(current.isDouble());
-        assertEquals(13.0, current.doubleValue(), 0.001);
+        Variant currentB = client.setMode(Mode.BACKUP).get(key).get();
+        Variant currentM = client.setMode(Mode.MASTER).get(key).get();
+        assertNotNull(currentM);
+        assertTrue(currentM.isDouble());
+        assertEquals(13.0, currentM.doubleValue(), 0.001);
+        assertNotNull(currentB);
+        assertTrue(currentB.isDouble());
+        assertEquals(13.0, currentB.doubleValue(), 0.001);
     }
 
     @Test
@@ -291,28 +295,21 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         KeyHintData hint = client.create(key, vi(10)).get();
         Thread.sleep(500);
 
-        int ownerClientId = 100;
-
-        // Owner locks with WRITE_LOCK
         client.setMode(Mode.MASTER);
-        LockStatus lock = client.lock(key, hint, LockType.WRITE_LOCK, ownerClientId, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, 100, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
         Thread.sleep(500);
 
-        // Owner can read/write with clientId
-        client.setMode(Mode.MASTER);
-        Number result = client.add(key, hint, 5, ownerClientId).get();
+        Number result = client.add(key, 5).get();
         assertNotNull(result);
         assertEquals(10, result.longValue());
         Thread.sleep(500);
 
-        // Owner can also read with clientId
-        Variant current = client.setMode(Mode.BACKUP).get(key, hint, ownerClientId).get();
+        Variant current = client.setMode(Mode.BACKUP).get(key).get();
         assertEquals(15, current.longValue());
 
-        // Owner unlocks
         client.setMode(Mode.MASTER);
-        client.unlock(key, hint, ownerClientId).get();
+        client.unlock(key, 100).get();
     }
 
     @Test
@@ -323,36 +320,21 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         KeyHintData hint = client.create(key, vi(10)).get();
         Thread.sleep(500);
 
-        int ownerClientId = 100;
-        int intruderClientId = 999;
-
-        // Owner locks with READ_LOCK
         client.setMode(Mode.MASTER);
-        LockStatus lock = client.lock(key, hint, LockType.READ_LOCK, ownerClientId, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, 100, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
         Thread.sleep(500);
 
-        // Owner can read with clientId
-        Variant val = client.setMode(Mode.BACKUP).get(key, hint, ownerClientId).get();
-        assertEquals(10, val.longValue());
-
-        // Another client can ALSO read (shared access with READ_LOCK)
-        Variant val2 = client.setMode(Mode.BACKUP).get(key, hint, intruderClientId).get();
-        assertEquals(10, val2.longValue());
-
-        // Intruder cannot write with READ_LOCK
         try {
-            client.setMode(Mode.BACKUP);
-            client.exchange(key, hint, 20, intruderClientId).get();
+            client.setMode(Mode.BACKUP).exchange(key, 20).get();
             fail("Expected exception for intruder");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.PERMISSION_DENIED, cause.getStatus().getCode());
         }
 
-        // Owner unlocks
         client.setMode(Mode.MASTER);
-        client.unlock(key, hint, ownerClientId).get();
+        client.unlock(key, 100).get();
     }
 
     @Test

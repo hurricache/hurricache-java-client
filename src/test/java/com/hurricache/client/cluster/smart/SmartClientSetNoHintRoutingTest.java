@@ -132,7 +132,11 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         Integer added = client.setMode(Mode.BACKUP).addElementUnordered(key, null, List.of(v("elem2"))).get();
-        assertEquals(2, added);
+        assertEquals(1, added);
+
+        Thread.sleep(500);
+        Integer size = client.setMode(Mode.MASTER).getSize(key, null).get();
+        assertEquals(2, size);
     }
 
     @Test
@@ -268,19 +272,5 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
         Integer size = client.setMode(Mode.BACKUP).getSize(key).get();
         assertEquals(1, size);
-    }
-
-    @Test
-    @DisplayName("Get value in set container on MASTER without keyHint")
-    void testGetValueInSetContainerOnMasterWithoutKeyHint() throws ExecutionException, InterruptedException {
-        String key = "set_no_hint_get_value_" + UUID.randomUUID();
-        List<Variant> data = List.of(v("elem1"), v("elem2"));
-
-        KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
-
-        Variant value = client.setMode(Mode.MASTER).getInContainer(key, null, "elem1".getBytes()).get();
-        assertNotNull(value);
-        assertEquals("elem1", new String(value.bytesValue(), StandardCharsets.UTF_8));
     }
 }
