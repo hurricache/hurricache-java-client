@@ -1,8 +1,6 @@
 package com.hurricache.client.standalone.simple;
 
 import com.hurricache.TestBase;
-import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -31,7 +29,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_list_head_" + UUID.randomUUID();
         client.createList(key, List.of()).get();
 
-        Variant variant = client.getHead(key).get();
+        Variant variant = client.peekHead(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -41,7 +39,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_list_tail_" + UUID.randomUUID();
         client.createList(key, List.of()).get();
 
-        Variant variant = client.getTail(key).get();
+        Variant variant = client.peekTail(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -51,7 +49,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_list_pop_head_" + UUID.randomUUID();
         client.createList(key, List.of()).get();
 
-        Variant variant = client.getAndDeleteHead(key).get();
+        Variant variant = client.popHead(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -61,7 +59,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_list_pop_tail_" + UUID.randomUUID();
         client.createList(key, List.of()).get();
 
-        Variant variant = client.getAndDeleteTail(key).get();
+        Variant variant = client.popTail(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -71,7 +69,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_vector_head_" + UUID.randomUUID();
         client.createVector(key, List.of()).get();
 
-        Variant variant = client.getHead(key).get();
+        Variant variant = client.peekHead(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -81,7 +79,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_vector_tail_" + UUID.randomUUID();
         client.createVector(key, List.of()).get();
 
-        Variant variant = client.getTail(key).get();
+        Variant variant = client.peekTail(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -91,7 +89,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_queue_head_" + UUID.randomUUID();
         client.createQueue(key, List.of()).get();
 
-        Variant variant = client.getHead(key).get();
+        Variant variant = client.peekHead(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -101,7 +99,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_queue_tail_" + UUID.randomUUID();
         client.createQueue(key, List.of()).get();
 
-            Variant variant = client.getTail(key).get();
+            Variant variant = client.peekTail(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -111,7 +109,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_queue_pop_head_" + UUID.randomUUID();
         client.createQueue(key, List.of()).get();
 
-        Variant variant = client.getAndDeleteHead(key).get();
+        Variant variant = client.popHead(key).get();
         assertEquals(Variant.none(), variant);
     }
 
@@ -125,7 +123,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_nonexistent_get_" + UUID.randomUUID();
 
         try {
-            client.getValue(key).get();
+            client.get(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -139,7 +137,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_nonexistent_stream_list_" + UUID.randomUUID();
 
         try {
-            client.streamList(key).get();
+            client.getList(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -153,7 +151,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_nonexistent_stream_vector_" + UUID.randomUUID();
 
         try {
-            client.streamVector(key).get();
+            client.getVector(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -167,7 +165,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_nonexistent_stream_set_" + UUID.randomUUID();
 
         try {
-            client.streamSet(key).get();
+            client.getSet(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -181,7 +179,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_nonexistent_stream_map_" + UUID.randomUUID();
 
         try {
-            client.streamMap(key).get();
+            client.getMap(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -208,7 +206,7 @@ public class EdgeCasesTest extends TestBase {
     void testExistKeyOnNonExistentKey() throws ExecutionException, InterruptedException {
         String key = "edge_nonexistent_exist_" + UUID.randomUUID();
 
-        Boolean exists = client.existKey(key).get();
+        Boolean exists = client.containsKey(key).get();
         assertFalse(exists);
     }
 
@@ -231,7 +229,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_position_zero_" + UUID.randomUUID();
         client.createList(key, List.of(v("only"))).get();
 
-        Variant element = client.getElementAtPosition(key, 0).get();
+        Variant element = client.getAt(key, 0).get();
         assertNotNull(element);
         assertEquals("only", new String(element.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -243,7 +241,7 @@ public class EdgeCasesTest extends TestBase {
         client.createList(key, List.of(v("first"), v("second"))).get();
 
         try {
-            client.getElementAtPosition(key, 10).get();
+            client.getAt(key, 10).get();
             fail("Expected error for out-of-bounds");
         } catch (ExecutionException e) {
             // Should throw - index out of range
@@ -258,7 +256,7 @@ public class EdgeCasesTest extends TestBase {
         client.createList(key, List.of(v("first"), v("second"))).get();
 
         try {
-            client.getElementAtPosition(key, -1).get();
+            client.getAt(key, -1).get();
             fail("Expected error for negative index");
         } catch (ExecutionException e) {
             assertNotNull(e.getCause());
@@ -271,7 +269,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_delete_position_oob_" + UUID.randomUUID();
         client.createList(key, List.of(v("1"), v("2"))).get();
 
-        Integer i = client.deleteElementAtPosition(key, null, 100L).get();
+        Integer i = client.removeAt(key, null, 100L).get();
         assertEquals(0, i.intValue());
     }
 
@@ -282,7 +280,7 @@ public class EdgeCasesTest extends TestBase {
         client.createList(key, List.of(v("1"), v("2"))).get();
 
         try {
-            client.getAndDeleteElementAtPosition(key, null, 50).get();
+            client.popAt(key, null, 50).get();
             fail("Expected error for out-of-bounds");
         } catch (ExecutionException e) {
             assertNotNull(e.getCause());
@@ -300,7 +298,7 @@ public class EdgeCasesTest extends TestBase {
         client.createMap(key, new java.util.HashMap<>()).get();
 
         try {
-            client.getValueInContainerByKey(key, null, "missing".getBytes()).get();
+            client.getInContainer(key, null, "missing".getBytes()).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -314,7 +312,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_empty_set_exist_" + UUID.randomUUID();
         client.createSet(key, List.of()).get();
 
-        Boolean exists = client.existInContainerByKey(key, null, "missing".getBytes()).get();
+        Boolean exists = client.containsKey(key, null, "missing".getBytes()).get();
         assertFalse(exists);
     }
 
@@ -336,9 +334,9 @@ public class EdgeCasesTest extends TestBase {
     @DisplayName("Read int value as bytes - bytesValue() returns empty/zero")
     void testReadIntAsBytes() throws ExecutionException, InterruptedException {
         String key = "edge_type_int_bytes_" + UUID.randomUUID();
-        client.createKeyValue(key, vi(42)).get();
+        client.create(key, vi(42)).get();
 
-        Variant value = client.getValue(key).get();
+        Variant value = client.get(key).get();
         assertTrue(value.isInt());
         assertEquals(42, value.longValue());
 
@@ -351,9 +349,9 @@ public class EdgeCasesTest extends TestBase {
     @DisplayName("Read double value as int - returns 0")
     void testReadDoubleAsInt() throws ExecutionException, InterruptedException {
         String key = "edge_type_double_int_" + UUID.randomUUID();
-        client.createKeyValue(key, vd(3.14)).get();
+        client.create(key, vd(3.14)).get();
 
-        Variant value = client.getValue(key).get();
+        Variant value = client.get(key).get();
         assertTrue(value.isDouble());
         assertEquals(3.14, value.doubleValue(), 0.001);
 
@@ -365,9 +363,9 @@ public class EdgeCasesTest extends TestBase {
     @DisplayName("Read bytes value as double - returns 0.0")
     void testReadBytesAsDouble() throws ExecutionException, InterruptedException {
         String key = "edge_type_bytes_double_" + UUID.randomUUID();
-        client.createKeyValue(key, v("hello")).get();
+        client.create(key, v("hello")).get();
 
-        Variant value = client.getValue(key).get();
+        Variant value = client.get(key).get();
         assertTrue(value.isBytes());
         assertEquals("hello", new String(value.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
@@ -385,7 +383,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_range_inverted_" + UUID.randomUUID();
         client.createList(key, List.of(v("1"), v("2"), v("3"))).get();
 
-        List<Variant> range = client.streamElementInRangeUnordered(key, null, com.hurricache.grpc.ContainerType.LIST, 5, 2).get();
+        List<Variant> range = client.getRange(key, null, com.hurricache.grpc.ContainerType.LIST, 5, 2).get();
         assertNotNull(range);
         assertTrue(range.isEmpty());
     }
@@ -396,7 +394,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_range_oob_" + UUID.randomUUID();
         client.createList(key, List.of(v("1"), v("2"), v("3"))).get();
 
-        List<Variant> range = client.streamElementInRangeUnordered(key, null, com.hurricache.grpc.ContainerType.LIST, 10, 20).get();
+        List<Variant> range = client.getRange(key, null, com.hurricache.grpc.ContainerType.LIST, 10, 20).get();
         assertNotNull(range);
         assertTrue(range.isEmpty());
     }
@@ -409,10 +407,10 @@ public class EdgeCasesTest extends TestBase {
     @DisplayName("getHead on scalar key throws type error")
     void testGetHeadOnScalarKey() throws ExecutionException, InterruptedException {
         String key = "edge_scalar_as_container_" + UUID.randomUUID();
-        client.createKeyValue(key, v("scalar_value")).get();
+        client.create(key, v("scalar_value")).get();
 
         try {
-            client.getHead(key).get();
+            client.peekHead(key).get();
             fail("Expected error - scalar key used as container");
         } catch (ExecutionException e) {
             assertNotNull(e.getCause());
@@ -426,7 +424,7 @@ public class EdgeCasesTest extends TestBase {
         client.createList(key, List.of(v("item1"))).get();
 
         try {
-            client.getValue(key).get();
+            client.get(key).get();
             fail("Expected error - container key used as scalar");
         } catch (ExecutionException e) {
             assertNotNull(e.getCause());
@@ -443,7 +441,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_atomic_nonexistent_" + UUID.randomUUID();
 
         try {
-            client.atomicAdd(key, 5).get();
+            client.add(key, 5).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -457,7 +455,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_atomic_exchange_nonexistent_" + UUID.randomUUID();
 
         try {
-            client.atomicExchange(key, 100).get();
+            client.exchange(key, 100).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -471,7 +469,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_atomic_cas_nonexistent_" + UUID.randomUUID();
 
         try {
-            client.atomicCompareAndSet(key, 0L, 100L).get();
+            client.compareAndSet(key, 0L, 100L).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -493,7 +491,7 @@ public class EdgeCasesTest extends TestBase {
         assertEquals(1, deleted);
 
         // Now list is empty - getHead returns Variant.none()
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertTrue(head.isNone());
     }
 
@@ -507,7 +505,7 @@ public class EdgeCasesTest extends TestBase {
         assertEquals(1, deleted);
 
         // Now list is empty - getTail returns Variant.none()
-        Variant tail = client.getTail(key).get();
+        Variant tail = client.peekTail(key).get();
         assertTrue(tail.isNone());
     }
 
@@ -521,7 +519,7 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_single_element_get_" + UUID.randomUUID();
         client.createVector(key, List.of(v("only"))).get();
 
-        Variant element = client.getElementAtPosition(key, 0).get();
+        Variant element = client.getAt(key, 0).get();
         assertNotNull(element);
         assertEquals("only", new String(element.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -532,12 +530,12 @@ public class EdgeCasesTest extends TestBase {
         String key = "edge_single_element_pop_" + UUID.randomUUID();
         client.createList(key, List.of(v("only"))).get();
 
-        Variant deleted = client.getAndDeleteElementAtPosition(key, null, 0).get();
+        Variant deleted = client.popAt(key, null, 0).get();
         assertNotNull(deleted);
         assertEquals("only", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
         // List is now empty
-        Variant variant = client.getHead(key).get();
+        Variant variant = client.peekHead(key).get();
         assertEquals(Variant.none(), variant);
 
     }

@@ -4,7 +4,6 @@ import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.OrderedVariant;
-import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import org.junit.jupiter.api.DisplayName;
@@ -54,7 +53,7 @@ public class OrderedSetOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -71,7 +70,7 @@ public class OrderedSetOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(3, stream.size());
         assertEquals(10, stream.get(0).intValue());
         assertEquals(20, stream.get(1).intValue());
@@ -90,7 +89,7 @@ public class OrderedSetOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(3, stream.size());
         assertEquals(1.1, stream.get(0).doubleValue(), 0.001);
     }
@@ -108,7 +107,7 @@ public class OrderedSetOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(3, stream.size());
         assertEquals("hello", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals(42, stream.get(1).intValue());
@@ -131,7 +130,7 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        Variant element = client.getElementAtPosition(key, 1).get();
+        Variant element = client.getAt(key, 1).get();
         assertNotNull(element);
         assertEquals("first", new String(element.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -148,11 +147,11 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        Variant deleted = client.getAndDeleteElementAtPosition(key, null, 1).get();
+        Variant deleted = client.popAt(key, null, 1).get();
         assertNotNull(deleted);
         assertEquals("1", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -168,10 +167,10 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        Integer deleted = client.deleteElementAtPosition(key, null, 1L).get();
+        Integer deleted = client.removeAt(key, null, 1L).get();
         assertEquals(1, deleted);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -193,7 +192,7 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        List<OrderedVariant> range = client.streamElementInRangeOrderedSet(key,hint, 1, 3, false).get();
+        List<OrderedVariant> range = client.getElementInRangeOrderedSet(key, hint, 1, 3, false).get();
         assertEquals(3, range.size());
         assertEquals("1", new String(range.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals("2", new String(range.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -219,7 +218,7 @@ public class OrderedSetOperationsTest extends TestBase {
         )).get();
         assertEquals(2, added);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -241,7 +240,7 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        List<OrderedVariant> range = client.streamElementInRangeOrderedSet(key, null, 2L, 4L, false).get();
+        List<OrderedVariant> range = client.getElementInRangeOrderedSet(key, null, 2L, 4L, false).get();
         assertEquals(3, range.size());
         assertEquals("2", new String(range.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals("3", new String(range.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -260,7 +259,7 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        List<OrderedVariant> range = client.streamElementInRangeOrderedSet(key, null, 1L, 3L, true).get();
+        List<OrderedVariant> range = client.getElementInRangeOrderedSet(key, null, 1L, 3L, true).get();
         assertEquals(3, range.size());
         // Reverse order: 3, 2, 1
         assertEquals("3", new String(range.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -304,7 +303,7 @@ public class OrderedSetOperationsTest extends TestBase {
         assertNotNull(removed);
         assertEquals("first", new String(removed.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -327,7 +326,7 @@ public class OrderedSetOperationsTest extends TestBase {
         Integer deleted = client.removeFromContainerByKey(key, v("b")).get();
         assertEquals(1, deleted);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -365,18 +364,18 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        List<OrderedVariant> val = client.streamOrderedSet(key, null, OWNER_CLIENT_ID).get();
+        List<OrderedVariant> val = client.getOrderedSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        List<OrderedVariant> intruderVal = client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<OrderedVariant> intruderVal = client.getOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -389,10 +388,10 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<OrderedVariant> val = client.streamOrderedSet(key, null, OWNER_CLIENT_ID).get();
+        List<OrderedVariant> val = client.getOrderedSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // OrderedSet has no addElement method - test would need to create new set
@@ -401,9 +400,9 @@ public class OrderedSetOperationsTest extends TestBase {
         //         OrderedVariant.ofBytes("added".getBytes(), 2L)
         // ), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -416,15 +415,15 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<OrderedVariant> val = client.streamOrderedSet(key, null, OWNER_CLIENT_ID).get();
+        List<OrderedVariant> val = client.getOrderedSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -437,12 +436,12 @@ public class OrderedSetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        List<OrderedVariant> val = client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<OrderedVariant> val = client.getOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 }

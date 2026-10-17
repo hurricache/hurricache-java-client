@@ -50,42 +50,42 @@ public interface HurriCacheClientHashMap extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing all map entries.
      */
-    CompletableFuture<Map<Payload, Variant>> streamMap(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Map<Payload, Variant>> getMap(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(String key, KeyHintData hint, int clientId,
-                                                               Duration timeout) {
-        return streamMap(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Map<Payload, Variant>> getMap(String key, KeyHintData hint, int clientId,
+                                                            Duration timeout) {
+        return getMap(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(String key) {
-        return streamMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(String key) {
+        return getMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(byte[] key) {
-        return streamMap(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(byte[] key) {
+        return getMap(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(String key, KeyHintData hint) {
-        return streamMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(String key, KeyHintData hint) {
+        return getMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(String key, KeyHintData hint, int clientId) {
-        return streamMap(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(String key, KeyHintData hint, int clientId) {
+        return getMap(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(byte[] key, KeyHintData hint) {
-        return streamMap(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(byte[] key, KeyHintData hint) {
+        return getMap(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(byte[] key, KeyHintData hint, int clientId) {
-        return streamMap(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(byte[] key, KeyHintData hint, int clientId) {
+        return getMap(key, hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(String key, int clientId) {
-        return streamMap(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(String key, int clientId) {
+        return getMap(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<Payload, Variant>> streamMap(byte[] key, int clientId) {
-        return streamMap(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Map<Payload, Variant>> getMap(byte[] key, int clientId) {
+        return getMap(key, null, clientId, getDefaultTimeout());
     }
 }

@@ -37,26 +37,26 @@ public class LockContentionTest extends TestBase {
     void testReadLockSharedAccess() throws ExecutionException, InterruptedException {
         String key = "lock_read_shared_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
         // Client A acquires READ_LOCK
-        LockStatus lockA = client.lockObject(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client A can read
-        Variant valA = client.getValue(key, CLIENT_A).get();
+        Variant valA = client.get(key, CLIENT_A).get();
         assertNotNull(valA);
 
         // Client B can ALSO read (shared access)
-        Variant valB = client.getValue(key, CLIENT_B).get();
+        Variant valB = client.get(key, CLIENT_B).get();
         assertNotNull(valB);
 
         // Client C can ALSO read
-        Variant valC = client.getValue(key, CLIENT_C).get();
+        Variant valC = client.get(key, CLIENT_C).get();
         assertNotNull(valC);
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -64,20 +64,20 @@ public class LockContentionTest extends TestBase {
     void testReadLockBlocksWrite() throws ExecutionException, InterruptedException {
         String key = "lock_read_blocks_write_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("original")).get();
+        KeyHintData hint = client.create(key, v("original")).get();
 
         // Client A gets READ_LOCK
-        LockStatus lockA = client.lockObject(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client A cannot write (READ_LOCK only)
-        assertDenied(client.updateKeyValue(key, v("updated"), CLIENT_A));
+        assertDenied(client.replace(key, v("updated"), CLIENT_A));
 
         // Client B cannot write
-        assertDenied(client.updateKeyValue(key, v("updated"), CLIENT_B));
+        assertDenied(client.replace(key, v("updated"), CLIENT_B));
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -85,18 +85,18 @@ public class LockContentionTest extends TestBase {
     void testReadLockBlocksLockChange() throws ExecutionException, InterruptedException {
         String key = "lock_read_blocks_lock_change_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
         // Client A gets READ_LOCK
-        LockStatus lockA = client.lockObject(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B tries to change lock to WRITE_LOCK - should fail
-        LockStatus lockB = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
+        LockStatus lockB = client.lock(key, LockType.WRITE_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
         assertNotEquals(LockStatus.OK, lockB);
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     // =========================================================================
@@ -108,22 +108,22 @@ public class LockContentionTest extends TestBase {
     void testWriteLockOwnerAccess() throws ExecutionException, InterruptedException {
         String key = "lock_write_owner_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("original")).get();
+        KeyHintData hint = client.create(key, v("original")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client A can read
-        Variant val = client.getValue(key, CLIENT_A).get();
+        Variant val = client.get(key, CLIENT_A).get();
         assertNotNull(val);
 
         // Client A can write
-        client.updateKeyValue(key, v("updated"), CLIENT_A).get();
-        val = client.getValue(key, CLIENT_A).get();
+        client.replace(key, v("updated"), CLIENT_A).get();
+        val = client.get(key, CLIENT_A).get();
         assertEquals("updated", new String(val.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -131,16 +131,16 @@ public class LockContentionTest extends TestBase {
     void testWriteLockBlocksOthersRead() throws ExecutionException, InterruptedException {
         String key = "lock_write_blocks_read_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B cannot read
-        assertDenied(client.getValue(key, CLIENT_B));
+        assertDenied(client.get(key, CLIENT_B));
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -148,16 +148,16 @@ public class LockContentionTest extends TestBase {
     void testWriteLockBlocksOthersWrite() throws ExecutionException, InterruptedException {
         String key = "lock_write_blocks_write_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("original")).get();
+        KeyHintData hint = client.create(key, v("original")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B cannot write
-        assertDenied(client.updateKeyValue(key, v("updated"), CLIENT_B));
+        assertDenied(client.replace(key, v("updated"), CLIENT_B));
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -165,17 +165,17 @@ public class LockContentionTest extends TestBase {
     void testWriteLockBlocksLockChange() throws ExecutionException, InterruptedException {
         String key = "lock_write_blocks_lock_change_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B tries to get READ_LOCK - should fail
-        LockStatus lockB = client.lockObject(key, LockType.READ_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
+        LockStatus lockB = client.lock(key, LockType.READ_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
         assertNotEquals(LockStatus.OK, lockB);
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     // =========================================================================
@@ -187,22 +187,22 @@ public class LockContentionTest extends TestBase {
     void testGlobalLockOwnerAccess() throws ExecutionException, InterruptedException {
         String key = "lock_global_owner_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("original")).get();
+        KeyHintData hint = client.create(key, v("original")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client A can read
-        Variant val = client.getValue(key, CLIENT_A).get();
+        Variant val = client.get(key, CLIENT_A).get();
         assertNotNull(val);
 
         // Client A can write
-        client.updateKeyValue(key, v("updated"), CLIENT_A).get();
-        val = client.getValue(key, CLIENT_A).get();
+        client.replace(key, v("updated"), CLIENT_A).get();
+        val = client.get(key, CLIENT_A).get();
         assertEquals("updated", new String(val.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -210,16 +210,16 @@ public class LockContentionTest extends TestBase {
     void testGlobalLockBlocksOthersRead() throws ExecutionException, InterruptedException {
         String key = "lock_global_blocks_read_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B cannot read
-        assertDenied(client.getValue(key, CLIENT_B));
+        assertDenied(client.get(key, CLIENT_B));
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -227,16 +227,16 @@ public class LockContentionTest extends TestBase {
     void testGlobalLockBlocksOthersWrite() throws ExecutionException, InterruptedException {
         String key = "lock_global_blocks_write_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("original")).get();
+        KeyHintData hint = client.create(key, v("original")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B cannot write
-        assertDenied(client.updateKeyValue(key, v("updated"), CLIENT_B));
+        assertDenied(client.replace(key, v("updated"), CLIENT_B));
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -244,21 +244,21 @@ public class LockContentionTest extends TestBase {
     void testGlobalLockBlocksAll() throws ExecutionException, InterruptedException {
         String key = "lock_global_blocks_all_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B tries READ_LOCK - blocked
-        LockStatus readLock = client.lockObject(key, LockType.READ_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
+        LockStatus readLock = client.lock(key, LockType.READ_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
         assertNotEquals(LockStatus.OK, readLock);
 
         // Client B tries WRITE_LOCK - blocked
-        LockStatus writeLock = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
+        LockStatus writeLock = client.lock(key, LockType.WRITE_LOCK, CLIENT_B, Duration.ofSeconds(1)).get();
         assertNotEquals(LockStatus.OK, writeLock);
 
         // Cleanup
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     // =========================================================================
@@ -270,17 +270,17 @@ public class LockContentionTest extends TestBase {
     void testUnlockOwner() throws ExecutionException, InterruptedException {
         String key = "lock_unlock_owner_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Owner unlocks
-        LockStatus unlock = client.unlockObject(key, CLIENT_A).get();
+        LockStatus unlock = client.unlock(key, CLIENT_A).get();
         assertEquals(LockStatus.OK, unlock);
 
         // Now anyone can access
-        Variant val = client.getValue(key, CLIENT_B).get();
+        Variant val = client.get(key, CLIENT_B).get();
         assertNotNull(val);
     }
 
@@ -289,20 +289,20 @@ public class LockContentionTest extends TestBase {
     void testUnlockIntruder() throws ExecutionException, InterruptedException {
         String key = "lock_unlock_intruder_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Intruder tries to unlock
-        LockStatus unlock = client.unlockObject(key, CLIENT_B).get();
+        LockStatus unlock = client.unlock(key, CLIENT_B).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
         // Lock still active
-        assertDenied(client.getValue(key, CLIENT_B));
+        assertDenied(client.get(key, CLIENT_B));
 
         // Owner can still unlock
-        unlock = client.unlockObject(key, CLIENT_A).get();
+        unlock = client.unlock(key, CLIENT_A).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -311,15 +311,15 @@ public class LockContentionTest extends TestBase {
     void testUnlockIntruderReadLock() throws ExecutionException, InterruptedException {
         String key = "lock_unlock_intruder_read_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
-        LockStatus unlock = client.unlockObject(key, CLIENT_B).get();
+        LockStatus unlock = client.unlock(key, CLIENT_B).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -327,15 +327,15 @@ public class LockContentionTest extends TestBase {
     void testUnlockIntruderWriteLock() throws ExecutionException, InterruptedException {
         String key = "lock_unlock_intruder_write_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
-        LockStatus unlock = client.unlockObject(key, CLIENT_B).get();
+        LockStatus unlock = client.unlock(key, CLIENT_B).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -343,15 +343,15 @@ public class LockContentionTest extends TestBase {
     void testUnlockIntruderGlobalLock() throws ExecutionException, InterruptedException {
         String key = "lock_unlock_intruder_global_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.GLOBAL, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
-        LockStatus unlock = client.unlockObject(key, CLIENT_B).get();
+        LockStatus unlock = client.unlock(key, CLIENT_B).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     // =========================================================================
@@ -365,18 +365,18 @@ public class LockContentionTest extends TestBase {
 
         KeyHintData hint = client.createList(key, List.of(v("item1"), v("item2"))).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.READ_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Both can stream
-        assertNotNull(client.streamList(key, CLIENT_A).get());
-        assertNotNull(client.streamList(key, CLIENT_B).get());
+        assertNotNull(client.getList(key, CLIENT_A).get());
+        assertNotNull(client.getList(key, CLIENT_B).get());
 
         // No one can add
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), CLIENT_A));
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), CLIENT_B));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), CLIENT_A));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), CLIENT_B));
 
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     @Test
@@ -389,19 +389,19 @@ public class LockContentionTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Owner can read
-        assertNotNull(client.streamMap(key, null, CLIENT_A).get());
+        assertNotNull(client.getMap(key, null, CLIENT_A).get());
 
         // Owner can write
-        client.addElementHashMap(key, null, List.of(p("k2")), List.of(v("v2")), CLIENT_A).get();
+        client.putAll(key, null, List.of(p("k2")), List.of(v("v2")), CLIENT_A).get();
 
         // Others cannot read
-        assertDenied(client.streamMap(key, null, CLIENT_B));
+        assertDenied(client.getMap(key, null, CLIENT_B));
 
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
     }
 
     // =========================================================================
@@ -413,19 +413,19 @@ public class LockContentionTest extends TestBase {
     void testLockReleaseAndReacquire() throws ExecutionException, InterruptedException {
         String key = "lock_release_reacquire_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lockA = client.lockObject(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
+        LockStatus lockA = client.lock(key, LockType.WRITE_LOCK, CLIENT_A, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lockA);
 
         // Client B blocked
-        assertDenied(client.getValue(key, CLIENT_B));
+        assertDenied(client.get(key, CLIENT_B));
 
         // Client A releases
-        client.unlockObject(key, CLIENT_A).get();
+        client.unlock(key, CLIENT_A).get();
 
         // Client B can now access
-        Variant val = client.getValue(key, CLIENT_B).get();
+        Variant val = client.get(key, CLIENT_B).get();
         assertNotNull(val);
     }
 }

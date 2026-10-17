@@ -32,15 +32,15 @@ public class AtomicOperationsTest extends TestBase {
         String key = "atomic_exchange_int_" + UUID.randomUUID();
 
         // Create with int
-        KeyHintData hint = client.createKeyValue(key, vi(100)).get();
+        KeyHintData hint = client.create(key, vi(100)).get();
 
         // Exchange to new value
-        Number previous = client.atomicExchange(key, 200).get();
+        Number previous = client.exchange(key, 200).get();
         assertNotNull(previous);
         assertEquals(100, previous.longValue());
 
         // Verify new value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(200, current.longValue());
         assert current.isInt() : "Expected INT type";
     }
@@ -51,13 +51,13 @@ public class AtomicOperationsTest extends TestBase {
         String key = "atomic_exchange_double_" + UUID.randomUUID();
 
         // Create with double
-        KeyHintData hint = client.createKeyValue(key, vd(3.14)).get();
+        KeyHintData hint = client.create(key, vd(3.14)).get();
 
         // Exchange double with int - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicExchange(key, 1L));
+        assertInvalidArgument(client.exchange(key, 1L));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isDouble());
         assertEquals(3.14, current.doubleValue(), 0.001);
     }
@@ -68,14 +68,14 @@ public class AtomicOperationsTest extends TestBase {
         String key = "atomic_exchange_double_double_" + UUID.randomUUID();
 
         // Create with double
-        KeyHintData hint = client.createKeyValue(key, vd(3.14)).get();
+        KeyHintData hint = client.create(key, vd(3.14)).get();
 
         // Exchange double with double - should work
-        Number previous = client.atomicExchange(key, 2.71).get();
+        Number previous = client.exchange(key, 2.71).get();
         assertNotNull(previous);
 
         // Verify new value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isDouble());
         assertEquals(2.71, current.doubleValue(), 0.001);
     }
@@ -86,13 +86,13 @@ public class AtomicOperationsTest extends TestBase {
         String key = "atomic_exchange_bytes_" + UUID.randomUUID();
 
         // Create with bytes
-        KeyHintData hint = client.createKeyValue(key, v("hello")).get();
+        KeyHintData hint = client.create(key, v("hello")).get();
 
         // Exchange bytes with int - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicExchange(key, 42));
+        assertInvalidArgument(client.exchange(key, 42));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isBytes());
     }
 
@@ -105,15 +105,15 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAddInt() throws ExecutionException, InterruptedException {
         String key = "atomic_add_int_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(10)).get();
+        KeyHintData hint = client.create(key, vi(10)).get();
 
         // atomicAdd returns OLD value (like std::atomic::fetch_add)
-        Number result = client.atomicAdd(key, 5).get();
+        Number result = client.add(key, 5).get();
         assertNotNull(result);
         assertEquals(10, result.longValue()); // Returns OLD value
 
         // Verify new value is correct
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(15, current.longValue());
         assertTrue(current.isInt());
     }
@@ -123,15 +123,15 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAddNegative() throws ExecutionException, InterruptedException {
         String key = "atomic_add_negative_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(10)).get();
+        KeyHintData hint = client.create(key, vi(10)).get();
 
         // Returns OLD value
-        Number result = client.atomicAdd(key, -3).get();
+        Number result = client.add(key, -3).get();
         assertNotNull(result);
         assertEquals(10, result.longValue()); // Returns OLD value
 
         // Verify new value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(7, current.longValue());
     }
 
@@ -140,13 +140,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAddDouble() throws ExecutionException, InterruptedException {
         String key = "atomic_add_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(10.5)).get();
+        KeyHintData hint = client.create(key, vd(10.5)).get();
 
         // atomicAdd double with int - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicAdd(key, 1));
+        assertInvalidArgument(client.add(key, 1));
 
         // Verify value remains unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
         assertEquals(10.5, current.doubleValue(), 0.001);
@@ -157,14 +157,14 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAddDoubleWithDouble() throws ExecutionException, InterruptedException {
         String key = "atomic_add_double_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(10.5)).get();
+        KeyHintData hint = client.create(key, vd(10.5)).get();
 
         // atomicAdd double with double - should work
-        Number result = client.atomicAdd(key, 2.5).get();
+        Number result = client.add(key, 2.5).get();
         assertNotNull(result);
 
         // Verify new value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
         assertEquals(13.0, current.doubleValue(), 0.001);
@@ -179,7 +179,7 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicSubInt() throws ExecutionException, InterruptedException {
         String key = "atomic_sub_int_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(100)).get();
+        KeyHintData hint = client.create(key, vi(100)).get();
 
         // atomicSub returns OLD value
         Number result = client.atomicSub(key, 25).get();
@@ -187,7 +187,7 @@ public class AtomicOperationsTest extends TestBase {
         assertEquals(100, result.longValue()); // Returns OLD value
 
         // Verify new value is correct
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(75, current.longValue());
         assertTrue(current.isInt());
     }
@@ -197,13 +197,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicSubDouble() throws ExecutionException, InterruptedException {
         String key = "atomic_sub_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(50.0)).get();
+        KeyHintData hint = client.create(key, vd(50.0)).get();
 
         // atomicSub double with int - should return INVALID_ARGUMENT
         assertInvalidArgument(client.atomicSub(key, 1));
 
         // Verify value remains unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
         assertEquals(50.0, current.doubleValue(), 0.001);
@@ -214,14 +214,14 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicSubDoubleWithDouble() throws ExecutionException, InterruptedException {
         String key = "atomic_sub_double_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(50.0)).get();
+        KeyHintData hint = client.create(key, vd(50.0)).get();
 
         // atomicSub double with double - should work
         Number result = client.atomicSub(key, 5.5).get();
         assertNotNull(result);
 
         // Verify new value through getValue
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
         assertEquals(44.5, current.doubleValue(), 0.001);
@@ -232,7 +232,7 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicSubNegative() throws ExecutionException, InterruptedException {
         String key = "atomic_sub_negative_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(10)).get();
+        KeyHintData hint = client.create(key, vi(10)).get();
 
         // Returns OLD value
         Number result = client.atomicSub(key, 30).get();
@@ -240,7 +240,7 @@ public class AtomicOperationsTest extends TestBase {
         assertEquals(10, result.longValue()); // Returns OLD value
 
         // Verify new value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(-20, current.longValue());
     }
 
@@ -253,15 +253,15 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAnd() throws ExecutionException, InterruptedException {
         String key = "atomic_and_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(255)).get();
+        KeyHintData hint = client.create(key, vi(255)).get();
 
         // atomicAnd returns OLD value (like fetch_and)
-        Long result = client.atomicAnd(key, 15).get();
+        Long result = client.and(key, 15).get();
         assertNotNull(result);
         assertEquals(255, result.longValue()); // Returns OLD value
 
         // Verify new value through getValue
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(15, current.longValue()); // 255 & 15 = 15
     }
 
@@ -270,14 +270,14 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAndMask() throws ExecutionException, InterruptedException {
         String key = "atomic_and_mask_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(255)).get();
+        KeyHintData hint = client.create(key, vi(255)).get();
 
         // atomicAnd returns OLD value
-        Long result = client.atomicAnd(key, 0b00001111).get();
+        Long result = client.and(key, 0b00001111).get();
         assertEquals(255, result.longValue()); // Returns OLD value
 
         // Verify new value through getValue
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(15, current.longValue()); // 255 & 0b00001111 = 15
     }
 
@@ -290,15 +290,15 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicOr() throws ExecutionException, InterruptedException {
         String key = "atomic_or_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(8)).get();
+        KeyHintData hint = client.create(key, vi(8)).get();
 
         // atomicOr returns OLD value
-        Long result = client.atomicOr(key, 7).get();
+        Long result = client.or(key, 7).get();
         assertNotNull(result);
         assertEquals(8, result.longValue()); // Returns OLD value
 
         // Verify new value through getValue
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(15, current.longValue()); // 8 | 7 = 15
     }
 
@@ -313,15 +313,15 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicXor() throws ExecutionException, InterruptedException {
         String key = "atomic_xor_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(15)).get();
+        KeyHintData hint = client.create(key, vi(15)).get();
 
         // atomicXor returns OLD value
-        Long result = client.atomicXor(key, 7).get();
+        Long result = client.xor(key, 7).get();
         assertNotNull(result);
         assertEquals(15, result.longValue()); // Returns OLD value
 
         // Verify new value through getValue
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(8, current.longValue()); // 15 ^ 7 = 8
     }
 
@@ -330,13 +330,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicXorDoubleInvalid() throws ExecutionException, InterruptedException {
         String key = "atomic_xor_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(2.71)).get();
+        KeyHintData hint = client.create(key, vd(2.71)).get();
 
         // Bitwise XOR on double - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicXor(key, 42));
+        assertInvalidArgument(client.xor(key, 42));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isDouble());
     }
 
@@ -349,13 +349,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicCompareAndSetSuccess() throws ExecutionException, InterruptedException {
         String key = "atomic_cas_success_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(100)).get();
+        KeyHintData hint = client.create(key, vi(100)).get();
 
-        AtomicCasRes result = client.atomicCompareAndSet(key, 100, 200).get();
+        AtomicCasRes result = client.compareAndSet(key, 100, 200).get();
         assertNotNull(result);
         assertTrue(result.getResult());
 
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(200, current.longValue());
         assert current.isInt() : "Expected INT type";
     }
@@ -365,14 +365,14 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicCompareAndSetFailure() throws ExecutionException, InterruptedException {
         String key = "atomic_cas_failure_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(100)).get();
+        KeyHintData hint = client.create(key, vi(100)).get();
 
-        AtomicCasRes result = client.atomicCompareAndSet(key, 999, 200).get();
+        AtomicCasRes result = client.compareAndSet(key, 999, 200).get();
         assertNotNull(result);
         assertTrue(!result.getResult());
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(100, current.longValue());
         assert current.isInt() : "Expected INT type";
     }
@@ -382,15 +382,15 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicCompareAndSetDouble() throws ExecutionException, InterruptedException {
         String key = "atomic_cas_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(3.14)).get();
+        KeyHintData hint = client.create(key, vd(3.14)).get();
 
         // CAS with double values - should succeed
-        AtomicCasRes result = client.atomicCompareAndSet(key, 3.14, 2.71).get();
+        AtomicCasRes result = client.compareAndSet(key, 3.14, 2.71).get();
         assertNotNull(result);
         assertTrue(result.getResult());
 
         // Verify new value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isDouble());
         assertEquals(2.71, current.doubleValue(), 0.001);
     }
@@ -400,13 +400,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicCompareAndSetDoubleWithIntExpected() throws ExecutionException, InterruptedException {
         String key = "atomic_cas_double_int_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(3.14)).get();
+        KeyHintData hint = client.create(key, vd(3.14)).get();
 
         // CAS with int expected on double value - should return INVALID_ARGUMENT (type mismatch)
-        assertInvalidArgument(client.atomicCompareAndSet(key, 0L, 1L));
+        assertInvalidArgument(client.compareAndSet(key, 0L, 1L));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isDouble());
         assertEquals(3.14, current.doubleValue(), 0.001);
     }
@@ -416,13 +416,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicCompareAndSetBytes() throws ExecutionException, InterruptedException {
         String key = "atomic_cas_bytes_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("hello")).get();
+        KeyHintData hint = client.create(key, v("hello")).get();
 
         // CAS with bytes - expecting long is INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicCompareAndSet(key, 0L, 1L));
+        assertInvalidArgument(client.compareAndSet(key, 0L, 1L));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isBytes());
     }
 
@@ -435,21 +435,21 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAddWithWriteLock() throws ExecutionException, InterruptedException {
         String key = "atomic_add_lock_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(10)).get();
+        KeyHintData hint = client.create(key, vi(10)).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // atomicAdd returns OLD value (like fetch_add)
-        Number result = client.atomicAdd(key, hint, 5, OWNER_CLIENT_ID).get();
+        Number result = client.add(key, hint, 5, OWNER_CLIENT_ID).get();
         assertNotNull(result);
         assertEquals(10, result.longValue()); // Returns OLD value
 
         // Verify new value is correct
-        Variant current = client.getValue(key,OWNER_CLIENT_ID).get();
+        Variant current = client.get(key, OWNER_CLIENT_ID).get();
         assertEquals(15, current.longValue());
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -457,15 +457,15 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicExchangeWithReadLock() throws ExecutionException, InterruptedException {
         String key = "atomic_exchange_read_lock_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(10)).get();
+        KeyHintData hint = client.create(key, vi(10)).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Intruder cannot perform atomic operations
-        assertDenied(client.atomicExchange(key, hint, 20, INTRUDER_CLIENT_ID));
+        assertDenied(client.exchange(key, hint, 20, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -473,16 +473,16 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicCompareAndSetWithWriteLock() throws ExecutionException, InterruptedException {
         String key = "atomic_cas_lock_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(100)).get();
+        KeyHintData hint = client.create(key, vi(100)).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        AtomicCasRes result = client.atomicCompareAndSet(key, hint, 100, 200, OWNER_CLIENT_ID).get();
+        AtomicCasRes result = client.compareAndSet(key, hint, 100, 200, OWNER_CLIENT_ID).get();
         assertNotNull(result);
         assertTrue(result.getResult());
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -495,18 +495,18 @@ public class AtomicOperationsTest extends TestBase {
         String key = "atomic_type_switch_" + UUID.randomUUID();
 
         // Create with bytes
-        KeyHintData hint = client.createKeyValue(key, v("hello")).get();
+        KeyHintData hint = client.create(key, v("hello")).get();
 
         // Switch to int explicitly
-        Variant variant = client.updateKeyValue(key, vi(50)).get();
+        Variant variant = client.replace(key, vi(50)).get();
 
         // atomicAdd int with int (compatible) - returns OLD value
-        Number result = client.atomicAdd(key, 10).get();
+        Number result = client.add(key, 10).get();
         assertNotNull(result);
         assertEquals(50, result.longValue()); // Returns OLD value
 
         // Verify new value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(60, current.longValue());
         assertTrue(current.isInt());
     }
@@ -517,17 +517,17 @@ public class AtomicOperationsTest extends TestBase {
         String key = "atomic_sub_type_switch_" + UUID.randomUUID();
 
         // Create with int
-        KeyHintData hint = client.createKeyValue(key, vi(100)).get();
+        KeyHintData hint = client.create(key, vi(100)).get();
 
         // Switch to double explicitly
-        client.updateKeyValue(key, vd(50.5)).get();
+        client.replace(key, vd(50.5)).get();
 
         // atomicSub double with double - returns OLD value
         Number result = client.atomicSub(key, 5.5).get();
         assertNotNull(result);
 
         // Verify new value through getValue
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
         assertEquals(45.0, current.doubleValue(), 0.001);
@@ -538,13 +538,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAddOnBytesInvalid() throws ExecutionException, InterruptedException {
         String key = "atomic_add_bytes_invalid_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("hello")).get();
+        KeyHintData hint = client.create(key, v("hello")).get();
 
         // atomicAdd on bytes - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicAdd(key, 10));
+        assertInvalidArgument(client.add(key, 10));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isBytes());
     }
 
@@ -553,13 +553,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAndOnDoubleInvalid() throws ExecutionException, InterruptedException {
         String key = "atomic_and_double_invalid_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(3.14)).get();
+        KeyHintData hint = client.create(key, vd(3.14)).get();
 
         // atomicAnd on double - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicAnd(key, 15));
+        assertInvalidArgument(client.and(key, 15));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isDouble());
     }
 
@@ -568,13 +568,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicAndOnBytesInvalid() throws ExecutionException, InterruptedException {
         String key = "atomic_and_bytes_invalid_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("hello")).get();
+        KeyHintData hint = client.create(key, v("hello")).get();
 
         // atomicAnd on bytes - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicAnd(key, 15));
+        assertInvalidArgument(client.and(key, 15));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isBytes());
     }
 
@@ -583,13 +583,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicOrDoubleInvalid() throws ExecutionException, InterruptedException {
         String key = "atomic_or_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(3.14)).get();
+        KeyHintData hint = client.create(key, vd(3.14)).get();
 
         // Bitwise OR on double - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicOr(key, 1));
+        assertInvalidArgument(client.or(key, 1));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isDouble());
     }
 
@@ -598,13 +598,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicOrBytesInvalid() throws ExecutionException, InterruptedException {
         String key = "atomic_or_bytes_invalid_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("hello")).get();
+        KeyHintData hint = client.create(key, v("hello")).get();
 
         // Bitwise OR on bytes - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicOr(key, 1));
+        assertInvalidArgument(client.or(key, 1));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isBytes());
     }
 
@@ -614,13 +614,13 @@ public class AtomicOperationsTest extends TestBase {
     void testAtomicXorBytesInvalid() throws ExecutionException, InterruptedException {
         String key = "atomic_xor_bytes_invalid_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("hello")).get();
+        KeyHintData hint = client.create(key, v("hello")).get();
 
         // Bitwise XOR on bytes - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicXor(key, 42));
+        assertInvalidArgument(client.xor(key, 42));
 
         // Value should remain unchanged
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertTrue(current.isBytes());
     }
 
@@ -633,20 +633,20 @@ public class AtomicOperationsTest extends TestBase {
     void testMultipleAtomicAdd() throws ExecutionException, InterruptedException {
         String key = "atomic_chained_add_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(0)).get();
+        KeyHintData hint = client.create(key, vi(0)).get();
 
         // atomicAdd returns OLD value
-        Number r1 = client.atomicAdd(key, 10).get();
+        Number r1 = client.add(key, 10).get();
         assertEquals(0, r1.longValue()); // Returns OLD value (0)
 
-        Number r2 = client.atomicAdd(key, 20).get();
+        Number r2 = client.add(key, 20).get();
         assertEquals(10, r2.longValue()); // Returns OLD value (0+10=10)
 
-        Number r3 = client.atomicAdd(key, 5).get();
+        Number r3 = client.add(key, 5).get();
         assertEquals(30, r3.longValue()); // Returns OLD value (10+20=30)
 
         // Verify final value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(35, current.longValue()); // 0+10+20+5=35
     }
 
@@ -655,20 +655,20 @@ public class AtomicOperationsTest extends TestBase {
     void testChainedAddAndSub() throws ExecutionException, InterruptedException {
         String key = "atomic_chained_add_sub_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(100)).get();
+        KeyHintData hint = client.create(key, vi(100)).get();
 
         // All operations on int type (compatible)
-        Number r1 = client.atomicAdd(key, 50).get();
+        Number r1 = client.add(key, 50).get();
         assertEquals(100, r1.longValue()); // OLD value
 
         Number r2 = client.atomicSub(key, 30).get();
         assertEquals(150, r2.longValue()); // OLD value
 
-        Number r3 = client.atomicAdd(key, 10).get();
+        Number r3 = client.add(key, 10).get();
         assertEquals(120, r3.longValue()); // OLD value
 
         // Verify final value
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(130, current.longValue());
         assertTrue(current.isInt());
     }
@@ -678,21 +678,21 @@ public class AtomicOperationsTest extends TestBase {
     void testExchangeThenCas() throws ExecutionException, InterruptedException {
         String key = "atomic_exchange_cas_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(10)).get();
+        KeyHintData hint = client.create(key, vi(10)).get();
 
         // Exchange
-        Number prev = client.atomicExchange(key, 20).get();
+        Number prev = client.exchange(key, 20).get();
         assertEquals(10, prev.longValue());
 
         // CAS should succeed with new value
-        AtomicCasRes cas = client.atomicCompareAndSet(key, 100, 20).get();
+        AtomicCasRes cas = client.compareAndSet(key, 100, 20).get();
         assertTrue(!cas.getResult()); // 100 != 20, so should fail
 
         // Try correct expected value
-        cas = client.atomicCompareAndSet(key, 20, 30).get();
+        cas = client.compareAndSet(key, 20, 30).get();
         assertTrue(cas.getResult());
 
-        Variant current = client.getValue(key).get();
+        Variant current = client.get(key).get();
         assertEquals(30, current.longValue());
         assert current.isInt() : "Expected INT type";
     }

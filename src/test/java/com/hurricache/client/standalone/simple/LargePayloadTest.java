@@ -3,12 +3,9 @@ package com.hurricache.client.standalone.simple;
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Variant;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -32,9 +29,9 @@ public class LargePayloadTest extends TestBase {
         String longKey = "k".repeat(1024);
         String key = "edge_long_key_1kb_" + UUID.randomUUID() + "_" + longKey;
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
         // If server accepts it, verify we can read it back
-        Variant value = client.getValue(key).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         client.remove(key).get();
     }
@@ -45,8 +42,8 @@ public class LargePayloadTest extends TestBase {
         String longKey = "k".repeat(10 * 1024);
         String key = "edge_long_key_10kb_" + UUID.randomUUID() + "_" + longKey;
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, v("value")).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         client.remove(key).get();
     }
@@ -60,8 +57,8 @@ public class LargePayloadTest extends TestBase {
     void testKeyWithNullBytes() throws ExecutionException, InterruptedException {
         String key = "edge_null_byte_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, v("value")).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         client.remove(key).get();
     }
@@ -71,8 +68,8 @@ public class LargePayloadTest extends TestBase {
     void testKeyWithUTF8() throws ExecutionException, InterruptedException {
         String key = "edge_utf8_" + UUID.randomUUID() + "_тест_🔥_中文";
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, v("value")).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         client.remove(key).get();
     }
@@ -90,8 +87,8 @@ public class LargePayloadTest extends TestBase {
             largeData[i] = (byte) (i % 256);
         }
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(largeData)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofBytes(largeData)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertArrayEquals(largeData, value.bytesValue());
         client.remove(key).get();
@@ -106,8 +103,8 @@ public class LargePayloadTest extends TestBase {
             largeData[i] = (byte) (i % 256);
         }
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(largeData)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofBytes(largeData)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertArrayEquals(largeData, value.bytesValue());
         client.remove(key).get();
@@ -122,8 +119,8 @@ public class LargePayloadTest extends TestBase {
             largeData[i] = (byte) (i % 256);
         }
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(largeData)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofBytes(largeData)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertArrayEquals(largeData, value.bytesValue());
         client.remove(key).get();
@@ -142,8 +139,8 @@ public class LargePayloadTest extends TestBase {
             allBytes[i] = (byte) i;
         }
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(allBytes)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofBytes(allBytes)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertArrayEquals(allBytes, value.bytesValue());
         client.remove(key).get();
@@ -158,8 +155,8 @@ public class LargePayloadTest extends TestBase {
             highBytes[i] = (byte) (0x80 + i);
         }
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(highBytes)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofBytes(highBytes)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertArrayEquals(highBytes, value.bytesValue());
         client.remove(key).get();
@@ -177,8 +174,8 @@ public class LargePayloadTest extends TestBase {
         data[10] = 'A';
         data[60] = 'B';
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(data)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofBytes(data)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertArrayEquals(data, value.bytesValue());
         client.remove(key).get();
@@ -193,8 +190,8 @@ public class LargePayloadTest extends TestBase {
     void testEmptyBytesValue() throws ExecutionException, InterruptedException {
         String key = "edge_empty_value_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofBytes(new byte[0])).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofBytes(new byte[0])).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertTrue(value.isBytes());
         assertArrayEquals(new byte[0], value.bytesValue());
@@ -224,7 +221,7 @@ public class LargePayloadTest extends TestBase {
         assertNotNull(hint);
 
         // Verify by reading head
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertArrayEquals(largeData, head.bytesValue());
         client.remove(key).get();
@@ -247,7 +244,7 @@ public class LargePayloadTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
 
-        Variant element = client.getElementAtPosition(key, 0).get();
+        Variant element = client.getAt(key, 0).get();
         assertNotNull(element);
         assertArrayEquals(largeData, element.bytesValue());
         client.remove(key).get();
@@ -262,8 +259,8 @@ public class LargePayloadTest extends TestBase {
     void testDoubleNaN() throws ExecutionException, InterruptedException {
         String key = "edge_double_nan_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofDouble(Double.NaN)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofDouble(Double.NaN)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertTrue(Double.isNaN(value.doubleValue()));
         client.remove(key).get();
@@ -274,8 +271,8 @@ public class LargePayloadTest extends TestBase {
     void testDoublePositiveInfinity() throws ExecutionException, InterruptedException {
         String key = "edge_double_pos_inf_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofDouble(Double.POSITIVE_INFINITY)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofDouble(Double.POSITIVE_INFINITY)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertTrue(Double.isInfinite(value.doubleValue()));
         client.remove(key).get();
@@ -286,8 +283,8 @@ public class LargePayloadTest extends TestBase {
     void testDoubleNegativeInfinity() throws ExecutionException, InterruptedException {
         String key = "edge_double_neg_inf_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofDouble(Double.NEGATIVE_INFINITY)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofDouble(Double.NEGATIVE_INFINITY)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertTrue(Double.isInfinite(value.doubleValue()));
         client.remove(key).get();
@@ -298,8 +295,8 @@ public class LargePayloadTest extends TestBase {
     void testDoubleMaxValue() throws ExecutionException, InterruptedException {
         String key = "edge_double_max_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofDouble(Double.MAX_VALUE)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofDouble(Double.MAX_VALUE)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertEquals(Double.MAX_VALUE, value.doubleValue());
         client.remove(key).get();
@@ -310,8 +307,8 @@ public class LargePayloadTest extends TestBase {
     void testDoubleMinValue() throws ExecutionException, InterruptedException {
         String key = "edge_double_min_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofDouble(Double.MIN_VALUE)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofDouble(Double.MIN_VALUE)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertEquals(Double.MIN_VALUE, value.doubleValue(), 0);
         client.remove(key).get();
@@ -326,8 +323,8 @@ public class LargePayloadTest extends TestBase {
     void testLongMaxValue() throws ExecutionException, InterruptedException {
         String key = "edge_long_max_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofLong(Long.MAX_VALUE)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofLong(Long.MAX_VALUE)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertEquals(Long.MAX_VALUE, value.longValue());
         client.remove(key).get();
@@ -338,8 +335,8 @@ public class LargePayloadTest extends TestBase {
     void testLongMinValue() throws ExecutionException, InterruptedException {
         String key = "edge_long_min_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, Variant.ofLong(Long.MIN_VALUE)).get();
-        Variant value = client.getValue(key).get();
+        KeyHintData hint = client.create(key, Variant.ofLong(Long.MIN_VALUE)).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertEquals(Long.MIN_VALUE, value.longValue());
         client.remove(key).get();

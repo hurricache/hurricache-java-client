@@ -158,14 +158,14 @@ public abstract class TestBase {
         return val.getBytes(StandardCharsets.UTF_8);
     }
 
-    private OrderedPayload op(byte[] value, Long order) {
+    protected OrderedPayload op(byte[] value, Long order) {
         return OrderedPayload.of(value, order);
     }
 
-    private OrderedPayload op(Long order,byte[] value) {
+    protected OrderedPayload op(Long order,byte[] value) {
         return OrderedPayload.of(value, order);
     }
-    private OrderedVariant ov(byte[] value, Long order) {
+    protected OrderedVariant ov(byte[] value, Long order) {
         return OrderedVariant.of(v(value), order);
     }
 }

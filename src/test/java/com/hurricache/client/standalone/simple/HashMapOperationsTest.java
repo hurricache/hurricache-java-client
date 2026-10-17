@@ -57,7 +57,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
 
-        Map<Payload, Variant> stream = client.streamMap(key).get();
+        Map<Payload, Variant> stream = client.getMap(key).get();
         assertEquals(3, stream.size());
 
         // Collect values and check by type/content
@@ -85,7 +85,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
 
-        Map<Payload, Variant> stream = client.streamMap(key).get();
+        Map<Payload, Variant> stream = client.getMap(key).get();
         assertEquals(3, stream.size());
 
         // Collect values by type
@@ -112,7 +112,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
 
-        Map<Payload, Variant> stream = client.streamMap(key).get();
+        Map<Payload, Variant> stream = client.getMap(key).get();
         assertEquals(3, stream.size());
 
         // Collect double values
@@ -139,7 +139,7 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
 
-        Map<Payload, Variant> stream = client.streamMap(key).get();
+        Map<Payload, Variant> stream = client.getMap(key).get();
         assertEquals(3, stream.size());
 
         // Collect values by type
@@ -176,11 +176,11 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        Variant value = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        Variant value = client.getInContainer(key, null, "key1".getBytes()).get();
         assertNotNull(value);
         assertEquals("value1", new String(value.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        value = client.getValueInContainerByKey(key, null, "key2".getBytes()).get();
+        value = client.getInContainer(key, null, "key2".getBytes()).get();
         assertNotNull(value);
         assertEquals(100, value.longValue());
     }
@@ -194,10 +194,10 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        Boolean exists = client.existInContainerByKey(key, null, "key1".getBytes()).get();
+        Boolean exists = client.containsKey(key, null, "key1".getBytes()).get();
         assertTrue(exists);
 
-        exists = client.existInContainerByKey(key, null, "key_missing".getBytes()).get();
+        exists = client.containsKey(key, null, "key_missing".getBytes()).get();
         assertFalse(exists);
     }
 
@@ -210,11 +210,11 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        Variant previous = client.updateContainerValue(key, null, "key1".getBytes(), v("new_value")).get();
+        Variant previous = client.update(key, null, "key1".getBytes(), v("new_value")).get();
         assertNotNull(previous);
         assertEquals("old_value", new String(previous.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant current = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        Variant current = client.getInContainer(key, null, "key1".getBytes()).get();
         assertEquals("new_value", new String(current.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
 
@@ -228,17 +228,17 @@ public class HashMapOperationsTest extends TestBase {
         KeyHintData hint = client.createMap(key, data).get();
 
         // Update from bytes to int
-        Variant previous = client.updateContainerValue(key, null, "key1".getBytes(), vi(42)).get();
+        Variant previous = client.update(key, null, "key1".getBytes(), vi(42)).get();
         assertEquals("text", new String(previous.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant current = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        Variant current = client.getInContainer(key, null, "key1".getBytes()).get();
         assertEquals(42, current.longValue());
 
         // Update from int to double
-        previous = client.updateContainerValue(key, null, "key1".getBytes(), vd(3.14)).get();
+        previous = client.update(key, null, "key1".getBytes(), vd(3.14)).get();
         assertEquals(42, previous.longValue());
 
-        current = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        current = client.getInContainer(key, null, "key1".getBytes()).get();
         assertEquals(3.14, current.doubleValue(), 0.001);
     }
 
@@ -252,14 +252,14 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        Variant deleted = client.getAndDeleteValueInContainer(key, null, "key1".getBytes()).get();
+        Variant deleted = client.popInContainer(key, null, "key1".getBytes()).get();
         assertNotNull(deleted);
         assertEquals("value1", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Boolean exists = client.existInContainerByKey(key, null, "key1".getBytes()).get();
+        Boolean exists = client.containsKey(key, null, "key1".getBytes()).get();
         assertFalse(exists);
 
-        exists = client.existInContainerByKey(key, null, "key2".getBytes()).get();
+        exists = client.containsKey(key, null, "key2".getBytes()).get();
         assertTrue(exists);
     }
 
@@ -273,10 +273,10 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        Integer removed = client.removeInContainerByKey(key, null, "key1".getBytes()).get();
+        Integer removed = client.remove(key, null, "key1".getBytes()).get();
         assertEquals(1, removed);
 
-        Map<Payload, Variant> stream = client.streamMap(key).get();
+        Map<Payload, Variant> stream = client.getMap(key).get();
         assertEquals(1, stream.size());
     }
 
@@ -293,12 +293,12 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        Integer added = client.addElementHashMap(key, hint,
-                                                 List.of(p("key2"), p("key3")),
-                                                 List.of(vi(100), vd(3.14))).get();
+        Integer added = client.putAll(key, hint,
+                                      List.of(p("key2"), p("key3")),
+                                      List.of(vi(100), vd(3.14))).get();
         assertEquals(2, added);
 
-        Map<Payload, Variant> stream = client.streamMap(key).get();
+        Map<Payload, Variant> stream = client.getMap(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -322,7 +322,7 @@ public class HashMapOperationsTest extends TestBase {
                 List.of(p("k1"), p("k2")), List.of(v("val"), v("val"))).get();
         assertEquals(2, deleted);
 
-        Map<Payload, Variant> stream = client.streamMap(key).get();
+        Map<Payload, Variant> stream = client.getMap(key).get();
         assertEquals(1, stream.size());
     }
 
@@ -358,22 +358,22 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Map<Payload, Variant> val = client.streamMap(key, null, OWNER_CLIENT_ID).get();
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        Map<Payload, Variant> intruderVal = client.streamMap(key, null, INTRUDER_CLIENT_ID).get();
+        Map<Payload, Variant> intruderVal = client.getMap(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.addElementHashMap(key, hint, List.of(p("key2")), List.of(v("value2")), OWNER_CLIENT_ID));
-        assertDenied(client.addElementHashMap(key, hint, List.of(p("key2")), List.of(v("value2")), INTRUDER_CLIENT_ID));
+        assertDenied(client.putAll(key, hint, List.of(p("key2")), List.of(v("value2")), OWNER_CLIENT_ID));
+        assertDenied(client.putAll(key, hint, List.of(p("key2")), List.of(v("value2")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -385,22 +385,22 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read and write
-        Map<Payload, Variant> val = client.streamMap(key, null, OWNER_CLIENT_ID).get();
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        client.addElementHashMap(key, hint,
-                List.of(p("key2")),
-                List.of(v("added")),
-                OWNER_CLIENT_ID).get();
+        client.putAll(key, hint,
+                      List.of(p("key2")),
+                      List.of(v("added")),
+                      OWNER_CLIENT_ID).get();
 
         // Intruder denied - use INTRUDER_CLIENT_ID explicitly
-        assertDenied(client.streamMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -412,17 +412,17 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can access
-        Map<Payload, Variant> val = client.streamMap(key, null, OWNER_CLIENT_ID).get();
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder denied - use INTRUDER_CLIENT_ID explicitly
-        assertDenied(client.streamMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
     @Test
     @DisplayName("Lock expiration on map")
@@ -433,13 +433,13 @@ public class HashMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
         // Lock should expire, intruder can access
-        Map<Payload, Variant> val = client.streamMap(key, null, INTRUDER_CLIENT_ID).get();
+        Map<Payload, Variant> val = client.getMap(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 }

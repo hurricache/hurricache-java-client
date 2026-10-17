@@ -31,12 +31,12 @@ public class TTLEdgeCasesTest extends TestBase {
     void testScalarTTLZero() throws ExecutionException, InterruptedException {
         String key = "ttl_zero_scalar_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, null, vi(42), Duration.ofMillis(0), OWNER_CLIENT_ID, Duration.ofSeconds(5)).get();
+        KeyHintData hint = client.create(key, null, vi(42), Duration.ofMillis(0), OWNER_CLIENT_ID, Duration.ofSeconds(5)).get();
         assertNotNull(hint);
 
         // Should expire very quickly - try to read
         try {
-            client.getValue(key).get();
+            client.get(key).get();
             // If it didn't expire instantly, try with setTtl(0)
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -51,7 +51,7 @@ public class TTLEdgeCasesTest extends TestBase {
         // Should be gone immediately
         try {
             Thread.sleep(10); // Give server time to process
-            client.getValue(key).get();
+            client.get(key).get();
             fail("Expected NOT_FOUND after TTL=0");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -70,7 +70,7 @@ public class TTLEdgeCasesTest extends TestBase {
 
         try {
             Thread.sleep(10);
-            client.streamList(key).get();
+            client.getList(key).get();
             fail("Expected NOT_FOUND after TTL=0");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -87,10 +87,10 @@ public class TTLEdgeCasesTest extends TestBase {
     void testScalarLargeTTL() throws ExecutionException, InterruptedException {
         String key = "ttl_large_scalar_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, null, vi(42), Duration.ofDays(365 * 10), OWNER_CLIENT_ID, Duration.ofSeconds(5)).get();
+        KeyHintData hint = client.create(key, null, vi(42), Duration.ofDays(365 * 10), OWNER_CLIENT_ID, Duration.ofSeconds(5)).get();
         assertNotNull(hint);
 
-        Variant value = client.getValue(key).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
         assertEquals(42, value.longValue());
 
@@ -111,18 +111,18 @@ public class TTLEdgeCasesTest extends TestBase {
     void testScalarTTL1ms() throws ExecutionException, InterruptedException {
         String key = "ttl_1ms_scalar_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(42)).get();
+        KeyHintData hint = client.create(key, vi(42)).get();
         client.setTtl(key, 1).get();
 
         // Should exist immediately
-        Variant value = client.getValue(key).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
 
         // Wait for expiry
         Thread.sleep(10);
 
         try {
-            client.getValue(key).get();
+            client.get(key).get();
             fail("Expected NOT_FOUND after TTL expiry");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -142,7 +142,7 @@ public class TTLEdgeCasesTest extends TestBase {
         Thread.sleep(10);
 
         try {
-            client.streamList(key).get();
+            client.getList(key).get();
             fail("Expected NOT_FOUND after TTL expiry");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -161,7 +161,7 @@ public class TTLEdgeCasesTest extends TestBase {
         Thread.sleep(10);
 
         try {
-            client.getHead(key).get();
+            client.peekHead(key).get();
             fail("Expected NOT_FOUND after TTL expiry");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -180,7 +180,7 @@ public class TTLEdgeCasesTest extends TestBase {
         Thread.sleep(10);
 
         try {
-            client.streamSet(key).get();
+            client.getSet(key).get();
             fail("Expected NOT_FOUND after TTL expiry");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -197,7 +197,7 @@ public class TTLEdgeCasesTest extends TestBase {
     void testUpdateTTL() throws ExecutionException, InterruptedException {
         String key = "ttl_update_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(42)).get();
+        KeyHintData hint = client.create(key, vi(42)).get();
 
         Long ttl1 = client.getTtl(key).get();
         assertNotNull(ttl1);
@@ -211,7 +211,7 @@ public class TTLEdgeCasesTest extends TestBase {
         assertTrue(ttl2 > 0);
 
         // Value still exists
-        Variant value = client.getValue(key).get();
+        Variant value = client.get(key).get();
         assertNotNull(value);
     }
 
@@ -232,13 +232,13 @@ public class TTLEdgeCasesTest extends TestBase {
     void testTTLBytes() throws ExecutionException, InterruptedException {
         String key = "ttl_bytes_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("hello"), OWNER_CLIENT_ID).get();
+        KeyHintData hint = client.create(key, v("hello"), OWNER_CLIENT_ID).get();
         client.setTtl(key, 1).get();
 
         Thread.sleep(10);
 
         try {
-            client.getValue(key).get();
+            client.get(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -251,13 +251,13 @@ public class TTLEdgeCasesTest extends TestBase {
     void testTLDouble() throws ExecutionException, InterruptedException {
         String key = "ttl_double_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vd(3.14), OWNER_CLIENT_ID).get();
+        KeyHintData hint = client.create(key, vd(3.14), OWNER_CLIENT_ID).get();
         client.setTtl(key, 1).get();
 
         Thread.sleep(10);
 
         try {
-            client.getValue(key).get();
+            client.get(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -279,7 +279,7 @@ public class TTLEdgeCasesTest extends TestBase {
         Thread.sleep(10);
 
         try {
-            client.streamMap(key).get();
+            client.getMap(key).get();
             fail("Expected NOT_FOUND");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -296,7 +296,7 @@ public class TTLEdgeCasesTest extends TestBase {
     void testGetTTLEXpired() throws ExecutionException, InterruptedException {
         String key = "ttl_get_expired_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, vi(42)).get();
+        KeyHintData hint = client.create(key, vi(42)).get();
         client.setTtl(key, 1).get();
 
         Thread.sleep(10);

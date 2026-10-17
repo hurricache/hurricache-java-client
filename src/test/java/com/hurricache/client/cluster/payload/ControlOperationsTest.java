@@ -1,7 +1,6 @@
 package com.hurricache.client.cluster.payload;
 
 import com.hurricache.TestBaseCluster;
-import com.hurricache.client.intf.Variant;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.LockStatus;
@@ -23,7 +22,7 @@ public class ControlOperationsTest extends TestBaseCluster {
 
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(key, createLargePayload(VALUE_SIZE))
+                .create(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -43,7 +42,7 @@ public class ControlOperationsTest extends TestBaseCluster {
 
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(key, createLargePayload(VALUE_SIZE))
+                .create(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -63,18 +62,18 @@ public class ControlOperationsTest extends TestBaseCluster {
 
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(lockKey, createLargePayload(VALUE_SIZE))
+                .create(lockKey, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // All other access should be done on backup
         // Client 1 acquires lock
-        LockStatus lockRes = client.setMode(Mode.BACKUP).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
+        LockStatus lockRes = client.setMode(Mode.BACKUP).lock(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
         // Client 2 attempts to lock (should fail based on server logic)
-        LockStatus lockResConflict = client.setMode(Mode.BACKUP).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
+        LockStatus lockResConflict = client.setMode(Mode.BACKUP).lock(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
         Assertions.assertNotEquals(LockStatus.OK, lockResConflict);
     }
 
@@ -84,18 +83,18 @@ public class ControlOperationsTest extends TestBaseCluster {
 
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(lockKey, createLargePayload(VALUE_SIZE))
+                .create(lockKey, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // All other access should be done on master
         // Client 1 acquires lock
-        LockStatus lockRes = client.setMode(Mode.MASTER).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
+        LockStatus lockRes = client.setMode(Mode.MASTER).lock(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
         // Client 2 attempts to lock (should fail based on server logic)
-        LockStatus lockResConflict = client.setMode(Mode.MASTER).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
+        LockStatus lockResConflict = client.setMode(Mode.MASTER).lock(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
         Assertions.assertNotEquals(LockStatus.OK, lockResConflict);
     }
 }

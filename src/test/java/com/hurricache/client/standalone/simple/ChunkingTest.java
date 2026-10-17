@@ -28,7 +28,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("item1", str(head));
         client.remove(key).get();
@@ -43,7 +43,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, data).get();
         assertNotNull(hint);
 
-        Variant element = client.getElementAtPosition(key, 0).get();
+        Variant element = client.getAt(key, 0).get();
         assertNotNull(element);
         assertEquals("item1", str(element));
         client.remove(key).get();
@@ -58,7 +58,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
 
-        Variant element = client.getElementAtPosition(key, 1).get();
+        Variant element = client.getAt(key, 1).get();
         assertNotNull(element);
         assertEquals("item2", str(element));
         client.remove(key).get();
@@ -73,7 +73,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> streamed = client.streamSet(key).get();
+        List<Variant> streamed = client.getSet(key).get();
         assertEquals(3, streamed.size());
         client.remove(key).get();
     }
@@ -86,7 +86,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createQueue(key, List.of()).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertTrue(head.isNone());
         client.remove(key).get();
     }
@@ -99,7 +99,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, List.of()).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertTrue(head.isNone());
         client.remove(key).get();
     }
@@ -112,7 +112,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createVector(key, List.of()).get();
         assertNotNull(hint);
 
-        List<Variant> streamed = client.streamVector(key).get();
+        List<Variant> streamed = client.getVector(key).get();
         assertTrue(streamed.isEmpty());
         client.remove(key).get();
     }
@@ -125,7 +125,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createSet(key, List.of()).get();
         assertNotNull(hint);
 
-        List<Variant> streamed = client.streamSet(key).get();
+        List<Variant> streamed = client.getSet(key).get();
         assertTrue(streamed.isEmpty());
         client.remove(key).get();
     }
@@ -141,7 +141,7 @@ public class ChunkingTest extends TestBase {
         int added = client.addElementUnordered(key, data).get();
         assertEquals(2, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(2, streamed.size());
         client.remove(key).get();
     }
@@ -154,10 +154,10 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, List.of()).get();
 
         List<Variant> data = List.of(v("item1"), v("item2"));
-        int added = client.addElementToTail(key, data).get();
+        int added = client.pushTail(key, data).get();
         assertEquals(2, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(2, streamed.size());
         client.remove(key).get();
     }
@@ -170,10 +170,10 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, List.of()).get();
 
         List<Variant> data = List.of(v("item1"), v("item2"));
-        int added = client.addElementToHead(key, data).get();
+        int added = client.pushHead(key, data).get();
         assertEquals(2, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(2, streamed.size());
         client.remove(key).get();
     }
@@ -188,7 +188,7 @@ public class ChunkingTest extends TestBase {
         int added = client.addElementUnordered(key, List.of()).get();
         assertEquals(0, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertTrue(streamed.isEmpty());
         client.remove(key).get();
     }
@@ -200,7 +200,7 @@ public class ChunkingTest extends TestBase {
         
         KeyHintData hint = client.createList(key, List.of()).get();
 
-        int added = client.addElementToTail(key, List.of()).get();
+        int added = client.pushTail(key, List.of()).get();
         assertEquals(0, added);
         client.remove(key).get();
     }
@@ -212,7 +212,7 @@ public class ChunkingTest extends TestBase {
         
         KeyHintData hint = client.createList(key, List.of()).get();
 
-        int added = client.addElementToHead(key, List.of()).get();
+        int added = client.pushHead(key, List.of()).get();
         assertEquals(0, added);
         client.remove(key).get();
     }
@@ -226,10 +226,10 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, initial).get();
 
         List<Variant> data = List.of(v("item1"), v("item2"));
-        int added = client.addElementToPosition(key, data, 1).get();
+        int added = client.insertAt(key, data, 1).get();
         assertEquals(2, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(3, streamed.size());
         client.remove(key).get();
     }
@@ -243,10 +243,10 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, initial).get();
 
         List<Variant> data = List.of(v("item1"), v("item2"));
-        int added = client.addElementToPositionBefore(key, data, v("pivot")).get();
+        int added = client.insertBefore(key, data, v("pivot")).get();
         assertEquals(2, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(3, streamed.size());
         client.remove(key).get();
     }
@@ -260,10 +260,10 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, initial).get();
 
         List<Variant> data = List.of(v("item1"), v("item2"));
-        int added = client.addElementToPositionAfter(key, data, v("pivot")).get();
+        int added = client.insertAfter(key, data, v("pivot")).get();
         assertEquals(2, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(3, streamed.size());
         client.remove(key).get();
     }
@@ -285,13 +285,13 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertArrayEquals(largePayload, head.bytesValue());
 
         int count = 0;
         while (true) {
-            Variant elem = client.getAndDeleteHead(key).get();
+            Variant elem = client.popHead(key).get();
             if (elem.isNone()) break;
             count++;
         }
@@ -315,7 +315,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createList(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(20, streamed.size());
         assertArrayEquals(largePayload, streamed.get(0).bytesValue());
         client.remove(key).get();
@@ -338,8 +338,8 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
 
-        Variant elem0 = client.getElementAtPosition(key, 0).get();
-        Variant elem9 = client.getElementAtPosition(key, 9).get();
+        Variant elem0 = client.getAt(key, 0).get();
+        Variant elem9 = client.getAt(key, 9).get();
         assertNotNull(elem0);
         assertNotNull(elem9);
         assertArrayEquals(largePayload, elem0.bytesValue());
@@ -364,7 +364,7 @@ public class ChunkingTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> streamed = client.streamSet(key).get();
+        List<Variant> streamed = client.getSet(key).get();
         assertEquals(10, streamed.size());
         client.remove(key).get();
     }
@@ -388,7 +388,7 @@ public class ChunkingTest extends TestBase {
         int added = client.addElementUnordered(key, data).get();
         assertEquals(30, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(30, streamed.size());
         client.remove(key).get();
     }
@@ -409,10 +409,10 @@ public class ChunkingTest extends TestBase {
             data.add(Variant.ofBytes(largePayload));
         }
 
-        int added = client.addElementToTail(key, data).get();
+        int added = client.pushTail(key, data).get();
         assertEquals(30, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(30, streamed.size());
         client.remove(key).get();
     }
@@ -433,10 +433,10 @@ public class ChunkingTest extends TestBase {
             data.add(Variant.ofBytes(largePayload));
         }
 
-        int added = client.addElementToHead(key, data).get();
+        int added = client.pushHead(key, data).get();
         assertEquals(30, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(30, streamed.size());
         client.remove(key).get();
     }
@@ -458,10 +458,10 @@ public class ChunkingTest extends TestBase {
             data.add(Variant.ofBytes(largePayload));
         }
 
-        int added = client.addElementToPosition(key, data, 1).get();
+        int added = client.insertAt(key, data, 1).get();
         assertEquals(20, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(21, streamed.size());
         client.remove(key).get();
     }
@@ -483,7 +483,7 @@ public class ChunkingTest extends TestBase {
         // Verify by draining the queue with getAndDeleteHead
         int count = 0;
         while (true) {
-            Variant elem = client.getAndDeleteHead(key).get();
+            Variant elem = client.popHead(key).get();
             if (elem.isNone()) break;
             count++;
         }
@@ -503,10 +503,10 @@ public class ChunkingTest extends TestBase {
             data.add(Variant.ofBytes(repetitive.getBytes(StandardCharsets.UTF_8)));
         }
 
-        int added = client.addElementToTail(key, data).get();
+        int added = client.pushTail(key, data).get();
         assertEquals(10, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(10, streamed.size());
         client.remove(key).get();
      }
@@ -529,7 +529,7 @@ public class ChunkingTest extends TestBase {
         // Verify by draining the queue with getAndDeleteHead
         int count = 0;
         while (true) {
-            Variant elem = client.getAndDeleteHead(key).get();
+            Variant elem = client.popHead(key).get();
             if (elem.isNone()) break;
             count++;
         }
@@ -551,7 +551,7 @@ public class ChunkingTest extends TestBase {
         int added = client.addElementUnordered(key, data).get();
         assertEquals(3, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(3, streamed.size());
         client.remove(key).get();
     }
@@ -582,10 +582,10 @@ public class ChunkingTest extends TestBase {
             more.add(Variant.ofBytes(payload2));
         }
 
-        int added = client.addElementToTail(key, more).get();
+        int added = client.pushTail(key, more).get();
         assertEquals(10, added);
 
-        List<Variant> streamed = client.streamList(key).get();
+        List<Variant> streamed = client.getList(key).get();
         assertEquals(20, streamed.size());
         
         for (int i = 0; i < 10; i++) {

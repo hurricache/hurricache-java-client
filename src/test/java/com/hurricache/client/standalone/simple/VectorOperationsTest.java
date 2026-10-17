@@ -49,7 +49,7 @@ public class VectorOperationsTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(3, stream.size());
         assertEquals("item1", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -63,7 +63,7 @@ public class VectorOperationsTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(3, stream.size());
         assertEquals(10, stream.get(0).longValue());
     }
@@ -77,7 +77,7 @@ public class VectorOperationsTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(3, stream.size());
         assertEquals(1.1, stream.get(0).doubleValue(), 0.001);
     }
@@ -91,7 +91,7 @@ public class VectorOperationsTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(3, stream.size());
         assertEquals("hello", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals(42, stream.get(1).longValue());
@@ -109,13 +109,13 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, List.of(v("middle"))).get();
 
-        Integer added = client.addElementToTail(key, List.of(v("tail1"), v("tail2"))).get();
+        Integer added = client.pushTail(key, List.of(v("tail1"), v("tail2"))).get();
         assertEquals(2, added);
 
-        added = client.addElementToHead(key, List.of(v("head1"))).get();
+        added = client.pushHead(key, List.of(v("head1"))).get();
         assertEquals(1, added);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(4, stream.size());
         assertEquals("head1", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals("tail2", new String(stream.get(3).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -129,11 +129,11 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("first", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant tail = client.getTail(key).get();
+        Variant tail = client.peekTail(key).get();
         assertNotNull(tail);
         assertEquals("last", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -146,15 +146,15 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        Variant deleted = client.getAndDeleteHead(key).get();
+        Variant deleted = client.popHead(key).get();
         assertNotNull(deleted);
         assertEquals("first", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        deleted = client.getAndDeleteTail(key).get();
+        deleted = client.popTail(key).get();
         assertNotNull(deleted);
         assertEquals("last", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(1, stream.size());
     }
 
@@ -172,7 +172,7 @@ public class VectorOperationsTest extends TestBase {
         deleted = client.deleteTail(key).get();
         assertEquals(1, deleted);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(1, stream.size());
     }
 
@@ -188,11 +188,11 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        Variant element = client.getElementAtPosition(key, 1).get();
+        Variant element = client.getAt(key, 1).get();
         assertNotNull(element);
         assertEquals(42, element.longValue());
 
-        element = client.getElementAtPosition(key, 2).get();
+        element = client.getAt(key, 2).get();
         assertNotNull(element);
         assertEquals(3.14, element.doubleValue(), 0.001);
     }
@@ -205,11 +205,11 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        Variant deleted = client.getAndDeleteElementAtPosition(key, null, 2).get();
+        Variant deleted = client.popAt(key, null, 2).get();
         assertNotNull(deleted);
         assertEquals("3", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(4, stream.size());
     }
 
@@ -221,16 +221,16 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        Integer deleted = client.deleteElementAtPosition(key, null, 2L).get();
+        Integer deleted = client.removeAt(key, null, 2L).get();
         assertEquals(1, deleted);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(4, stream.size());
 
-        deleted = client.deleteElementAtPosition(key, null, 1L, 2L).get();
+        deleted = client.removeAt(key, null, 1L, 2L).get();
         assertEquals(2, deleted);
 
-        stream = client.streamVector(key).get();
+        stream = client.getVector(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -245,7 +245,7 @@ public class VectorOperationsTest extends TestBase {
         Integer deleted = client.removeFromContainerByKeyAndValue(key, ContainerType.VECTOR, List.of(), List.of(v("a"))).get();
         assertEquals(2, deleted);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -261,13 +261,13 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        Integer added = client.addElementToPositionBefore(key, hint, List.of(v("before")), v("last")).get();
+        Integer added = client.insertBefore(key, hint, List.of(v("before")), v("last")).get();
         assertEquals(1, added);
 
-        added = client.addElementToPositionAfter(key, hint, List.of(v("after")), v("first")).get();
+        added = client.insertAfter(key, hint, List.of(v("after")), v("first")).get();
         assertEquals(1, added);
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(4, stream.size());
         assertEquals("first", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals("after", new String(stream.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -283,9 +283,9 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        client.addElementToPositionBefore(key, hint, List.of(v("str"), vi(200), vd(3.14)), vi(100)).get();
+        client.insertBefore(key, hint, List.of(v("str"), vi(200), vd(3.14)), vi(100)).get();
 
-        List<Variant> stream = client.streamVector(key).get();
+        List<Variant> stream = client.getVector(key).get();
         assertEquals(4, stream.size());
         assertEquals("str", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals(200, stream.get(1).longValue());
@@ -305,7 +305,7 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        List<Variant> range = client.streamElementInRangeUnordered(key, null, ContainerType.VECTOR, 1, 3).get();
+        List<Variant> range = client.getRange(key, null, ContainerType.VECTOR, 1, 3).get();
         assertEquals(3, range.size());
         assertEquals("2", new String(range.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
         assertEquals("3", new String(range.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -340,22 +340,22 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        List<Variant> val = client.streamVector(key.getBytes(), OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getVector(key.getBytes(), OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        List<Variant> intruderVal = client.streamVector(key.getBytes(), INTRUDER_CLIENT_ID).get();
+        List<Variant> intruderVal = client.getVector(key.getBytes(), INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID));
-        assertDenied(client.addElementToTail(key, null, List.of(v("added")), INTRUDER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("added")), OWNER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("added")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -366,17 +366,17 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<Variant> val = client.streamVector(key.getBytes(),  OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getVector(key.getBytes(), OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID).get();
+        client.pushTail(key, null, List.of(v("added")), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.streamVector(key.getBytes(),  INTRUDER_CLIENT_ID));
+        assertDenied(client.getVector(key.getBytes(), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -387,15 +387,15 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<Variant> val = client.streamVector(key.getBytes(), OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getVector(key.getBytes(), OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamVector(key.getBytes(),  INTRUDER_CLIENT_ID));
+        assertDenied(client.getVector(key.getBytes(), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
     @Test
     @DisplayName("Lock expiration on vector")
@@ -405,12 +405,12 @@ public class VectorOperationsTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        List<Variant> val = client.streamVector(key.getBytes(), INTRUDER_CLIENT_ID).get();
+        List<Variant> val = client.getVector(key.getBytes(), INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 }

@@ -19,12 +19,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing the previous value as Number.
      */
-    CompletableFuture<Number> atomicExchange(byte[] key,
-                                             KeyHintData hint,
-                                             long value,
-                                             Duration ttl,
-                                             int clientId,
-                                             Duration timeout);
+    CompletableFuture<Number> exchange(byte[] key,
+                                       KeyHintData hint,
+                                       long value,
+                                       Duration ttl,
+                                       int clientId,
+                                       Duration timeout);
 
     /**
      * Atomically sets a new double value and returns the old value.
@@ -38,71 +38,71 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing the previous value as Number.
      */
-    CompletableFuture<Number> atomicExchange(byte[] key,
-                                             KeyHintData hint,
-                                             double value,
-                                             Duration ttl,
-                                             int clientId,
-                                             Duration timeout);
+    CompletableFuture<Number> exchange(byte[] key,
+                                       KeyHintData hint,
+                                       double value,
+                                       Duration ttl,
+                                       int clientId,
+                                       Duration timeout);
 
-    default CompletableFuture<Number> atomicExchange(String key, KeyHintData hint, long value,
-                                                     Duration ttl, int clientId, Duration timeout) {
-        return atomicExchange(serializeKey(key), hint, value, ttl, clientId, timeout);
+    default CompletableFuture<Number> exchange(String key, KeyHintData hint, long value,
+                                               Duration ttl, int clientId, Duration timeout) {
+        return exchange(serializeKey(key), hint, value, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<Number> atomicExchange(byte[] key, KeyHintData hint, long value) {
-        return atomicExchange(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(byte[] key, KeyHintData hint, long value) {
+        return exchange(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(String key, KeyHintData hint, long value) {
-        return atomicExchange(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(String key, KeyHintData hint, long value) {
+        return exchange(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(byte[] key, long value) {
-        return atomicExchange(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(byte[] key, long value) {
+        return exchange(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(String key, long value) {
-        return atomicExchange(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(String key, long value) {
+        return exchange(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(String key, KeyHintData hint, long value, int clientId) {
-        return atomicExchange(serializeKey(key), hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> exchange(String key, KeyHintData hint, long value, int clientId) {
+        return exchange(serializeKey(key), hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(byte[] key, KeyHintData hint, long value, int clientId) {
-        return atomicExchange(key, hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> exchange(byte[] key, KeyHintData hint, long value, int clientId) {
+        return exchange(key, hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     // ====== Double overloads for atomicExchange ======
 
-    default CompletableFuture<Number> atomicExchange(String key, KeyHintData hint, double value,
-                                                     Duration ttl, int clientId, Duration timeout) {
-        return atomicExchange(serializeKey(key), hint, value, ttl, clientId, timeout);
+    default CompletableFuture<Number> exchange(String key, KeyHintData hint, double value,
+                                               Duration ttl, int clientId, Duration timeout) {
+        return exchange(serializeKey(key), hint, value, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<Number> atomicExchange(byte[] key, KeyHintData hint, double value) {
-        return atomicExchange(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(byte[] key, KeyHintData hint, double value) {
+        return exchange(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(String key, KeyHintData hint, double value) {
-        return atomicExchange(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(String key, KeyHintData hint, double value) {
+        return exchange(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(byte[] key, double value) {
-        return atomicExchange(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(byte[] key, double value) {
+        return exchange(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(String key, double value) {
-        return atomicExchange(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> exchange(String key, double value) {
+        return exchange(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(String key, KeyHintData hint, double value, int clientId) {
-        return atomicExchange(serializeKey(key), hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> exchange(String key, KeyHintData hint, double value, int clientId) {
+        return exchange(serializeKey(key), hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicExchange(byte[] key, KeyHintData hint, double value, int clientId) {
-        return atomicExchange(key, hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> exchange(byte[] key, KeyHintData hint, double value, int clientId) {
+        return exchange(key, hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
@@ -117,12 +117,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing the new value as Number.
      */
-    CompletableFuture<Number> atomicAdd(byte[] key,
-                                        KeyHintData hint,
-                                        long delta,
-                                        Duration ttl,
-                                        int clientId,
-                                        Duration timeout);
+    CompletableFuture<Number> add(byte[] key,
+                                  KeyHintData hint,
+                                  long delta,
+                                  Duration ttl,
+                                  int clientId,
+                                  Duration timeout);
 
     /**
      * Atomically increments a double scalar value by a given delta.
@@ -136,71 +136,71 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing the new value as Number.
      */
-    CompletableFuture<Number> atomicAdd(byte[] key,
-                                        KeyHintData hint,
-                                        double delta,
-                                        Duration ttl,
-                                        int clientId,
-                                        Duration timeout);
+    CompletableFuture<Number> add(byte[] key,
+                                  KeyHintData hint,
+                                  double delta,
+                                  Duration ttl,
+                                  int clientId,
+                                  Duration timeout);
 
-    default CompletableFuture<Number> atomicAdd(String key, KeyHintData hint, long delta,
-                                                Duration ttl, int clientId, Duration timeout) {
-        return atomicAdd(serializeKey(key), hint, delta, ttl, clientId, timeout);
+    default CompletableFuture<Number> add(String key, KeyHintData hint, long delta,
+                                          Duration ttl, int clientId, Duration timeout) {
+        return add(serializeKey(key), hint, delta, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, long delta) {
-        return atomicAdd(key, hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(byte[] key, KeyHintData hint, long delta) {
+        return add(key, hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(String key, KeyHintData hint, long delta) {
-        return atomicAdd(serializeKey(key), hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(String key, KeyHintData hint, long delta) {
+        return add(serializeKey(key), hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(byte[] key, long delta) {
-        return atomicAdd(key, null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(byte[] key, long delta) {
+        return add(key, null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(String key, long delta) {
-        return atomicAdd(serializeKey(key), null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(String key, long delta) {
+        return add(serializeKey(key), null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(String key, KeyHintData hint, long delta, int clientId) {
-        return atomicAdd(serializeKey(key), hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> add(String key, KeyHintData hint, long delta, int clientId) {
+        return add(serializeKey(key), hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, long delta, int clientId) {
-        return atomicAdd(key, hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> add(byte[] key, KeyHintData hint, long delta, int clientId) {
+        return add(key, hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     // ====== Double overloads for atomicAdd ======
 
-    default CompletableFuture<Number> atomicAdd(String key, KeyHintData hint, double delta,
-                                                Duration ttl, int clientId, Duration timeout) {
-        return atomicAdd(serializeKey(key), hint, delta, ttl, clientId, timeout);
+    default CompletableFuture<Number> add(String key, KeyHintData hint, double delta,
+                                          Duration ttl, int clientId, Duration timeout) {
+        return add(serializeKey(key), hint, delta, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, double delta) {
-        return atomicAdd(key, hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(byte[] key, KeyHintData hint, double delta) {
+        return add(key, hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(String key, KeyHintData hint, double delta) {
-        return atomicAdd(serializeKey(key), hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(String key, KeyHintData hint, double delta) {
+        return add(serializeKey(key), hint, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(byte[] key, double delta) {
-        return atomicAdd(key, null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(byte[] key, double delta) {
+        return add(key, null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(String key, double delta) {
-        return atomicAdd(serializeKey(key), null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Number> add(String key, double delta) {
+        return add(serializeKey(key), null, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(String key, KeyHintData hint, double delta, int clientId) {
-        return atomicAdd(serializeKey(key), hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> add(String key, KeyHintData hint, double delta, int clientId) {
+        return add(serializeKey(key), hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Number> atomicAdd(byte[] key, KeyHintData hint, double delta, int clientId) {
-        return atomicAdd(key, hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Number> add(byte[] key, KeyHintData hint, double delta, int clientId) {
+        return add(key, hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
@@ -312,40 +312,40 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing the resulting value after AND.
      */
-    CompletableFuture<Long> atomicAnd(byte[] key,
-                                      KeyHintData hint,
-                                      long mask,
-                                      Duration ttl,
-                                      int clientId,
-                                      Duration timeout);
+    CompletableFuture<Long> and(byte[] key,
+                                KeyHintData hint,
+                                long mask,
+                                Duration ttl,
+                                int clientId,
+                                Duration timeout);
 
-    default CompletableFuture<Long> atomicAnd(String key, KeyHintData hint, long mask,
-                                              Duration ttl, int clientId, Duration timeout) {
-        return atomicAnd(serializeKey(key), hint, mask, ttl, clientId, timeout);
+    default CompletableFuture<Long> and(String key, KeyHintData hint, long mask,
+                                        Duration ttl, int clientId, Duration timeout) {
+        return and(serializeKey(key), hint, mask, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<Long> atomicAnd(byte[] key, KeyHintData hint, long mask) {
-        return atomicAnd(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> and(byte[] key, KeyHintData hint, long mask) {
+        return and(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicAnd(String key, KeyHintData hint, long mask) {
-        return atomicAnd(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> and(String key, KeyHintData hint, long mask) {
+        return and(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicAnd(byte[] key, long mask) {
-        return atomicAnd(key, null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> and(byte[] key, long mask) {
+        return and(key, null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicAnd(String key, long mask) {
-        return atomicAnd(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> and(String key, long mask) {
+        return and(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicAnd(String key, KeyHintData hint, long mask, int clientId) {
-        return atomicAnd(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Long> and(String key, KeyHintData hint, long mask, int clientId) {
+        return and(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicAnd(byte[] key, KeyHintData hint, long mask, int clientId) {
-        return atomicAnd(key, hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Long> and(byte[] key, KeyHintData hint, long mask, int clientId) {
+        return and(key, hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
@@ -359,40 +359,40 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing the resulting value after OR.
      */
-    CompletableFuture<Long> atomicOr(byte[] key,
-                                     KeyHintData hint,
-                                     long mask,
-                                     Duration ttl,
-                                     int clientId,
-                                     Duration timeout);
+    CompletableFuture<Long> or(byte[] key,
+                               KeyHintData hint,
+                               long mask,
+                               Duration ttl,
+                               int clientId,
+                               Duration timeout);
 
-    default CompletableFuture<Long> atomicOr(String key, KeyHintData hint, long mask,
-                                             Duration ttl, int clientId, Duration timeout) {
-        return atomicOr(serializeKey(key), hint, mask, ttl, clientId, timeout);
+    default CompletableFuture<Long> or(String key, KeyHintData hint, long mask,
+                                       Duration ttl, int clientId, Duration timeout) {
+        return or(serializeKey(key), hint, mask, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<Long> atomicOr(byte[] key, KeyHintData hint, long mask) {
-        return atomicOr(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> or(byte[] key, KeyHintData hint, long mask) {
+        return or(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicOr(String key, KeyHintData hint, long mask) {
-        return atomicOr(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> or(String key, KeyHintData hint, long mask) {
+        return or(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicOr(byte[] key, long mask) {
-        return atomicOr(key, null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> or(byte[] key, long mask) {
+        return or(key, null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicOr(String key, long mask) {
-        return atomicOr(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> or(String key, long mask) {
+        return or(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicOr(String key, KeyHintData keyHint, long mask, int clientId) {
-        return atomicOr(serializeKey(key), keyHint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Long> or(String key, KeyHintData keyHint, long mask, int clientId) {
+        return or(serializeKey(key), keyHint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicOr(byte[] key, KeyHintData keyHint, long mask, int clientId) {
-        return atomicOr(key, keyHint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Long> or(byte[] key, KeyHintData keyHint, long mask, int clientId) {
+        return or(key, keyHint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
@@ -406,40 +406,40 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing the resulting value after XOR.
      */
-    CompletableFuture<Long> atomicXor(byte[] key,
-                                      KeyHintData hint,
-                                      long mask,
-                                      Duration ttl,
-                                      int clientId,
-                                      Duration timeout);
+    CompletableFuture<Long> xor(byte[] key,
+                                KeyHintData hint,
+                                long mask,
+                                Duration ttl,
+                                int clientId,
+                                Duration timeout);
 
-    default CompletableFuture<Long> atomicXor(String key, KeyHintData hint, long mask,
-                                              Duration ttl, int clientId, Duration timeout) {
-        return atomicXor(serializeKey(key), hint, mask, ttl, clientId, timeout);
+    default CompletableFuture<Long> xor(String key, KeyHintData hint, long mask,
+                                        Duration ttl, int clientId, Duration timeout) {
+        return xor(serializeKey(key), hint, mask, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<Long> atomicXor(byte[] key, KeyHintData hint, long mask) {
-        return atomicXor(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> xor(byte[] key, KeyHintData hint, long mask) {
+        return xor(key, hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicXor(String key, KeyHintData hint, long mask) {
-        return atomicXor(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> xor(String key, KeyHintData hint, long mask) {
+        return xor(serializeKey(key), hint, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicXor(byte[] key, long mask) {
-        return atomicXor(key, null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> xor(byte[] key, long mask) {
+        return xor(key, null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicXor(String key, long mask) {
-        return atomicXor(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Long> xor(String key, long mask) {
+        return xor(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicXor(String key, KeyHintData hint, long mask, int clientId) {
-        return atomicXor(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Long> xor(String key, KeyHintData hint, long mask, int clientId) {
+        return xor(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Long> atomicXor(byte[] key, KeyHintData hint, long mask, int clientId) {
-        return atomicXor(key, hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Long> xor(byte[] key, KeyHintData hint, long mask, int clientId) {
+        return xor(key, hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
@@ -454,13 +454,13 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout       execution timeout duration.
      * @return resulting {@link AtomicCasRes} indicating success/failure and current value.
      */
-    CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key,
-                                                        KeyHintData hint,
-                                                        long expectedValue,
-                                                        long newValue,
-                                                        Duration ttl,
-                                                        int clientId,
-                                                        Duration timeout);
+    CompletableFuture<AtomicCasRes> compareAndSet(byte[] key,
+                                                  KeyHintData hint,
+                                                  long expectedValue,
+                                                  long newValue,
+                                                  Duration ttl,
+                                                  int clientId,
+                                                  Duration timeout);
 
     /**
      * Performs an atomic Compare-And-Swap (CAS) operation on a double scalar.
@@ -474,97 +474,97 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      * @param timeout       execution timeout duration.
      * @return resulting {@link AtomicCasRes} indicating success/failure and current value.
      */
-    CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key,
-                                                        KeyHintData hint,
-                                                        double expectedValue,
-                                                        double newValue,
-                                                        Duration ttl,
-                                                        int clientId,
-                                                        Duration timeout);
+    CompletableFuture<AtomicCasRes> compareAndSet(byte[] key,
+                                                  KeyHintData hint,
+                                                  double expectedValue,
+                                                  double newValue,
+                                                  Duration ttl,
+                                                  int clientId,
+                                                  Duration timeout);
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData hint,
-                                                                long expectedValue, long newValue,
-                                                                Duration ttl, int clientId, Duration timeout) {
-        return atomicCompareAndSet(serializeKey(key), hint, expectedValue, newValue, ttl, clientId, timeout);
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint,
+                                                          long expectedValue, long newValue,
+                                                          Duration ttl, int clientId, Duration timeout) {
+        return compareAndSet(serializeKey(key), hint, expectedValue, newValue, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData keyHint,
-                                                                long expectedValue, long newValue) {
-        return atomicCompareAndSet(key, keyHint, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, KeyHintData keyHint,
+                                                          long expectedValue, long newValue) {
+        return compareAndSet(key, keyHint, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData keyHint,
-                                                                long expectedValue, long newValue) {
-        return atomicCompareAndSet(serializeKey(key), keyHint, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData keyHint,
+                                                          long expectedValue, long newValue) {
+        return compareAndSet(serializeKey(key), keyHint, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, long expectedValue, long newValue) {
-        return atomicCompareAndSet(key, null, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, long expectedValue, long newValue) {
+        return compareAndSet(key, null, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, long expectedValue, long newValue) {
-        return atomicCompareAndSet(serializeKey(key), null, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, long expectedValue, long newValue) {
+        return compareAndSet(serializeKey(key), null, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData hint,
-                                                                long expectedValue, long newValue,
-                                                                int clientId) {
-        return atomicCompareAndSet(serializeKey(key), hint, expectedValue, newValue,
-                                   getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint,
+                                                          long expectedValue, long newValue,
+                                                          int clientId) {
+        return compareAndSet(serializeKey(key), hint, expectedValue, newValue,
+                             getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData hint,
-                                                                long expectedValue, long newValue,
-                                                                int clientId) {
-        return atomicCompareAndSet(key, hint, expectedValue, newValue,
-                                   getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, KeyHintData hint,
+                                                          long expectedValue, long newValue,
+                                                          int clientId) {
+        return compareAndSet(key, hint, expectedValue, newValue,
+                             getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     // ====== Double overloads for atomicCompareAndSet ======
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData hint,
-                                                                double expectedValue, double newValue,
-                                                                Duration ttl, int clientId, Duration timeout) {
-        return atomicCompareAndSet(serializeKey(key), hint, expectedValue, newValue, ttl, clientId, timeout);
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint,
+                                                          double expectedValue, double newValue,
+                                                          Duration ttl, int clientId, Duration timeout) {
+        return compareAndSet(serializeKey(key), hint, expectedValue, newValue, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData keyHint,
-                                                                double expectedValue, double newValue) {
-        return atomicCompareAndSet(key, keyHint, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, KeyHintData keyHint,
+                                                          double expectedValue, double newValue) {
+        return compareAndSet(key, keyHint, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData keyHint,
-                                                                double expectedValue, double newValue) {
-        return atomicCompareAndSet(serializeKey(key), keyHint, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData keyHint,
+                                                          double expectedValue, double newValue) {
+        return compareAndSet(serializeKey(key), keyHint, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, double expectedValue, double newValue) {
-        return atomicCompareAndSet(key, null, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, double expectedValue, double newValue) {
+        return compareAndSet(key, null, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, double expectedValue, double newValue) {
-        return atomicCompareAndSet(serializeKey(key), null, expectedValue, newValue,
-                                   getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, double expectedValue, double newValue) {
+        return compareAndSet(serializeKey(key), null, expectedValue, newValue,
+                             getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(String key, KeyHintData hint,
-                                                                double expectedValue, double newValue,
-                                                                int clientId) {
-        return atomicCompareAndSet(serializeKey(key), hint, expectedValue, newValue,
-                                   getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint,
+                                                          double expectedValue, double newValue,
+                                                          int clientId) {
+        return compareAndSet(serializeKey(key), hint, expectedValue, newValue,
+                             getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<AtomicCasRes> atomicCompareAndSet(byte[] key, KeyHintData hint,
-                                                                double expectedValue, double newValue,
-                                                                int clientId) {
-        return atomicCompareAndSet(key, hint, expectedValue, newValue,
-                                   getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, KeyHintData hint,
+                                                          double expectedValue, double newValue,
+                                                          int clientId) {
+        return compareAndSet(key, hint, expectedValue, newValue,
+                             getDefaultTtl(), clientId, getDefaultTimeout());
     }
 }

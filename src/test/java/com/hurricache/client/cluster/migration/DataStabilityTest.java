@@ -108,9 +108,9 @@ public class DataStabilityTest extends TestBaseCluster {
 
                 switch (type) {
                     case "scalar" ->
-                        client.createKeyValue(key, Variant.ofBytes(("value_" + objNum).getBytes(StandardCharsets.UTF_8))).join();
+                        client.create(key, Variant.ofBytes(("value_" + objNum).getBytes(StandardCharsets.UTF_8))).join();
                     case "atomic" ->
-                        client.createKeyValue(key, Variant.ofLong(objNum));
+                        client.create(key, Variant.ofLong(objNum));
                     case "vector" ->
                         client.createVector(key, generatePayloads(elementsPerContainer)).join();
                     case "set" ->
@@ -159,7 +159,7 @@ public class DataStabilityTest extends TestBaseCluster {
                 try {
                     switch (type) {
                         case "scalar" -> {
-                            Variant result = client.getValue(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            Variant result = client.get(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             String expected = "value_" + objNum;
                             if (result == null || !new String(result.bytesValue(), StandardCharsets.UTF_8).equals(expected)) {
                                 errors.add("SCALAR " + key + ": expected '" + expected + "', got '" + 
@@ -167,41 +167,41 @@ public class DataStabilityTest extends TestBaseCluster {
                             }
                         }
                         case "atomic" -> {
-                            Long result = client.getValue(key.getBytes(), null, 0, Duration.ofSeconds(5)).join().longValue();
+                            Long result = client.get(key.getBytes(), null, 0, Duration.ofSeconds(5)).join().longValue();
                             if (result == null || result != objNum) {
                                 errors.add("ATOMIC " + key + ": expected " + objNum + ", got " + result);
                             }
                         }
                         case "vector" -> {
-                            List<Variant> result = client.streamVector(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            List<Variant> result = client.getVector(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("VECTOR " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));
                             }
                         }
                         case "set" -> {
-                            List<Variant> result = client.streamSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            List<Variant> result = client.getSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("SET " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));
                             }
                         }
                         case "oset" -> {
-                            List<OrderedVariant> result = client.streamOrderedSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            List<OrderedVariant> result = client.getOrderedSet(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("OSET " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));
                             }
                         }
                         case "omap" -> {
-                            Map<OrderedPayload, Variant> result = client.streamOrderedMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            Map<OrderedPayload, Variant> result = client.getOrderedMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("OMAP " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));
                             }
                         }
                         case "map" -> {
-                            Map<Payload, Variant> result = client.streamMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
+                            Map<Payload, Variant> result = client.getMap(key.getBytes(), null, 0, Duration.ofSeconds(5)).join();
                             if (result == null || result.size() != elementsPerContainer) {
                                 errors.add("MAP " + key + ": expected " + elementsPerContainer + " items, got " + 
                                     (result != null ? result.size() : "null"));

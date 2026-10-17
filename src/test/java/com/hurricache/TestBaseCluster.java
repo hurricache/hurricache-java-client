@@ -2,6 +2,7 @@ package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
 import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
@@ -139,4 +140,29 @@ public abstract class TestBaseCluster {
         return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
     }
 
+
+    protected Variant v(byte[] val) {
+        return Variant.ofBytes(val);
+    }
+
+    protected Variant vi(int val) {
+        return Variant.ofLong(val);
+    }
+
+    protected Variant vd(double val) {
+        return Variant.ofDouble(val);
+    }
+
+
+
+    protected OrderedPayload op(byte[] value, Long order) {
+        return OrderedPayload.of(value, order);
+    }
+
+    protected OrderedPayload op(Long order,byte[] value) {
+        return OrderedPayload.of(value, order);
+    }
+    protected OrderedVariant ov(byte[] value, Long order) {
+        return OrderedVariant.of(v(value), order);
+    }
 }

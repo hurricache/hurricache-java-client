@@ -3,7 +3,6 @@ package com.hurricache.client.standalone.simple;
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
-import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
@@ -56,7 +55,7 @@ public class OrderedMapOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
         assertNotNull(hint);
 
-        Map<OrderedPayload, Variant> stream = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> stream = client.getOrderedMap(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -72,7 +71,7 @@ public class OrderedMapOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
         assertNotNull(hint);
 
-        Map<OrderedPayload, Variant> stream = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> stream = client.getOrderedMap(key).get();
         assertEquals(3, stream.size());
         assertEquals(10, stream.values().iterator().next().longValue());
     }
@@ -89,7 +88,7 @@ public class OrderedMapOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
         assertNotNull(hint);
 
-        Map<OrderedPayload, Variant> stream = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> stream = client.getOrderedMap(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -105,7 +104,7 @@ public class OrderedMapOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
         assertNotNull(hint);
 
-        Map<OrderedPayload, Variant> stream = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> stream = client.getOrderedMap(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -123,11 +122,11 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        Variant value = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        Variant value = client.getInContainer(key, null, "key1".getBytes()).get();
         assertNotNull(value);
         assertEquals("value1", new String(value.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        value = client.getValueInContainerByKey(key, null, "key2".getBytes()).get();
+        value = client.getInContainer(key, null, "key2".getBytes()).get();
         assertNotNull(value);
         assertEquals(100, value.longValue());
     }
@@ -141,10 +140,10 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        Boolean exists = client.existInContainerByKey(key, null, "key1".getBytes()).get();
+        Boolean exists = client.containsKey(key, null, "key1".getBytes()).get();
         assertTrue(exists);
 
-        exists = client.existInContainerByKey(key, null, "key_missing".getBytes()).get();
+        exists = client.containsKey(key, null, "key_missing".getBytes()).get();
         assertFalse(exists);
     }
 
@@ -157,11 +156,11 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        Variant previous = client.updateContainerValue(key, null, "key1".getBytes(), v("new_value")).get();
+        Variant previous = client.update(key, null, "key1".getBytes(), v("new_value")).get();
         assertNotNull(previous);
         assertEquals("old_value", new String(previous.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant current = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        Variant current = client.getInContainer(key, null, "key1".getBytes()).get();
         assertEquals("new_value", new String(current.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
 
@@ -175,17 +174,17 @@ public class OrderedMapOperationsTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
         // Update from bytes to int
-        Variant previous = client.updateContainerValue(key, null, "key1".getBytes(), vi(42)).get();
+        Variant previous = client.update(key, null, "key1".getBytes(), vi(42)).get();
         assertEquals("text", new String(previous.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant current = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        Variant current = client.getInContainer(key, null, "key1".getBytes()).get();
         assertEquals(42, current.longValue());
 
         // Update from int to double
-        previous = client.updateContainerValue(key, null, "key1".getBytes(), vd(3.14)).get();
+        previous = client.update(key, null, "key1".getBytes(), vd(3.14)).get();
         assertEquals(42, previous.longValue());
 
-        current = client.getValueInContainerByKey(key, null, "key1".getBytes()).get();
+        current = client.getInContainer(key, null, "key1".getBytes()).get();
         assertEquals(3.14, current.doubleValue(), 0.001);
     }
 
@@ -199,14 +198,14 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        Variant deleted = client.getAndDeleteValueInContainer(key, null, "key1".getBytes()).get();
+        Variant deleted = client.popInContainer(key, null, "key1".getBytes()).get();
         assertNotNull(deleted);
         assertEquals("value1", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Boolean exists = client.existInContainerByKey(key, null, "key1".getBytes()).get();
+        Boolean exists = client.containsKey(key, null, "key1".getBytes()).get();
         assertFalse(exists);
 
-        exists = client.existInContainerByKey(key, hint, "key2".getBytes()).get();
+        exists = client.containsKey(key, hint, "key2".getBytes()).get();
         assertTrue(exists);
     }
 
@@ -220,10 +219,10 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        Integer removed = client.removeInContainerByKey(key, null, "key1".getBytes()).get();
+        Integer removed = client.remove(key, null, "key1".getBytes()).get();
         assertEquals(1, removed);
 
-        Map<OrderedPayload, Variant> stream = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> stream = client.getOrderedMap(key).get();
         assertEquals(1, stream.size());
     }
 
@@ -245,7 +244,7 @@ public class OrderedMapOperationsTest extends TestBase {
                                                     List.of(vi(100), vd(3.14))).get();
         assertEquals(2, added);
 
-        Map<OrderedPayload, Variant> stream = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> stream = client.getOrderedMap(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -266,7 +265,7 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        Map<OrderedPayload, Variant> range = client.streamElementInRangeOrderedMap(key, null, 2L, 4L, false).get();
+        Map<OrderedPayload, Variant> range = client.getElementInRangeOrderedMap(key, null, 2L, 4L, false).get();
         assertEquals(3, range.size());
     }
 
@@ -281,7 +280,7 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        Map<OrderedPayload, Variant> range = client.streamElementInRangeOrderedMap(key, null, 1L, 3L, true).get();
+        Map<OrderedPayload, Variant> range = client.getElementInRangeOrderedMap(key, null, 1L, 3L, true).get();
         assertEquals(3, range.size());
     }
 
@@ -306,7 +305,7 @@ public class OrderedMapOperationsTest extends TestBase {
                 List.of(v("val"), v("val"))).get();
         assertEquals(2, deleted);
 
-        Map<OrderedPayload, Variant> stream = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> stream = client.getOrderedMap(key).get();
         assertEquals(1, stream.size());
     }
 
@@ -342,18 +341,18 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Map<OrderedPayload, Variant> val = client.streamOrderedMap(key, null, OWNER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> val = client.getOrderedMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        Map<OrderedPayload, Variant> intruderVal = client.streamOrderedMap(key, null, INTRUDER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> intruderVal = client.getOrderedMap(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -365,10 +364,10 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Map<OrderedPayload, Variant> val = client.streamOrderedMap(key, null, OWNER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> val = client.getOrderedMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         client.addElementOrderedMap(key, hint,
@@ -376,9 +375,9 @@ public class OrderedMapOperationsTest extends TestBase {
                 List.of(v("added")),
                 OWNER_CLIENT_ID).get();
 
-        assertDenied(client.streamOrderedMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -390,15 +389,15 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Map<OrderedPayload, Variant> val = client.streamOrderedMap(key, null, OWNER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> val = client.getOrderedMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamOrderedMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -410,12 +409,12 @@ public class OrderedMapOperationsTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        Map<OrderedPayload, Variant> val = client.streamOrderedMap(key, null, INTRUDER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> val = client.getOrderedMap(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 }

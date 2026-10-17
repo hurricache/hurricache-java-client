@@ -17,31 +17,31 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
      * @param timeout     execution timeout duration.
      * @return a {@link CompletableFuture} containing the value as Variant.
      */
-    CompletableFuture<Variant> getValueInContainerByKey(byte[] key,
-                                                        KeyHintData hint,
-                                                        byte[] elementKey,
-                                                        int clientId,
-                                                        Duration timeout);
+    CompletableFuture<Variant> getInContainer(byte[] key,
+                                              KeyHintData hint,
+                                              byte[] elementKey,
+                                              int clientId,
+                                              Duration timeout);
 
-    default CompletableFuture<Variant> getValueInContainerByKey(String key, KeyHintData hint, byte[] elementKey,
-                                                                Duration ttl, int clientId, Duration timeout) {
-        return getValueInContainerByKey(serializeKey(key), hint, elementKey, clientId, timeout);
+    default CompletableFuture<Variant> getInContainer(String key, KeyHintData hint, byte[] elementKey,
+                                                      Duration ttl, int clientId, Duration timeout) {
+        return getInContainer(serializeKey(key), hint, elementKey, clientId, timeout);
     }
 
-    default CompletableFuture<Variant> getValueInContainerByKey(byte[] key, KeyHintData hint, byte[] elementKey) {
-        return getValueInContainerByKey(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> getInContainer(byte[] key, KeyHintData hint, byte[] elementKey) {
+        return getInContainer(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Variant> getValueInContainerByKey(String key, KeyHintData hint, byte[] elementKey) {
-        return getValueInContainerByKey(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> getInContainer(String key, KeyHintData hint, byte[] elementKey) {
+        return getInContainer(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Variant> getValueInContainerByKey(byte[] key, KeyHintData hint, byte[] elementKey, int clientId) {
-        return getValueInContainerByKey(key, hint, elementKey, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> getInContainer(byte[] key, KeyHintData hint, byte[] elementKey, int clientId) {
+        return getInContainer(key, hint, elementKey, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Variant> getValueInContainerByKey(String key, KeyHintData hint, byte[] elementKey, int clientId) {
-        return getValueInContainerByKey(serializeKey(key), hint, elementKey, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> getInContainer(String key, KeyHintData hint, byte[] elementKey, int clientId) {
+        return getInContainer(serializeKey(key), hint, elementKey, clientId, getDefaultTimeout());
     }
 
     /**
@@ -54,23 +54,23 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
      * @param timeout     execution timeout duration.
      * @return a {@link CompletableFuture} containing the deleted value as Variant.
      */
-    CompletableFuture<Variant> getAndDeleteValueInContainer(byte[] key,
-                                                            KeyHintData hint,
-                                                            byte[] elementKey,
-                                                            int clientId,
-                                                            Duration timeout);
+    CompletableFuture<Variant> popInContainer(byte[] key,
+                                              KeyHintData hint,
+                                              byte[] elementKey,
+                                              int clientId,
+                                              Duration timeout);
 
-    default CompletableFuture<Variant> getAndDeleteValueInContainer(String key, KeyHintData hint, byte[] elementKey,
-                                                                    int clientId, Duration timeout) {
-        return getAndDeleteValueInContainer(serializeKey(key), hint, elementKey, clientId, timeout);
+    default CompletableFuture<Variant> popInContainer(String key, KeyHintData hint, byte[] elementKey,
+                                                      int clientId, Duration timeout) {
+        return popInContainer(serializeKey(key), hint, elementKey, clientId, timeout);
     }
 
-    default CompletableFuture<Variant> getAndDeleteValueInContainer(byte[] key, KeyHintData hint, byte[] elementKey) {
-        return getAndDeleteValueInContainer(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popInContainer(byte[] key, KeyHintData hint, byte[] elementKey) {
+        return popInContainer(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Variant> getAndDeleteValueInContainer(String key, KeyHintData hint, byte[] elementKey) {
-        return getAndDeleteValueInContainer(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popInContainer(String key, KeyHintData hint, byte[] elementKey) {
+        return popInContainer(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -83,23 +83,23 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
      * @param timeout     execution timeout duration.
      * @return a {@link CompletableFuture} returning true if key exists.
      */
-    CompletableFuture<Boolean> existInContainerByKey(byte[] key,
-                                                     KeyHintData hint,
-                                                     byte[] elementKey,
-                                                     int clientId,
-                                                     Duration timeout);
+    CompletableFuture<Boolean> containsKey(byte[] key,
+                                           KeyHintData hint,
+                                           byte[] elementKey,
+                                           int clientId,
+                                           Duration timeout);
 
-    default CompletableFuture<Boolean> existInContainerByKey(String key, KeyHintData hint, byte[] elementKey,
-                                                             int clientId, Duration timeout) {
-        return existInContainerByKey(serializeKey(key), hint, elementKey, clientId, timeout);
+    default CompletableFuture<Boolean> containsKey(String key, KeyHintData hint, byte[] elementKey,
+                                                   int clientId, Duration timeout) {
+        return containsKey(serializeKey(key), hint, elementKey, clientId, timeout);
     }
 
-    default CompletableFuture<Boolean> existInContainerByKey(byte[] key, KeyHintData hint, byte[] elementKey) {
-        return existInContainerByKey(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(byte[] key, KeyHintData hint, byte[] elementKey) {
+        return containsKey(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existInContainerByKey(String key, KeyHintData hint, byte[] elementKey) {
-        return existInContainerByKey(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(String key, KeyHintData hint, byte[] elementKey) {
+        return containsKey(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -114,26 +114,26 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
      * @param timeout     execution timeout duration.
      * @return a {@link CompletableFuture} containing the previous value as Variant.
      */
-    CompletableFuture<Variant> updateContainerValue(byte[] key,
-                                                    KeyHintData hint,
-                                                    byte[] elementKey,
-                                                    Variant value,
-                                                    int clientId,
-                                                    Duration timeout);
+    CompletableFuture<Variant> update(byte[] key,
+                                      KeyHintData hint,
+                                      byte[] elementKey,
+                                      Variant value,
+                                      int clientId,
+                                      Duration timeout);
 
-    default CompletableFuture<Variant> updateContainerValue(String key, KeyHintData hint, byte[] elementKey,
-                                                            Variant value, int clientId, Duration timeout) {
-        return updateContainerValue(serializeKey(key), hint, elementKey, value, clientId, timeout);
+    default CompletableFuture<Variant> update(String key, KeyHintData hint, byte[] elementKey,
+                                              Variant value, int clientId, Duration timeout) {
+        return update(serializeKey(key), hint, elementKey, value, clientId, timeout);
     }
 
-    default CompletableFuture<Variant> updateContainerValue(byte[] key, KeyHintData hint, byte[] elementKey,
-                                                            Variant value) {
-        return updateContainerValue(key, hint, elementKey, value, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> update(byte[] key, KeyHintData hint, byte[] elementKey,
+                                              Variant value) {
+        return update(key, hint, elementKey, value, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Variant> updateContainerValue(String key, KeyHintData hint, byte[] elementKey,
-                                                            Variant value) {
-        return updateContainerValue(serializeKey(key), hint, elementKey, value, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> update(String key, KeyHintData hint, byte[] elementKey,
+                                              Variant value) {
+        return update(serializeKey(key), hint, elementKey, value, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -146,23 +146,23 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
      * @param timeout     execution timeout duration.
      * @return a {@link CompletableFuture} containing count of removed elements.
      */
-    CompletableFuture<Integer> removeInContainerByKey(byte[] key,
-                                                      KeyHintData hint,
-                                                      byte[] elementKey,
-                                                      int clientId,
-                                                      Duration timeout);
+    CompletableFuture<Integer> remove(byte[] key,
+                                      KeyHintData hint,
+                                      byte[] elementKey,
+                                      int clientId,
+                                      Duration timeout);
 
-    default CompletableFuture<Integer> removeInContainerByKey(String key, KeyHintData hint, byte[] elementKey,
-                                                              int clientId, Duration timeout) {
-        return removeInContainerByKey(serializeKey(key), hint, elementKey, clientId, timeout);
+    default CompletableFuture<Integer> remove(String key, KeyHintData hint, byte[] elementKey,
+                                              int clientId, Duration timeout) {
+        return remove(serializeKey(key), hint, elementKey, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> removeInContainerByKey(byte[] key, KeyHintData hint, byte[] elementKey) {
-        return removeInContainerByKey(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> remove(byte[] key, KeyHintData hint, byte[] elementKey) {
+        return remove(key, hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> removeInContainerByKey(String key, KeyHintData hint, byte[] elementKey) {
-        return removeInContainerByKey(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> remove(String key, KeyHintData hint, byte[] elementKey) {
+        return remove(serializeKey(key), hint, elementKey, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**
@@ -177,64 +177,64 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
      * @param timeout         execution timeout duration.
      * @return a {@link CompletableFuture} containing count of elements added.
      */
-    CompletableFuture<Integer> addElementHashMap(byte[] key,
-                                                 KeyHintData hint,
-                                                 List<Payload> container_keys,
-                                                 List<Variant> container_values,
-                                                 int clientId,
-                                                 Duration timeout);
+    CompletableFuture<Integer> putAll(byte[] key,
+                                      KeyHintData hint,
+                                      List<Payload> container_keys,
+                                      List<Variant> container_values,
+                                      int clientId,
+                                      Duration timeout);
 
-    default CompletableFuture<Integer> addElementHashMap(String key, KeyHintData hint,
-                                                         List<Payload> container_keys,
-                                                         List<Variant> container_values,
-                                                         int clientId, Duration timeout) {
-        return addElementHashMap(serializeKey(key), hint, container_keys, container_values, clientId, timeout);
+    default CompletableFuture<Integer> putAll(String key, KeyHintData hint,
+                                              List<Payload> container_keys,
+                                              List<Variant> container_values,
+                                              int clientId, Duration timeout) {
+        return putAll(serializeKey(key), hint, container_keys, container_values, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementHashMap(byte[] key, KeyHintData hint,
-                                                         List<Payload> container_keys,
-                                                         List<Variant> container_values) {
-        return addElementHashMap(key, hint, container_keys, container_values,
-                                    getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> putAll(byte[] key, KeyHintData hint,
+                                              List<Payload> container_keys,
+                                              List<Variant> container_values) {
+        return putAll(key, hint, container_keys, container_values,
+                      getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementHashMap(String key, KeyHintData hint,
-                                                         List<Payload> container_keys,
-                                                         List<Variant> container_values) {
-        return addElementHashMap(serializeKey(key), hint, container_keys, container_values,
-                                    getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> putAll(String key, KeyHintData hint,
+                                              List<Payload> container_keys,
+                                              List<Variant> container_values) {
+        return putAll(serializeKey(key), hint, container_keys, container_values,
+                      getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementHashMap(String key, KeyHintData hint,
-                                                         List<Payload> container_keys,
-                                                         List<Variant> container_values,int clientId) {
-        return addElementHashMap(serializeKey(key), hint, container_keys, container_values,
-                                 clientId, getDefaultTimeout());
-    }
-
-
-    default CompletableFuture<Integer> addElementHashMap(byte[] key, List<Payload> container_keys,
-                                                         List<Variant> container_values) {
-        return addElementHashMap(key, null, container_keys, container_values,
-                                    getDefaultClientId(), getDefaultTimeout());
-    }
-
-    default CompletableFuture<Integer> addElementHashMap(byte[] key, List<Payload> container_keys,
-                                                         List<Variant> container_values,int clientId) {
-        return addElementHashMap(key, null, container_keys, container_values,
-                                 clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> putAll(String key, KeyHintData hint,
+                                              List<Payload> container_keys,
+                                              List<Variant> container_values, int clientId) {
+        return putAll(serializeKey(key), hint, container_keys, container_values,
+                      clientId, getDefaultTimeout());
     }
 
 
-    default CompletableFuture<Integer> addElementHashMap(String key, List<Payload> container_keys,
-                                                         List<Variant> container_values) {
-        return addElementHashMap(serializeKey(key), null, container_keys, container_values,
-                                    getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> putAll(byte[] key, List<Payload> container_keys,
+                                              List<Variant> container_values) {
+        return putAll(key, null, container_keys, container_values,
+                      getDefaultClientId(), getDefaultTimeout());
     }
-    default CompletableFuture<Integer> addElementHashMap(String key, List<Payload> container_keys,
-                                                         List<Variant> container_values,int clientId) {
-        return addElementHashMap(serializeKey(key), null, container_keys, container_values,
-                                 clientId, getDefaultTimeout());
+
+    default CompletableFuture<Integer> putAll(byte[] key, List<Payload> container_keys,
+                                              List<Variant> container_values, int clientId) {
+        return putAll(key, null, container_keys, container_values,
+                      clientId, getDefaultTimeout());
+    }
+
+
+    default CompletableFuture<Integer> putAll(String key, List<Payload> container_keys,
+                                              List<Variant> container_values) {
+        return putAll(serializeKey(key), null, container_keys, container_values,
+                      getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Integer> putAll(String key, List<Payload> container_keys,
+                                              List<Variant> container_values, int clientId) {
+        return putAll(serializeKey(key), null, container_keys, container_values,
+                      clientId, getDefaultTimeout());
     }
 
     /**

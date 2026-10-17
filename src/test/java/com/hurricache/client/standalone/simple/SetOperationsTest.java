@@ -50,7 +50,7 @@ public class SetOperationsTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -63,7 +63,7 @@ public class SetOperationsTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(3, stream.size());
         assertTrue(stream.stream().anyMatch(v -> v.longValue() == 10));
         assertTrue(stream.stream().anyMatch(v -> v.longValue() == 20));
@@ -79,7 +79,7 @@ public class SetOperationsTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(3, stream.size());
         assertTrue(stream.stream().anyMatch(v -> Math.abs(v.doubleValue() - 1.1) < 0.001));
     }
@@ -93,7 +93,7 @@ public class SetOperationsTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -106,7 +106,7 @@ public class SetOperationsTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -119,7 +119,7 @@ public class SetOperationsTest extends TestBase {
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(2, stream.size());
         assertEquals(10, stream.stream().filter(v -> v.longValue() == 10).findFirst().get().longValue());
         assertEquals(20, stream.stream().filter(v -> v.longValue() == 20).findFirst().get().longValue());
@@ -139,7 +139,7 @@ public class SetOperationsTest extends TestBase {
         Integer added = client.addElementUnordered(key, List.of(v("item2"), v("item3"))).get();
         assertEquals(2, added);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(3, stream.size());
     }
 
@@ -153,7 +153,7 @@ public class SetOperationsTest extends TestBase {
         Integer added = client.addElementUnordered(key, List.of(v("item1"))).get();
         assertEquals(0, added);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(1, stream.size());
     }
 
@@ -168,7 +168,7 @@ public class SetOperationsTest extends TestBase {
         Integer deleted = client.removeFromContainerByKeyAndValue(key, ContainerType.SET, List.of(), List.of(v("b"))).get();
         assertEquals(1, deleted);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(2, stream.size());
         assertFalse(stream.stream().anyMatch(v -> "b".equals(new String(v.bytesValue(), java.nio.charset.StandardCharsets.UTF_8))));
     }
@@ -184,7 +184,7 @@ public class SetOperationsTest extends TestBase {
         Integer deleted = client.removeFromContainerByKey(key, v("b")).get();
         assertEquals(1, deleted);
 
-        List<Variant> stream = client.streamSet(key).get();
+        List<Variant> stream = client.getSet(key).get();
         assertEquals(2, stream.size());
     }
 
@@ -200,7 +200,7 @@ public class SetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, data).get();
 
-        Boolean exists = client.existInContainerByKey(key, null, v("b").bytesValue()).get();
+        Boolean exists = client.containsKey(key, null, v("b").bytesValue()).get();
         assertTrue(exists);
     }
 
@@ -212,7 +212,7 @@ public class SetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, data).get();
 
-        Boolean exists = client.existInContainerByKey(key, null, v("c").bytesValue()).get();
+        Boolean exists = client.containsKey(key, null, v("c").bytesValue()).get();
         assertFalse(exists);
     }
 
@@ -244,22 +244,22 @@ public class SetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        List<Variant> val = client.streamSet(key, null, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        List<Variant> intruderVal = client.streamSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<Variant> intruderVal = client.getSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
         assertDenied(client.addElementUnordered(key, null, List.of(v("added")), OWNER_CLIENT_ID));
         assertDenied(client.addElementUnordered(key, null, List.of(v("added")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -270,17 +270,17 @@ public class SetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<Variant> val = client.streamSet(key, null, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         client.addElementUnordered(key, null, List.of(v("added")), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.streamSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -291,15 +291,15 @@ public class SetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<Variant> val = client.streamSet(key, null, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -310,12 +310,12 @@ public class SetOperationsTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        List<Variant> val = client.streamSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<Variant> val = client.getSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 }

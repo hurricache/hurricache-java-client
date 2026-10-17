@@ -33,10 +33,10 @@ public class HintRoutingTest extends TestBase {
     @DisplayName("Scalar: getValue with real hint")
     void testScalarWithHint() throws ExecutionException, InterruptedException {
         String key = "hint_scalar_" + UUID.randomUUID();
-        KeyHintData hint = client.createKeyValue(key, vi(42)).get();
+        KeyHintData hint = client.create(key, vi(42)).get();
         assertNotNull(hint);
 
-        Variant value = client.getValue(key, hint).get();
+        Variant value = client.get(key, hint).get();
         assertNotNull(value);
         assertEquals(42, value.longValue());
     }
@@ -52,7 +52,7 @@ public class HintRoutingTest extends TestBase {
         KeyHintData hint = client.createList(key, List.of(v("a"), v("b"), v("c"))).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamList(key, hint).get();
+        List<Variant> stream = client.getList(key, hint).get();
         assertNotNull(stream);
         assertEquals(3, stream.size());
         assertEquals("a", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -69,7 +69,7 @@ public class HintRoutingTest extends TestBase {
         KeyHintData hint = client.createVector(key, List.of(v("x"), v("y"))).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamVector(key, hint).get();
+        List<Variant> stream = client.getVector(key, hint).get();
         assertNotNull(stream);
         assertEquals(2, stream.size());
     }
@@ -85,7 +85,7 @@ public class HintRoutingTest extends TestBase {
         KeyHintData hint = client.createQueue(key, List.of(v("head"), v("tail"))).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key, hint).get();
+        Variant head = client.peekHead(key, hint).get();
         assertNotNull(head);
         assertEquals("head", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -101,7 +101,7 @@ public class HintRoutingTest extends TestBase {
         KeyHintData hint = client.createSet(key, List.of(v("item1"), v("item2"))).get();
         assertNotNull(hint);
 
-        List<Variant> stream = client.streamSet(key, hint).get();
+        List<Variant> stream = client.getSet(key, hint).get();
         assertNotNull(stream);
         assertEquals(2, stream.size());
     }
@@ -120,7 +120,7 @@ public class HintRoutingTest extends TestBase {
         )).get();
         assertNotNull(hint);
 
-        List<OrderedVariant> stream = client.streamOrderedSet(key, hint).get();
+        List<OrderedVariant> stream = client.getOrderedSet(key, hint).get();
         assertNotNull(stream);
         assertEquals(2, stream.size());
         assertEquals("first", new String(stream.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
@@ -141,11 +141,11 @@ public class HintRoutingTest extends TestBase {
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
 
-        Variant value = client.getValueInContainerByKey(key, hint, "k1".getBytes()).get();
+        Variant value = client.getInContainer(key, hint, "k1".getBytes()).get();
         assertNotNull(value);
         assertEquals("v1", new String(value.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        value = client.getValueInContainerByKey(key, hint, "k2".getBytes()).get();
+        value = client.getInContainer(key, hint, "k2".getBytes()).get();
         assertNotNull(value);
         assertEquals(100, value.longValue());
     }
@@ -165,11 +165,11 @@ public class HintRoutingTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
         assertNotNull(hint);
 
-        Variant value = client.getValueInContainerByKey(key, hint, "k1".getBytes()).get();
+        Variant value = client.getInContainer(key, hint, "k1".getBytes()).get();
         assertNotNull(value);
         assertEquals("v1", new String(value.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        value = client.getValueInContainerByKey(key, hint, "k2".getBytes()).get();
+        value = client.getInContainer(key, hint, "k2".getBytes()).get();
         assertNotNull(value);
         assertEquals(3.14, value.doubleValue(), 0.001);
     }

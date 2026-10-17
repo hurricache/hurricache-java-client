@@ -48,7 +48,7 @@ public class QueueOperationsTest extends TestBase {
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("item1", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -62,7 +62,7 @@ public class QueueOperationsTest extends TestBase {
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals(10, head.longValue());
     }
@@ -76,7 +76,7 @@ public class QueueOperationsTest extends TestBase {
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals(1.1, head.doubleValue(), 0.001);
     }
@@ -90,7 +90,7 @@ public class QueueOperationsTest extends TestBase {
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("hello", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -106,17 +106,17 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("middle"))).get();
 
-        Integer added = client.addElementToTail(key, List.of(v("tail1"), v("tail2"))).get();
+        Integer added = client.pushTail(key, List.of(v("tail1"), v("tail2"))).get();
         assertEquals(2, added);
 
-        added = client.addElementToHead(key, List.of(v("head1"))).get();
+        added = client.pushHead(key, List.of(v("head1"))).get();
         assertEquals(1, added);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("head1", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant tail = client.getTail(key).get();
+        Variant tail = client.peekTail(key).get();
         assertNotNull(tail);
         assertEquals("tail2", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -129,11 +129,11 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, data).get();
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("first", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant tail = client.getTail(key).get();
+        Variant tail = client.peekTail(key).get();
         assertNotNull(tail);
         assertEquals("last", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -146,11 +146,11 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, data).get();
 
-        Variant deleted = client.getAndDeleteHead(key).get();
+        Variant deleted = client.popHead(key).get();
         assertNotNull(deleted);
         assertEquals("first", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant newHead = client.getHead(key).get();
+        Variant newHead = client.peekHead(key).get();
         assertEquals("middle", new String(newHead.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
 
@@ -168,7 +168,7 @@ public class QueueOperationsTest extends TestBase {
         deleted = client.deleteTail(key).get();
         assertEquals(1, deleted);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("middle", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -181,11 +181,11 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, data).get();
 
-        Variant deleted = client.getAndDeleteTail(key).get();
+        Variant deleted = client.popTail(key).get();
         assertNotNull(deleted);
         assertEquals("last", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant tail = client.getTail(key).get();
+        Variant tail = client.peekTail(key).get();
         assertNotNull(tail);
         assertEquals("middle", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -197,14 +197,14 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("middle"))).get();
 
-        Integer added = client.addElementToHead(key, List.of(v("head1"), v("head2"))).get();
+        Integer added = client.pushHead(key, List.of(v("head1"), v("head2"))).get();
         assertEquals(2, added);
 
-        Variant head = client.getHead(key).get();
+        Variant head = client.peekHead(key).get();
         assertNotNull(head);
         assertEquals("head2", new String(head.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
 
-        Variant tail = client.getTail(key).get();
+        Variant tail = client.peekTail(key).get();
         assertNotNull(tail);
         assertEquals("middle", new String(tail.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -224,7 +224,7 @@ public class QueueOperationsTest extends TestBase {
         // Count elements by getting and deleting head
         int count = 0;
         while (true) {
-            Variant head = client.getAndDeleteHead(key).get();
+            Variant head = client.popHead(key).get();
             if (head == null || head.isNone()) break;
             count++;
         }
@@ -242,22 +242,22 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        Variant val = client.peekHead(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        Variant intruderVal = client.getHead(key, INTRUDER_CLIENT_ID).get();
+        Variant intruderVal = client.peekHead(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID));
-        assertDenied(client.addElementToTail(key, null, List.of(v("added")), INTRUDER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("added")), OWNER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("added")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -267,17 +267,17 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        Variant val = client.peekHead(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        client.addElementToTail(key, null, List.of(v("added")), OWNER_CLIENT_ID).get();
+        client.pushTail(key, null, List.of(v("added")), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.getHead(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.peekHead(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -287,15 +287,15 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        Variant val = client.peekHead(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.getHead(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.peekHead(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -305,12 +305,12 @@ public class QueueOperationsTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        Variant val = client.getHead(key, INTRUDER_CLIENT_ID).get();
+        Variant val = client.peekHead(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 }

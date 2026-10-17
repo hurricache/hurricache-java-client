@@ -3,8 +3,6 @@ package com.hurricache.client.cluster.payload;
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Mode;
-import com.hurricache.client.intf.Payload;
-import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
 import io.grpc.Status;
@@ -37,19 +35,19 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Ensure object exists - Create on master
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
+                .create(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Owner locks GLOBAL on backup
-        client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.BACKUP).lock(testKey1, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getValue
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).get(testKey1, keyHint, intruderId).get());
 
         // 2. Intruder tries updateValue
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Intruder tries remove
         assertPermissionDenied(() -> client.setMode(Mode.BACKUP).remove(testKey1, keyHint, intruderId).get());
@@ -63,19 +61,19 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Ensure object exists - Create on backup
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
+                .create(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Owner locks GLOBAL on master
-        client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.MASTER).lock(testKey1, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getValue
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).getValue(testKey1, keyHint, intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).get(testKey1, keyHint, intruderId).get());
 
         // 2. Intruder tries updateValue
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Intruder tries remove
         assertPermissionDenied(() -> client.setMode(Mode.MASTER).remove(testKey1, keyHint, intruderId).get());
@@ -95,15 +93,15 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on backup
-        client.setMode(Mode.BACKUP).lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.BACKUP).lock(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getHead
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).getHead(listKey, keyHint, intruderId, Duration.ofSeconds(30)).get());
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).peekHead(listKey, keyHint, intruderId, Duration.ofSeconds(30)).get());
 
         // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList(createLargePayload(VALUE_SIZE)),
-                                                                                  intruderId, Duration.ofSeconds(30)).get());
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).pushTail(listKey, keyHint,
+                                                                          Collections.singletonList(createLargePayload(VALUE_SIZE)),
+                                                                          intruderId, Duration.ofSeconds(30)).get());
     }
 
     @Test
@@ -120,15 +118,15 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         Thread.sleep(150);
 
         // Lock on master
-        client.setMode(Mode.MASTER).lockObject(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.MASTER).lock(listKey, keyHint, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getHead
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).getHead(listKey, keyHint, intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).peekHead(listKey, keyHint, intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
 
         // 2. Intruder tries addElementToTail
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).addElementToTail(listKey, keyHint,
-                                                                                  Collections.singletonList(createLargePayload(VALUE_SIZE)),
-                                                                                  intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).pushTail(listKey, keyHint,
+                                                                          Collections.singletonList(createLargePayload(VALUE_SIZE)),
+                                                                          intruderId, Duration.of(1, ChronoUnit.SECONDS)).get());
     }
 
     // --- SECTION 2: WRITE LOCK PROTECTION ---
@@ -139,23 +137,23 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Create on master
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
+                .create(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Lock on backup
-        client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.BACKUP).lock(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get().requireBytes();
+        byte[] data = client.setMode(Mode.BACKUP).get(testKey1, keyHint, intruderId).get().requireBytes();
         assertNotNull(data);
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get().requireBytes();
+        byte[] ownerUpdate = client.setMode(Mode.BACKUP).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get().requireBytes();
         assertNotNull(ownerUpdate);
     }
 
@@ -165,23 +163,23 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Create on backup
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE), ownerId)
+                .create(testKey1, createLargePayload(VALUE_SIZE), ownerId)
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Lock on master
-        client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.MASTER).lock(testKey1, keyHint, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Shared Read (Intruder) - SHOULD SUCCEED
-        byte[] data = client.setMode(Mode.MASTER).getValue(testKey1, keyHint, intruderId).get().requireBytes();
+        byte[] data = client.setMode(Mode.MASTER).get(testKey1, keyHint, intruderId).get().requireBytes();
         assertNotNull(data);
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Owner Write - SHOULD SUCCEED
-        byte[] ownerUpdate = client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get().requireBytes();
+        byte[] ownerUpdate = client.setMode(Mode.MASTER).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get().requireBytes();
         assertNotNull(ownerUpdate);
     }
 
@@ -193,22 +191,22 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Create on master
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
+                .create(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Lock on backup
-        client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.BACKUP).lock(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(Mode.BACKUP).getValue(testKey1, keyHint, intruderId).get().requireBytes());
+        assertNotNull(client.setMode(Mode.BACKUP).get(testKey1, keyHint, intruderId).get().requireBytes());
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Owner Write - SHOULD ALSO FAIL (Read locks block all mutations)
-        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.BACKUP).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get());
     }
 
     @Test
@@ -217,22 +215,22 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Create on backup
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
+                .create(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Lock on master
-        client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.MASTER).lock(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder Read - SHOULD SUCCEED
-        assertNotNull(client.setMode(Mode.MASTER).getValue(testKey1, keyHint, intruderId).get().requireBytes());
+        assertNotNull(client.setMode(Mode.MASTER).get(testKey1, keyHint, intruderId).get().requireBytes());
 
         // 2. Intruder Write - SHOULD FAIL
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), intruderId).get());
 
         // 3. Owner Write - SHOULD ALSO FAIL (Read locks block all mutations)
-        assertPermissionDenied(() -> client.setMode(Mode.MASTER).updateKeyValue(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get());
+        assertPermissionDenied(() -> client.setMode(Mode.MASTER).replace(testKey1, keyHint, createLargePayload(VALUE_SIZE), ownerId).get());
     }
 
     // --- SECTION 4: LOCK COMPATIBILITY ---
@@ -244,20 +242,20 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Create on master
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
+                .create(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Client A has READ on backup
-        client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.BACKUP).lock(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // Client B tries WRITE
-        LockStatus res = client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus res = client.setMode(Mode.BACKUP).lock(testKey1, keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, res);
 
         // Client B tries READ - SHOULD SUCCEED (Shared Read)
-        LockStatus resRead = client.setMode(Mode.BACKUP).lockObject(testKey1, keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus resRead = client.setMode(Mode.BACKUP).lock(testKey1, keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, resRead);
     }
 
@@ -267,20 +265,20 @@ public class LockMethodProtectionTest extends TestBaseCluster {
         // Create on backup
         byte[] testKey1 = createLargePayloadKey(KEY_SIZE);
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(testKey1, createLargePayload(VALUE_SIZE))
+                .create(testKey1, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
 
         // Client A has READ on master
-        client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
+        client.setMode(Mode.MASTER).lock(testKey1, keyHint, LockType.READ_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
         // Client B tries WRITE
-        LockStatus res = client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus res = client.setMode(Mode.MASTER).lock(testKey1, keyHint, LockType.WRITE_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.CANT_LOCK, res);
 
         // Client B tries READ - SHOULD SUCCEED (Shared Read)
-        LockStatus resRead = client.setMode(Mode.MASTER).lockObject(testKey1, keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
+        LockStatus resRead = client.setMode(Mode.MASTER).lock(testKey1, keyHint, LockType.READ_LOCK, intruderId, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, resRead);
     }
 

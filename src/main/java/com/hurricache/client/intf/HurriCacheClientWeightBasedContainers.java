@@ -106,46 +106,46 @@ public interface HurriCacheClientWeightBasedContainers extends HurriCacheClientI
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} containing count of elements added.
      */
-    default CompletableFuture<Integer> addElementWithWeightValues(byte[] key,
-                                                                  KeyHintData hint,
-                                                                  List<OrderedPayload> keys,
-                                                                  List<Variant> values,
-                                                                  int clientId,
-                                                                  Duration timeout) {
+    default CompletableFuture<Integer> addElementWithWeight(byte[] key,
+                                                            KeyHintData hint,
+                                                            List<OrderedPayload> keys,
+                                                            List<Variant> values,
+                                                            int clientId,
+                                                            Duration timeout) {
         // Default implementation: add keys without explicit values (ORDERED_SET behavior)
-        return addElementWithWeightValues(key, hint, keys,values, clientId, timeout);
+        return addElementWithWeight(key, hint, keys, values, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementWithWeightValues(String key, KeyHintData hint,
-                                                                  List<OrderedPayload> keys,
-                                                                  List<Variant> values,
-                                                                  int clientId, Duration timeout) {
-        return addElementWithWeightValues(serializeKey(key), hint, keys, values, clientId, timeout);
+    default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint,
+                                                            List<OrderedPayload> keys,
+                                                            List<Variant> values,
+                                                            int clientId, Duration timeout) {
+        return addElementWithWeight(serializeKey(key), hint, keys, values, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementWithWeightValues(byte[] key, KeyHintData hint,
-                                                                  List<OrderedPayload> keys,
-                                                                  List<Variant> values) {
-        return addElementWithWeightValues(key, hint, keys, values, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint,
+                                                            List<OrderedPayload> keys,
+                                                            List<Variant> values) {
+        return addElementWithWeight(key, hint, keys, values, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementWithWeightValues(String key, KeyHintData hint,
-                                                                  List<OrderedPayload> keys,
-                                                                  List<Variant> values) {
-        return addElementWithWeightValues(serializeKey(key), hint, keys, values,
-                                          getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint,
+                                                            List<OrderedPayload> keys,
+                                                            List<Variant> values) {
+        return addElementWithWeight(serializeKey(key), hint, keys, values,
+                                    getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementWithWeightValues(String key, KeyHintData hint,
-                                                                  List<OrderedPayload> keys,
-                                                                  List<Variant> values, int clientId) {
-        return addElementWithWeightValues(serializeKey(key), hint, keys, values,
-                                          clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> addElementWithWeight(String key, KeyHintData hint,
+                                                            List<OrderedPayload> keys,
+                                                            List<Variant> values, int clientId) {
+        return addElementWithWeight(serializeKey(key), hint, keys, values,
+                                    clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementWithWeightValues(byte[] key, KeyHintData hint,
-                                                                  List<OrderedPayload> keys,
-                                                                  List<Variant> values, int clientId) {
-        return addElementWithWeightValues(key, hint, keys, values, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> addElementWithWeight(byte[] key, KeyHintData hint,
+                                                            List<OrderedPayload> keys,
+                                                            List<Variant> values, int clientId) {
+        return addElementWithWeight(key, hint, keys, values, clientId, getDefaultTimeout());
     }
 }

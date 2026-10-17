@@ -2,7 +2,6 @@ package com.hurricache.client.cluster.leaks;
 
 import com.hurricache.client.cluster.AdvancedTest;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,7 @@ public class VectorTestImproved extends AdvancedTest {
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Variant data = client.getHead(k, v.second).get();
+                Variant data = client.peekHead(k, v.second).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
@@ -56,7 +55,7 @@ public class VectorTestImproved extends AdvancedTest {
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Variant data = client.getAndDeleteHead(k, v.second).get();
+                Variant data = client.popHead(k, v.second).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
@@ -89,7 +88,7 @@ public class VectorTestImproved extends AdvancedTest {
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Variant data = client.getAndDeleteElementAtPosition(client.serializeKey(k), v.second, 0).get();
+                Variant data = client.popAt(client.serializeKey(k), v.second, 0).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
@@ -122,7 +121,7 @@ public class VectorTestImproved extends AdvancedTest {
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Variant data = client.getAndDeleteTail(client.serializeKey(k), v.second).get();
+                Variant data = client.popTail(client.serializeKey(k), v.second).get();
                 if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }

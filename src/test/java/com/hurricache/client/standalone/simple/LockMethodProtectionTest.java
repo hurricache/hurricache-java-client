@@ -12,7 +12,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,24 +49,24 @@ public class LockMethodProtectionTest extends TestBase {
     void testScalarReadLock() throws ExecutionException, InterruptedException {
         String key = "lock_scalar_read_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("secret")).get();
+        KeyHintData hint = client.create(key, v("secret")).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Variant val = client.getValue(key, OWNER_CLIENT_ID).get();
+        Variant val = client.get(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        Variant intruderVal = client.getValue(key, INTRUDER_CLIENT_ID).get();
+        Variant intruderVal = client.get(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.updateKeyValue(key, v("updated"), OWNER_CLIENT_ID));
-        assertDenied(client.updateKeyValue(key, v("updated"), INTRUDER_CLIENT_ID));
+        assertDenied(client.replace(key, v("updated"), OWNER_CLIENT_ID));
+        assertDenied(client.replace(key, v("updated"), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -75,22 +74,22 @@ public class LockMethodProtectionTest extends TestBase {
     void testScalarWriteLock() throws ExecutionException, InterruptedException {
         String key = "lock_scalar_write_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("secret")).get();
+        KeyHintData hint = client.create(key, v("secret")).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Variant val = client.getValue(key, OWNER_CLIENT_ID).get();
+        Variant val = client.get(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Owner can write
-        client.updateKeyValue(key, v("updated"), OWNER_CLIENT_ID).get();
+        client.replace(key, v("updated"), OWNER_CLIENT_ID).get();
 
         // Intruder blocked
-        assertDenied(client.getValue(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.get(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -98,17 +97,17 @@ public class LockMethodProtectionTest extends TestBase {
     void testScalarGlobalLock() throws ExecutionException, InterruptedException {
         String key = "lock_scalar_global_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("secret")).get();
+        KeyHintData hint = client.create(key, v("secret")).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Variant val = client.getValue(key, OWNER_CLIENT_ID).get();
+        Variant val = client.get(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.getValue(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.get(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -122,22 +121,22 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createList(key, List.of(v("item1"), v("item2"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        List<Variant> val = client.streamList(key, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getList(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        List<Variant> intruderVal = client.streamList(key, INTRUDER_CLIENT_ID).get();
+        List<Variant> intruderVal = client.getList(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), OWNER_CLIENT_ID));
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), INTRUDER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), OWNER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -147,16 +146,16 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createList(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can add
-        client.addElementToTail(key, null, List.of(v("item2")), OWNER_CLIENT_ID).get();
+        client.pushTail(key, null, List.of(v("item2")), OWNER_CLIENT_ID).get();
 
         // Intruder blocked
-        assertDenied(client.streamList(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.getList(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -166,15 +165,15 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createList(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<Variant> val = client.streamList(key, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getList(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamList(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.getList(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -188,22 +187,22 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, List.of(v("item1"), v("item2"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        List<Variant> val = client.streamVector(key, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getVector(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        List<Variant> intruderVal = client.streamVector(key, INTRUDER_CLIENT_ID).get();
+        List<Variant> intruderVal = client.getVector(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), OWNER_CLIENT_ID));
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), INTRUDER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), OWNER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -213,14 +212,14 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        client.addElementToTail(key, null, List.of(v("item2")), OWNER_CLIENT_ID).get();
+        client.pushTail(key, null, List.of(v("item2")), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.streamVector(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.getVector(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -230,15 +229,15 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<Variant> val = client.streamVector(key, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getVector(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamVector(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.getVector(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -252,22 +251,22 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("item1"), v("item2"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        Variant val = client.peekHead(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        Variant intruderVal = client.getHead(key, INTRUDER_CLIENT_ID).get();
+        Variant intruderVal = client.peekHead(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), OWNER_CLIENT_ID));
-        assertDenied(client.addElementToTail(key, null, List.of(v("item3")), INTRUDER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), OWNER_CLIENT_ID));
+        assertDenied(client.pushTail(key, null, List.of(v("item3")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -277,14 +276,14 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        client.addElementToTail(key, null, List.of(v("item2")), OWNER_CLIENT_ID).get();
+        client.pushTail(key, null, List.of(v("item2")), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.getHead(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.peekHead(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -294,15 +293,15 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Variant val = client.getHead(key, OWNER_CLIENT_ID).get();
+        Variant val = client.peekHead(key, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.getHead(key, INTRUDER_CLIENT_ID));
+        assertDenied(client.peekHead(key, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -316,22 +315,22 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, List.of(v("item1"), v("item2"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        List<Variant> val = client.streamSet(key, null, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        List<Variant> intruderVal = client.streamSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<Variant> intruderVal = client.getSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
         assertDenied(client.addElementUnordered(key, null, List.of(v("item3")), OWNER_CLIENT_ID));
         assertDenied(client.addElementUnordered(key, null, List.of(v("item3")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -341,14 +340,14 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         client.addElementUnordered(key, null, List.of(v("item2")), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.streamSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -358,15 +357,15 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, List.of(v("item1"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<Variant> val = client.streamSet(key, null, OWNER_CLIENT_ID).get();
+        List<Variant> val = client.getSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -383,18 +382,18 @@ public class LockMethodProtectionTest extends TestBase {
                 OrderedVariant.ofBytes("item2".getBytes(), 2L)
         )).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        List<OrderedVariant> val = client.streamOrderedSet(key, null, OWNER_CLIENT_ID).get();
+        List<OrderedVariant> val = client.getOrderedSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        List<OrderedVariant> intruderVal = client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<OrderedVariant> intruderVal = client.getOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -406,7 +405,7 @@ public class LockMethodProtectionTest extends TestBase {
                 OrderedVariant.ofBytes("item1".getBytes(), 1L)
         )).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // OrderedSet has no addElement method - test would need to create new set
@@ -415,9 +414,9 @@ public class LockMethodProtectionTest extends TestBase {
         //         OrderedVariant.ofBytes("item2".getBytes(), 2L)
         // ), OWNER_CLIENT_ID).get();
 
-        assertDenied(client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -429,15 +428,15 @@ public class LockMethodProtectionTest extends TestBase {
                 OrderedVariant.ofBytes("item1".getBytes(), 1L)
         )).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        List<OrderedVariant> val = client.streamOrderedSet(key, null, OWNER_CLIENT_ID).get();
+        List<OrderedVariant> val = client.getOrderedSet(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedSet(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -455,22 +454,22 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Map<Payload, Variant> val = client.streamMap(key, null, OWNER_CLIENT_ID).get();
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        Map<Payload, Variant> intruderVal = client.streamMap(key, null, INTRUDER_CLIENT_ID).get();
+        Map<Payload, Variant> intruderVal = client.getMap(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
         // Neither can write
-        assertDenied(client.addElementHashMap(key, null, List.of(p("key3")), List.of(v("value3")), OWNER_CLIENT_ID));
-        assertDenied(client.addElementHashMap(key, null, List.of(p("key3")), List.of(v("value3")), INTRUDER_CLIENT_ID));
+        assertDenied(client.putAll(key, null, List.of(p("key3")), List.of(v("value3")), OWNER_CLIENT_ID));
+        assertDenied(client.putAll(key, null, List.of(p("key3")), List.of(v("value3")), INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -483,19 +482,19 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can write
-        client.addElementHashMap(key, hint,
-                List.of(p("key2")),
-                List.of(v("value2")),
-                OWNER_CLIENT_ID).get();
+        client.putAll(key, hint,
+                      List.of(p("key2")),
+                      List.of(v("value2")),
+                      OWNER_CLIENT_ID).get();
 
         // Intruder blocked
-        assertDenied(client.streamMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -508,15 +507,15 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Map<Payload, Variant> val = client.streamMap(key, null, OWNER_CLIENT_ID).get();
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -534,18 +533,18 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can read
-        Map<OrderedPayload, Variant> val = client.streamOrderedMap(key, null, OWNER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> val = client.getOrderedMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
         // Intruder can ALSO read (shared access)
-        Map<OrderedPayload, Variant> intruderVal = client.streamOrderedMap(key, null, INTRUDER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> intruderVal = client.getOrderedMap(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(intruderVal);
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -558,7 +557,7 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
         // Owner can write
@@ -568,9 +567,9 @@ public class LockMethodProtectionTest extends TestBase {
                 OWNER_CLIENT_ID).get();
 
         // Intruder blocked
-        assertDenied(client.streamOrderedMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     @Test
@@ -583,15 +582,15 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        Map<OrderedPayload, Variant> val = client.streamOrderedMap(key, null, OWNER_CLIENT_ID).get();
+        Map<OrderedPayload, Variant> val = client.getOrderedMap(key, null, OWNER_CLIENT_ID).get();
         assertNotNull(val);
 
-        assertDenied(client.streamOrderedMap(key, null, INTRUDER_CLIENT_ID));
+        assertDenied(client.getOrderedMap(key, null, INTRUDER_CLIENT_ID));
 
-        client.unlockObject(key, OWNER_CLIENT_ID).get();
+        client.unlock(key, OWNER_CLIENT_ID).get();
     }
 
     // =========================================================================
@@ -603,15 +602,15 @@ public class LockMethodProtectionTest extends TestBase {
     void testUnlockOwnerOnlyScalar() throws ExecutionException, InterruptedException {
         String key = "lock_unlock_scalar_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -622,13 +621,13 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createList(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -639,13 +638,13 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -656,13 +655,13 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -673,13 +672,13 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -692,13 +691,13 @@ public class LockMethodProtectionTest extends TestBase {
                 OrderedVariant.ofBytes("value".getBytes(), 1L)
         )).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -712,13 +711,13 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -732,13 +731,13 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
         assertEquals(LockStatus.OK, lock);
 
-        LockStatus unlock = client.unlockObject(key, INTRUDER_CLIENT_ID).get();
+        LockStatus unlock = client.unlock(key, INTRUDER_CLIENT_ID).get();
         assertEquals(LockStatus.CANT_UNLOCK, unlock);
 
-        unlock = client.unlockObject(key, OWNER_CLIENT_ID).get();
+        unlock = client.unlock(key, OWNER_CLIENT_ID).get();
         assertEquals(LockStatus.OK, unlock);
     }
 
@@ -753,14 +752,14 @@ public class LockMethodProtectionTest extends TestBase {
     void testLockExpirationScalar() throws ExecutionException, InterruptedException {
         String key = "lock_expire_scalar_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createKeyValue(key, v("value")).get();
+        KeyHintData hint = client.create(key, v("value")).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        Variant val = client.getValue(key, INTRUDER_CLIENT_ID).get();
+        Variant val = client.get(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 
@@ -771,12 +770,12 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createList(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        List<Variant> val = client.streamList(key, INTRUDER_CLIENT_ID).get();
+        List<Variant> val = client.getList(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 
@@ -787,12 +786,12 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createVector(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        List<Variant> val = client.streamVector(key, INTRUDER_CLIENT_ID).get();
+        List<Variant> val = client.getVector(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 
@@ -803,12 +802,12 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        Variant val = client.getHead(key, INTRUDER_CLIENT_ID).get();
+        Variant val = client.peekHead(key, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 
@@ -819,12 +818,12 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createSet(key, List.of(v("value"))).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        List<Variant> val = client.streamSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<Variant> val = client.getSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 
@@ -837,12 +836,12 @@ public class LockMethodProtectionTest extends TestBase {
                 OrderedVariant.ofBytes("value".getBytes(), 1L)
         )).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        List<OrderedVariant> val = client.streamOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
+        List<OrderedVariant> val = client.getOrderedSet(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
 
@@ -856,12 +855,12 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        Map<Payload, Variant> val = client.streamMap(key).get();
+        Map<Payload, Variant> val = client.getMap(key).get();
         assertNotNull(val);
     }
 
@@ -875,12 +874,12 @@ public class LockMethodProtectionTest extends TestBase {
 
         KeyHintData hint = client.createOrderedMap(key, data).get();
 
-        LockStatus lock = client.lockObject(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
         assertEquals(LockStatus.OK, lock);
 
         Thread.sleep(2000);
 
-        Map<OrderedPayload, Variant> val = client.streamOrderedMap(key).get();
+        Map<OrderedPayload, Variant> val = client.getOrderedMap(key).get();
         assertNotNull(val);
     }
 }

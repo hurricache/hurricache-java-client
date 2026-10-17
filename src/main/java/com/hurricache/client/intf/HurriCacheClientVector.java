@@ -5,8 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import com.hurricache.client.intf.Variant;
-
 public interface HurriCacheClientVector  extends HurriCacheClientInterfaceCommon, HurriCacheClientDequeBased,HurriCacheClientRandomAccessContainers{
 
     /**
@@ -64,33 +62,41 @@ public interface HurriCacheClientVector  extends HurriCacheClientInterfaceCommon
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing list of all {@link Variant} elements.
      */
-    CompletableFuture<List<Variant>> streamVector(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<List<Variant>> getVector(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<List<Variant>> streamVector(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return streamVector(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<List<Variant>> getVector(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return getVector(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<List<Variant>> streamVector(String key) {
-        return streamVector(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getVector(String key) {
+        return getVector(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamVector(byte[] key) {
-        return streamVector(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getVector(byte[] key) {
+        return getVector(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamVector(String key, KeyHintData hint) {
-        return streamVector(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getVector(String key, KeyHintData hint) {
+        return getVector(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamVector(byte[] key, KeyHintData hint) {
-        return streamVector(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getVector(byte[] key, KeyHintData hint) {
+        return getVector(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamVector(String key, int clientId) {
-        return streamVector(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getVector(String key, int clientId) {
+        return getVector(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamVector(byte[] key, int clientId) {
-        return streamVector(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getVector(byte[] key, int clientId) {
+        return getVector(key, null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getVector(String key, KeyHintData hint, int clientId) {
+        return getVector(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getVector(byte[] key, KeyHintData hint, int clientId) {
+        return getVector(key, hint, clientId, getDefaultTimeout());
     }
 }

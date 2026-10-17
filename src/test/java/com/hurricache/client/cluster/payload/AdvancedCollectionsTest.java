@@ -33,17 +33,17 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToHead -> [Head, Middle]
         byte[] head = createLargePayloadKey(VALUE_SIZE);
         Integer intResp = client.setMode(Mode.BACKUP)
-                .addElementToHead(listKey, keyHint, List.of(Variant.ofBytes(head)))
+                .pushHead(listKey, keyHint, List.of(Variant.ofBytes(head)))
                 .get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         byte[] newPos1 = createLargePayloadKey(VALUE_SIZE);
         Integer intResp1 = client.setMode(Mode.BACKUP)
-                .addElementToPosition(listKey, keyHint, List.of(Variant.ofBytes(newPos1)), 1)
+                .insertAt(listKey, keyHint, List.of(Variant.ofBytes(newPos1)), 1)
                 .get();
 
-        Variant head1 = client.setMode(Mode.BACKUP).getHead(listKey, keyHint).get();
-        Variant pos1 = client.setMode(Mode.BACKUP).getElementAtPosition(listKey, keyHint, 1).get();
+        Variant head1 = client.setMode(Mode.BACKUP).peekHead(listKey, keyHint).get();
+        Variant pos1 = client.setMode(Mode.BACKUP).getAt(listKey, keyHint, 1).get();
 
         Assertions.assertNotNull(head1);
         Assertions.assertNotNull(pos1);
@@ -66,18 +66,18 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // addElementToHead -> [Head, Middle]
         byte[] head1 = createLargePayloadKey(VALUE_SIZE);
         Integer boolResponse = client.setMode(Mode.MASTER)
-                .addElementToHead(listKey, keyHint, List.of(Variant.ofBytes(head1)))
+                .pushHead(listKey, keyHint, List.of(Variant.ofBytes(head1)))
                 .get();
 
         // addElementToPosition at 1 -> [Head, NewPos1, Middle]
         byte[] newPos1 = createLargePayloadKey(VALUE_SIZE);
         Integer boolResponse1 = client.setMode(Mode.MASTER)
-                .addElementToPosition(listKey, keyHint, List.of(Variant.ofBytes(newPos1)), 1)
+                .insertAt(listKey, keyHint, List.of(Variant.ofBytes(newPos1)), 1)
                 .get();
 
         Assertions.assertEquals(boolResponse1.intValue(),1);
-        Variant head = client.setMode(Mode.MASTER).getHead(listKey, keyHint).get();
-        Variant pos1 = client.setMode(Mode.MASTER).getElementAtPosition(listKey, keyHint, 1).get();
+        Variant head = client.setMode(Mode.MASTER).peekHead(listKey, keyHint).get();
+        Variant pos1 = client.setMode(Mode.MASTER).getAt(listKey, keyHint, 1).get();
 
         Assertions.assertNotNull(head);
         Assertions.assertNotNull(pos1);
@@ -99,16 +99,16 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         byte[] first = createLargePayloadKey(VALUE_SIZE);
         byte[] second = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.BACKUP)
-                .addElementToTail(vecKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
+                .pushTail(vecKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
                 .get();
 
         // removeTail -> [0, 1]
         client.setMode(Mode.BACKUP).deleteTail(vecKey, keyHint).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(Mode.BACKUP).deleteElementAtPosition(vecKey, keyHint, 0).get();
+        client.setMode(Mode.BACKUP).removeAt(vecKey, keyHint, 0).get();
 
-        Variant remaining = client.setMode(Mode.BACKUP).getElementAtPosition(vecKey, keyHint, 0).get();
+        Variant remaining = client.setMode(Mode.BACKUP).getAt(vecKey, keyHint, 0).get();
         Assertions.assertNotNull(remaining);
         Assertions.assertArrayEquals(first, remaining.bytesValue());
     }
@@ -127,16 +127,16 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         byte[] first = createLargePayloadKey(VALUE_SIZE);
         byte[] second = createLargePayloadKey(VALUE_SIZE);
         client.setMode(Mode.MASTER)
-                .addElementToTail(vecKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
+                .pushTail(vecKey, keyHint, Arrays.asList(Variant.ofBytes(first), Variant.ofBytes(second)))
                 .get();
 
         // removeTail -> [0, 1]
         client.setMode(Mode.MASTER).deleteTail(vecKey, keyHint).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.setMode(Mode.MASTER).deleteElementAtPosition(vecKey, keyHint, 0).get();
+        client.setMode(Mode.MASTER).removeAt(vecKey, keyHint, 0).get();
 
-        Variant remaining = client.setMode(Mode.MASTER).getElementAtPosition(vecKey, keyHint, 0).get();
+        Variant remaining = client.setMode(Mode.MASTER).getAt(vecKey, keyHint, 0).get();
         Assertions.assertNotNull(remaining);
         Assertions.assertArrayEquals(first, remaining.bytesValue());
     }
@@ -152,12 +152,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
             client.setMode(Mode.BACKUP)
-                    .addElementToTail(key, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
+                    .pushTail(key, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                     .get();
         }
 
         // Remove index 0
-        Integer statusList = client.setMode(Mode.BACKUP).deleteElementAtPosition(key, keyHint, 0).get();
+        Integer statusList = client.setMode(Mode.BACKUP).removeAt(key, keyHint, 0).get();
 
         Assertions.assertEquals(1, statusList);
     }
@@ -173,12 +173,12 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         Thread.sleep(500);
         for (int i = 1; i < 5; i++) {
             client.setMode(Mode.MASTER)
-                    .addElementToTail(key, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
+                    .pushTail(key, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))))
                     .get();
         }
 
         // Remove index 0
-        Integer statusList = client.setMode(Mode.MASTER).deleteElementAtPosition(key, keyHint, 0).get();
+        Integer statusList = client.setMode(Mode.MASTER).removeAt(key, keyHint, 0).get();
 
         Assertions.assertEquals(1, statusList);
     }
@@ -197,7 +197,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
             client.setMode(Mode.BACKUP)
-                    .addElementToPosition(qKey, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))), 1)
+                    .insertAt(qKey, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))), 1)
                     .get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -220,7 +220,7 @@ public class AdvancedCollectionsTest extends TestBaseCluster {
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
             client.setMode(Mode.MASTER)
-                    .addElementToPosition(qKey, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))), 1)
+                    .insertAt(qKey, keyHint, List.of(Variant.ofBytes(createLargePayloadKey(VALUE_SIZE))), 1)
                     .get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();

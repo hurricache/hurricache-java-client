@@ -1,13 +1,9 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.grpc.KeyHint;
-
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import com.hurricache.client.intf.Variant;
 
 public interface HurriCacheClientList extends HurriCacheClientInterfaceCommon,HurriCacheClientDequeBased,HurriCacheClientRandomAccessContainers{
     /**
@@ -77,33 +73,41 @@ public interface HurriCacheClientList extends HurriCacheClientInterfaceCommon,Hu
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing list of all {@link Variant} elements.
      */
-    CompletableFuture<List<Variant>> streamList(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<List<Variant>> getList(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<List<Variant>> streamList(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return streamList(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<List<Variant>> getList(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return getList(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<List<Variant>> streamList(String key) {
-        return streamList(key, getDefaultClientId());
+    default CompletableFuture<List<Variant>> getList(String key) {
+        return getList(key, getDefaultClientId());
     }
 
-    default CompletableFuture<List<Variant>> streamList(byte[] key) {
-        return streamList(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(byte[] key) {
+        return getList(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamList(String key, int clientId) {
-        return streamList(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(String key, int clientId) {
+        return getList(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamList(byte[] key, int clientId) {
-        return streamList(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(byte[] key, int clientId) {
+        return getList(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamList(String key, KeyHintData hint) {
-        return streamList(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(String key, KeyHintData hint) {
+        return getList(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Variant>> streamList(byte[] key, KeyHintData hint) {
-        return streamList(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(byte[] key, KeyHintData hint) {
+        return getList(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getList(String key, KeyHintData hint, int clientId) {
+        return getList(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getList(byte[] key, KeyHintData hint, int clientId) {
+        return getList(key, hint, clientId, getDefaultTimeout());
     }
 }
