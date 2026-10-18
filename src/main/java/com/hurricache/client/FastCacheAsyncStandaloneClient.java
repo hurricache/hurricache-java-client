@@ -897,13 +897,13 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     }
 
     @Override
-    public CompletableFuture<Number> atomicSub(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
-        return delegate.atomicSub(key, hint, delta, ttl, clientId, timeout);
+    public CompletableFuture<Number> sub(byte[] key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.sub(key, hint, delta, ttl, clientId, timeout);
     }
 
     @Override
-    public CompletableFuture<Number> atomicSub(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
-        return delegate.atomicSub(key, hint, delta, ttl, clientId, timeout);
+    public CompletableFuture<Number> sub(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.sub(key, hint, delta, ttl, clientId, timeout);
     }
 
     @Override

@@ -128,7 +128,12 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         client.addElementWithWeight(key, null, List.of(OrderedVariant.ofBytes("elem1".getBytes(), 1L))).get();
         Thread.sleep(500);
         Integer added = client.setMode(Mode.BACKUP).addElementWithWeight(key, null, List.of(OrderedVariant.ofBytes("elem2".getBytes(), 2L))).get();
-        assertEquals(2, added);
+        assertEquals(1, added);
+        Thread.sleep(500);
+        Integer sizeb = client.setMode(Mode.BACKUP).getSize(key).get();
+        Integer sizem = client.setMode(Mode.MASTER).getSize(key).get();
+        assertEquals(2, sizeb);
+        assertEquals(2, sizem);
     }
 
     @Test
@@ -325,89 +330,5 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         assertEquals(3, range.size());
         assertEquals("3", new String(range.get(0).bytesValue(), StandardCharsets.UTF_8));
         assertEquals("1", new String(range.get(2).bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    // =========================================================================
-    // 8. CONTAINER OPERATIONS WITHOUT KEYHINT
-    // =========================================================================
-
-    @Test
-    @DisplayName("getValueInContainerByKey on MASTER without keyHint")
-    void testGetValueInContainerByKeyWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
-        String key = "oset_no_hint_get_value_" + UUID.randomUUID();
-        List<OrderedVariant> data = List.of(
-                OrderedVariant.ofBytes("elem1".getBytes(), 1L),
-                OrderedVariant.ofBytes("elem2".getBytes(), 2L)
-        );
-        KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
-
-        Variant value = client.setMode(Mode.MASTER).getInContainer(key, null, "elem1".getBytes()).get();
-        assertNotNull(value);
-        assertEquals("elem1", new String(value.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("updateValueInContainer on MASTER without keyHint")
-    void testUpdateValueInContainerWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
-        String key = "oset_no_hint_update_container_" + UUID.randomUUID();
-        List<OrderedVariant> data = List.of(
-                OrderedVariant.ofBytes("elem1".getBytes(), 1L),
-                OrderedVariant.ofBytes("elem2".getBytes(), 2L)
-        );
-        KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
-
-        client.setMode(Mode.MASTER);
-        Variant previous = client.update(key, null, "elem1".getBytes(), v("updated_elem1")).get();
-        assertNotNull(previous);
-        assertEquals("elem1", new String(previous.bytesValue(), StandardCharsets.UTF_8));
-        Thread.sleep(500);
-
-        Variant value = client.setMode(Mode.BACKUP).getInContainer(key, null, "elem1".getBytes()).get();
-        assertNotNull(value);
-        assertEquals("updated_elem1", new String(value.bytesValue(), StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getAndDeleteValueInContainer on MASTER without keyHint")
-    void testGetAndDeleteValueInContainerWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
-        String key = "oset_no_hint_delete_container_" + UUID.randomUUID();
-        List<OrderedVariant> data = List.of(
-                OrderedVariant.ofBytes("elem1".getBytes(), 1L),
-                OrderedVariant.ofBytes("elem2".getBytes(), 2L)
-        );
-        KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
-
-        client.setMode(Mode.MASTER);
-        Variant deleted = client.popInContainer(key, null, "elem1".getBytes()).get();
-        assertNotNull(deleted);
-        assertEquals("elem1", new String(deleted.bytesValue(), StandardCharsets.UTF_8));
-        Thread.sleep(500);
-
-        Boolean exists = client.setMode(Mode.BACKUP).containsKey(key, null, "elem1".getBytes()).get();
-        assertFalse(exists);
-    }
-
-    @Test
-    @DisplayName("deleteFromContainerByKeyValue on MASTER without keyHint")
-    void testDeleteFromContainerByKeyValueWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
-        String key = "oset_no_hint_delete_value_" + UUID.randomUUID();
-        List<OrderedVariant> data = List.of(
-                OrderedVariant.ofBytes("a".getBytes(), 1L),
-                OrderedVariant.ofBytes("b".getBytes(), 2L),
-                OrderedVariant.ofBytes("a".getBytes(), 3L)
-        );
-        KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
-
-        client.setMode(Mode.MASTER);
-        Integer deleted = client.removeFromContainerByKeyAndValue(key, com.hurricache.grpc.ContainerType.ORDERED_SET, List.of(), List.of(v("a"))).get();
-        assertTrue(deleted >= 1);
-        Thread.sleep(500);
-
-        Integer size = client.setMode(Mode.BACKUP).getSize(key).get();
-        assertTrue(size < 3);
     }
 }

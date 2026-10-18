@@ -64,12 +64,21 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key, hint).get();
         assertEquals(3, stream.size());
-
-        List<Variant> values = new ArrayList<>(stream.values());
-        assertEquals(3, values.size());
+        assertTrue(stream.containsKey(p("key1")));
+        assertTrue(stream.containsKey(p("key2")));
+        assertTrue(stream.containsKey(p("key3")));
+        assertEquals("value1", new String(stream.get(p("key1")).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("value2", new String(stream.get(p("key2")).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("value3", new String(stream.get(p("key3")).bytesValue(), StandardCharsets.UTF_8));
 
         stream = client.setMode(Mode.BACKUP).getMap(key, hint).get();
         assertEquals(3, stream.size());
+        assertTrue(stream.containsKey(p("key1")));
+        assertTrue(stream.containsKey(p("key2")));
+        assertTrue(stream.containsKey(p("key3")));
+        assertEquals("value1", new String(stream.get(p("key1")).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("value2", new String(stream.get(p("key2")).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("value3", new String(stream.get(p("key3")).bytesValue(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -100,6 +109,15 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         stream = client.setMode(Mode.BACKUP).getMap(key, hint).get();
         assertEquals(3, stream.size());
+        ints = stream.values().stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.INT)
+            .map(Variant::longValue)
+            .sorted()
+            .collect(Collectors.toList());
+        assertEquals(3, ints.size());
+        assertEquals(10, ints.get(0));
+        assertEquals(20, ints.get(1));
+        assertEquals(30, ints.get(2));
     }
 
     @Test
@@ -130,6 +148,15 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         stream = client.setMode(Mode.BACKUP).getMap(key, hint).get();
         assertEquals(3, stream.size());
+        doubles = stream.values().stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.DOUBLE)
+            .map(Variant::doubleValue)
+            .sorted()
+            .collect(Collectors.toList());
+        assertEquals(3, doubles.size());
+        assertEquals(1.1, doubles.get(0), 0.001);
+        assertEquals(2.2, doubles.get(1), 0.001);
+        assertEquals(3.3, doubles.get(2), 0.001);
     }
 
     @Test
@@ -389,6 +416,31 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         size = client.setMode(Mode.BACKUP).getSize(key, hint).get();
         assertEquals(3, size);
+    }
+
+    @Test
+    @DisplayName("Create map with duplicate keys, validate uniqueness on MASTER and BACKUP")
+    void testCreateMapWithDuplicateKeysOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
+        String key = "map_duplicate_keys_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+        data.put(p("key1"), v("value2")); // duplicate key - should keep last value
+
+        KeyHintData hint = client.createMap(key, data).get();
+        assertNotNull(hint);
+        Thread.sleep(500);
+
+        // On MASTER - should have 1 unique key with last value
+        Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key, hint).get();
+        assertEquals(1, stream.size());
+        assertTrue(stream.containsKey(p("key1")));
+        assertEquals("value2", new String(stream.get(p("key1")).bytesValue(), StandardCharsets.UTF_8));
+
+        // On BACKUP - should also have 1 unique key with last value
+        stream = client.setMode(Mode.BACKUP).getMap(key, hint).get();
+        assertEquals(1, stream.size());
+        assertTrue(stream.containsKey(p("key1")));
+        assertEquals("value2", new String(stream.get(p("key1")).bytesValue(), StandardCharsets.UTF_8));
     }
 
     // =========================================================================

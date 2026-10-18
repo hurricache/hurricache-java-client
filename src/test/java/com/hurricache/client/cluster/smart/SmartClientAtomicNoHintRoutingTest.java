@@ -129,7 +129,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         client.setMode(Mode.MASTER);
-        Number result = client.atomicSub(key, 25).get();
+        Number result = client.sub(key, 25).get();
         assertNotNull(result);
         assertEquals(100, result.longValue());
         Thread.sleep(500);
@@ -148,7 +148,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         client.setMode(Mode.MASTER);
-        Number result = client.atomicSub(key, 5.5).get();
+        Number result = client.sub(key, 5.5).get();
         assertNotNull(result);
         Thread.sleep(500);
 
@@ -167,7 +167,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         client.setMode(Mode.MASTER);
-        Number result = client.atomicSub(key, 30).get();
+        Number result = client.sub(key, 30).get();
         assertNotNull(result);
         assertEquals(10, result.longValue());
         Thread.sleep(500);
@@ -300,12 +300,12 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         assertEquals(LockStatus.OK, lock);
         Thread.sleep(500);
 
-        Number result = client.add(key, 5).get();
+        Number result = client.add(key, 5, 100).get();
         assertNotNull(result);
         assertEquals(10, result.longValue());
         Thread.sleep(500);
 
-        Variant current = client.setMode(Mode.BACKUP).get(key).get();
+        Variant current = client.setMode(Mode.BACKUP).get(key, 100).get();
         assertEquals(15, current.longValue());
 
         client.setMode(Mode.MASTER);
@@ -326,7 +326,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         try {
-            client.setMode(Mode.BACKUP).exchange(key, 20).get();
+            client.setMode(Mode.BACKUP).exchange(key, 20, 999).get();
             fail("Expected exception for intruder");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -372,7 +372,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         Number r1 = client.add(key, 50).get();
         assertEquals(100, r1.longValue());
 
-        Number r2 = client.atomicSub(key, 30).get();
+        Number r2 = client.sub(key, 30).get();
         assertEquals(150, r2.longValue());
 
         Number r3 = client.add(key, 10).get();

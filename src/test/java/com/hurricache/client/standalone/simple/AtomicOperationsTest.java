@@ -182,7 +182,7 @@ public class AtomicOperationsTest extends TestBase {
         KeyHintData hint = client.create(key, vi(100)).get();
 
         // atomicSub returns OLD value
-        Number result = client.atomicSub(key, 25).get();
+        Number result = client.sub(key, 25).get();
         assertNotNull(result);
         assertEquals(100, result.longValue()); // Returns OLD value
 
@@ -200,7 +200,7 @@ public class AtomicOperationsTest extends TestBase {
         KeyHintData hint = client.create(key, vd(50.0)).get();
 
         // atomicSub double with int - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.atomicSub(key, 1));
+        assertInvalidArgument(client.sub(key, 1));
 
         // Verify value remains unchanged
         Variant current = client.get(key).get();
@@ -217,7 +217,7 @@ public class AtomicOperationsTest extends TestBase {
         KeyHintData hint = client.create(key, vd(50.0)).get();
 
         // atomicSub double with double - should work
-        Number result = client.atomicSub(key, 5.5).get();
+        Number result = client.sub(key, 5.5).get();
         assertNotNull(result);
 
         // Verify new value through getValue
@@ -235,7 +235,7 @@ public class AtomicOperationsTest extends TestBase {
         KeyHintData hint = client.create(key, vi(10)).get();
 
         // Returns OLD value
-        Number result = client.atomicSub(key, 30).get();
+        Number result = client.sub(key, 30).get();
         assertNotNull(result);
         assertEquals(10, result.longValue()); // Returns OLD value
 
@@ -523,7 +523,7 @@ public class AtomicOperationsTest extends TestBase {
         client.replace(key, vd(50.5)).get();
 
         // atomicSub double with double - returns OLD value
-        Number result = client.atomicSub(key, 5.5).get();
+        Number result = client.sub(key, 5.5).get();
         assertNotNull(result);
 
         // Verify new value through getValue
@@ -661,7 +661,7 @@ public class AtomicOperationsTest extends TestBase {
         Number r1 = client.add(key, 50).get();
         assertEquals(100, r1.longValue()); // OLD value
 
-        Number r2 = client.atomicSub(key, 30).get();
+        Number r2 = client.sub(key, 30).get();
         assertEquals(150, r2.longValue()); // OLD value
 
         Number r3 = client.add(key, 10).get();

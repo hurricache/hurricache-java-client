@@ -24,7 +24,7 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
                                               Duration timeout);
 
     default CompletableFuture<Variant> getInContainer(String key, KeyHintData hint, byte[] elementKey,
-                                                      Duration ttl, int clientId, Duration timeout) {
+                                                      int clientId, Duration timeout) {
         return getInContainer(serializeKey(key), hint, elementKey, clientId, timeout);
     }
 

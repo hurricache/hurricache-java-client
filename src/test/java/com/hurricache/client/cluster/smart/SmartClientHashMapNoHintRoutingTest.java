@@ -279,6 +279,31 @@ public class SmartClientHashMapNoHintRoutingTest extends TestBaseCluster {
     }
 
     @Test
+    @DisplayName("Create map with duplicate keys, validate uniqueness without keyHint")
+    void testCreateMapWithDuplicateKeysWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
+        String key = "map_no_hint_duplicate_keys_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+        data.put(p("key1"), v("value2")); // duplicate key - should keep last value
+
+        KeyHintData hint = client.createMap(key, data).get();
+        assertNotNull(hint);
+        Thread.sleep(500);
+
+        // On MASTER - should have 1 unique key with last value
+        Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key).get();
+        assertEquals(1, stream.size());
+        assertTrue(stream.containsKey(p("key1")));
+        assertEquals("value2", new String(stream.get(p("key1")).bytesValue(), StandardCharsets.UTF_8));
+
+        // On BACKUP - should also have 1 unique key with last value
+        stream = client.setMode(Mode.BACKUP).getMap(key).get();
+        assertEquals(1, stream.size());
+        assertTrue(stream.containsKey(p("key1")));
+        assertEquals("value2", new String(stream.get(p("key1")).bytesValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
     @DisplayName("READ_LOCK on map on MASTER without keyHint")
     void testReadLockOnMapWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
         String key = "map_no_hint_read_lock_" + UUID.randomUUID();
@@ -296,7 +321,7 @@ public class SmartClientHashMapNoHintRoutingTest extends TestBaseCluster {
         Map<Payload, Variant> val = client.setMode(Mode.BACKUP).getMap(key, null, 100).get();
         assertNotNull(val);
 
-        Map<Payload, Variant> intruderVal = client.setMode(Mode.BACKUP).getMap(key, null, 100).get();
+        Map<Payload, Variant> intruderVal = client.setMode(Mode.BACKUP).getMap(key, null, 999).get();
         assertNotNull(intruderVal);
 
         client.setMode(Mode.MASTER);

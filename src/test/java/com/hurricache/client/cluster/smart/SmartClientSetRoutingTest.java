@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -55,9 +56,15 @@ public class SmartClientSetRoutingTest extends TestBaseCluster {
 
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        assertTrue(stream.stream().anyMatch(v -> "item1".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
+        assertTrue(stream.stream().anyMatch(v -> "item2".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
+        assertTrue(stream.stream().anyMatch(v -> "item3".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
 
         stream = client.setMode(Mode.BACKUP).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        assertTrue(stream.stream().anyMatch(v -> "item1".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
+        assertTrue(stream.stream().anyMatch(v -> "item2".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
+        assertTrue(stream.stream().anyMatch(v -> "item3".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
     }
 
     @Test
@@ -72,9 +79,17 @@ public class SmartClientSetRoutingTest extends TestBaseCluster {
 
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        List<Long> ints = stream.stream().map(Variant::longValue).sorted().collect(Collectors.toList());
+        assertEquals(10, ints.get(0));
+        assertEquals(20, ints.get(1));
+        assertEquals(30, ints.get(2));
 
         stream = client.setMode(Mode.BACKUP).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        ints = stream.stream().map(Variant::longValue).sorted().collect(Collectors.toList());
+        assertEquals(10, ints.get(0));
+        assertEquals(20, ints.get(1));
+        assertEquals(30, ints.get(2));
     }
 
     @Test
@@ -89,9 +104,17 @@ public class SmartClientSetRoutingTest extends TestBaseCluster {
 
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        List<Double> doubles = stream.stream().map(Variant::doubleValue).sorted().collect(Collectors.toList());
+        assertEquals(1.1, doubles.get(0), 0.001);
+        assertEquals(2.2, doubles.get(1), 0.001);
+        assertEquals(3.3, doubles.get(2), 0.001);
 
         stream = client.setMode(Mode.BACKUP).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        doubles = stream.stream().map(Variant::doubleValue).sorted().collect(Collectors.toList());
+        assertEquals(1.1, doubles.get(0), 0.001);
+        assertEquals(2.2, doubles.get(1), 0.001);
+        assertEquals(3.3, doubles.get(2), 0.001);
     }
 
     @Test
@@ -106,9 +129,15 @@ public class SmartClientSetRoutingTest extends TestBaseCluster {
 
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        assertTrue(stream.stream().anyMatch(v -> v.type() == Variant.Type.BYTES && "hello".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
+        assertTrue(stream.stream().anyMatch(v -> v.type() == Variant.Type.INT && v.longValue() == 42));
+        assertTrue(stream.stream().anyMatch(v -> v.type() == Variant.Type.DOUBLE && Math.abs(v.doubleValue() - 3.14) < 0.001));
 
         stream = client.setMode(Mode.BACKUP).getSet(key, hint).get();
         assertEquals(3, stream.size());
+        assertTrue(stream.stream().anyMatch(v -> v.type() == Variant.Type.BYTES && "hello".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))));
+        assertTrue(stream.stream().anyMatch(v -> v.type() == Variant.Type.INT && v.longValue() == 42));
+        assertTrue(stream.stream().anyMatch(v -> v.type() == Variant.Type.DOUBLE && Math.abs(v.doubleValue() - 3.14) < 0.001));
     }
 
     @Test

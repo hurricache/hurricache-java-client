@@ -367,7 +367,7 @@ public class ChaosClusterTest extends TestBaseCluster {
             new ChaosOperation() {
                 public String getPrefix() { return "atomic-"; }
                 public void execute(String key, int clientId, ChaosTestStats stats, FastCacheAsyncSmartClient c) {
-                    c.atomicSub(key, null, 1).join();
+                    c.sub(key, null, 1).join();
                 }
             },
             new ChaosOperation() {

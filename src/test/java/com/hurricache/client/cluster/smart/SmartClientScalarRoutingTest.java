@@ -101,6 +101,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
 
         // Create with bytes
         KeyHintData hint = client.create(key, v("hello")).get();
+        Thread.sleep(500);
         Variant v1 = client.setMode(Mode.MASTER).get(key, hint).get();
         assertEquals("hello", new String(v1.bytesValue(), StandardCharsets.UTF_8));
 
@@ -139,13 +140,16 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "switch_double_to_bytes_" + UUID.randomUUID();
 
         // Create with double
-        KeyHintData hint = client.create(key, vd(2.5)).get();
+        Variant vd = vd(2.5);
+        KeyHintData hint = client.create(key, vd).get();
+        Thread.sleep(500);
         Variant v1 = client.setMode(Mode.MASTER).get(key, hint).get();
         assertEquals(2.5, v1.doubleValue(), 0.001);
 
         // Update to bytes on MASTER
         client.setMode(Mode.MASTER);
-        client.replace(key, hint, v("new_value")).get();
+        Variant variant = client.replace(key, hint, v("new_value")).get();
+        assertEquals(vd, variant);
         Thread.sleep(500);
 
         // Verify on BACKUP

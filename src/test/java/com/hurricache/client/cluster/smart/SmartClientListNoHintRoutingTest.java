@@ -130,7 +130,11 @@ public class SmartClientListNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         Integer added = client.setMode(Mode.BACKUP).pushTail(key, null, List.of(v("elem2"))).get();
-        assertEquals(2, added);
+        Thread.sleep(500);
+        Integer sizeB = client.setMode(Mode.BACKUP).getSize(key).get();
+        Integer sizeM = client.setMode(Mode.MASTER).getSize(key).get();
+        assertEquals(2, sizeB);
+        assertEquals(2, sizeM);
     }
 
     @Test

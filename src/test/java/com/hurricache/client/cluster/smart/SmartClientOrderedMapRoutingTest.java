@@ -397,6 +397,40 @@ public class SmartClientOrderedMapRoutingTest extends TestBaseCluster {
         assertEquals(3, size);
     }
 
+    @Test
+    @DisplayName("Create ordered map with duplicate weights, validate on MASTER and BACKUP")
+    void testCreateOrderedMapWithDuplicateWeightsOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
+        String key = "ordered_map_dup_weight_" + UUID.randomUUID();
+        // Different keys with same weight - should all be stored
+        Map<OrderedPayload, Variant> data = new HashMap<>();
+        data.put(OrderedPayload.of("alpha".getBytes(), 5L), v("value1"));
+        data.put(OrderedPayload.of("beta".getBytes(), 5L), v("value2"));
+        data.put(OrderedPayload.of("gamma".getBytes(), 5L), v("value3"));
+
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+        assertNotNull(hint);
+        Thread.sleep(500);
+
+        // On MASTER - should have 3 entries with same weight
+        Map<OrderedPayload, Variant> stream = client.setMode(Mode.MASTER).getOrderedMap(key, hint).get();
+        assertEquals(3, stream.size());
+        // All should have weight 5
+        for (Map.Entry<OrderedPayload, Variant> entry : stream.entrySet()) {
+            assertEquals(5L, entry.getKey().getOrder());
+        }
+        // Verify all keys present
+        assertTrue(stream.containsKey(OrderedPayload.of("alpha".getBytes(), 5L)));
+        assertTrue(stream.containsKey(OrderedPayload.of("beta".getBytes(), 5L)));
+        assertTrue(stream.containsKey(OrderedPayload.of("gamma".getBytes(), 5L)));
+
+        // On BACKUP - should also have 3 entries with same weight
+        stream = client.setMode(Mode.BACKUP).getOrderedMap(key, hint).get();
+        assertEquals(3, stream.size());
+        for (Map.Entry<OrderedPayload, Variant> entry : stream.entrySet()) {
+            assertEquals(5L, entry.getKey().getOrder());
+        }
+    }
+
     // =========================================================================
     // 7. LOCK OPERATIONS WITH ROUTING
     // =========================================================================

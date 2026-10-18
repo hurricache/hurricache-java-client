@@ -238,7 +238,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .build();
         getStub(timeout).updateValue(req, new CompletableFutureObserver<>(future, resp -> {
             if (resp.hasValue()) {
-                return toVariant(ValueResponse.newBuilder().setValueUnordered(resp.getValue()).build());
+                return toVariant(resp);
             }
             return Variant.none();
         }));
@@ -1088,12 +1088,12 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<Number> atomicSub(byte[] key,
-                                               KeyHintData hint,
-                                               long delta,
-                                               Duration ttl,
-                                               int clientId,
-                                               Duration timeout) {
+    public CompletableFuture<Number> sub(byte[] key,
+                                         KeyHintData hint,
+                                         long delta,
+                                         Duration ttl,
+                                         int clientId,
+                                         Duration timeout) {
         CompletableFuture<Number> future = new CompletableFuture<>();
         getStub(timeout).atomicSub(buildAtomicCreateRequest(key,
                                                                hint,
@@ -1108,12 +1108,12 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     @Override
-    public CompletableFuture<Number> atomicSub(byte[] key,
-                                               KeyHintData hint,
-                                               double delta,
-                                               Duration ttl,
-                                               int clientId,
-                                               Duration timeout) {
+    public CompletableFuture<Number> sub(byte[] key,
+                                         KeyHintData hint,
+                                         double delta,
+                                         Duration ttl,
+                                         int clientId,
+                                         Duration timeout) {
         CompletableFuture<Number> future = new CompletableFuture<>();
         getStub(timeout).atomicSub(buildAtomicCreateRequest(key,
                                                                hint,

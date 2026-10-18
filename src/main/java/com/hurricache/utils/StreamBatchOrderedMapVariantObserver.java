@@ -26,7 +26,7 @@ public class StreamBatchOrderedMapVariantObserver implements StreamObserver<Batc
         int count = response.getKeyOrderedCount();
         
         for (int i = 0; i < count; i++) {
-            byte[] keyBytes = response.getKeyOrdered(i).getPayload().toByteArray();
+            byte[] keyBytes = response.getKeyOrdered(i).getPayload().getPayload().toByteArray();;
             long weight = response.getKeyOrdered(i).getOrder();
             // Server sends values in value_unordered field
             Variant variant = extractVariantFromValue(response.getValueUnordered(i));

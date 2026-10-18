@@ -11,6 +11,7 @@ import com.hurricache.grpc.Key;
 import com.hurricache.grpc.KeyHint;
 import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.OrderedValue;
+import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
 import com.hurricache.grpc.ValueType;
@@ -23,6 +24,21 @@ public class KeyValueUtils {
     public static  Variant toVariant(ValueResponse resp) {
         if (!resp.hasValueUnordered()) return Variant.none();
         Value val = resp.getValueUnordered();
+        ValueType vt = val.hasValueType() ? val.getValueType() : ValueType.AUTO;
+        BinaryPayload bp = val.getValue();
+        switch (vt) {
+            case INT: return Variant.ofLong(bp.getIntPayload());
+            case DOUBLE: return Variant.ofDouble(bp.getDoublePayload());
+            case BYTES: case AUTO: default:
+                if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
+                if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
+                if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
+                return Variant.none();
+        }
+    }
+
+    public static  Variant toVariant(UpdateValueResponse resp) {
+        Value val = resp.getValue();
         ValueType vt = val.hasValueType() ? val.getValueType() : ValueType.AUTO;
         BinaryPayload bp = val.getValue();
         switch (vt) {

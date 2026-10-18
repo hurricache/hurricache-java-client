@@ -269,7 +269,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // atomicSub returns OLD value on MASTER
         client.setMode(Mode.MASTER);
-        Number result = client.atomicSub(key, hint, 25).get();
+        Number result = client.sub(key, hint, 25).get();
         assertNotNull(result);
         assertEquals(100, result.longValue());
         Thread.sleep(500);
@@ -290,7 +290,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // atomicSub double with double on MASTER
         client.setMode(Mode.MASTER);
-        Number result = client.atomicSub(key, hint, 5.5).get();
+        Number result = client.sub(key, hint, 5.5).get();
         assertNotNull(result);
         Thread.sleep(500);
 
@@ -311,7 +311,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Returns OLD value on MASTER
         client.setMode(Mode.MASTER);
-        Number result = client.atomicSub(key, hint, 30).get();
+        Number result = client.sub(key, hint, 30).get();
         assertNotNull(result);
         assertEquals(10, result.longValue());
         Thread.sleep(500);
@@ -675,13 +675,13 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // atomicAdd returns OLD value on MASTER
-        Number result = client.add(key, hint, 5).get();
+        Number result = client.add(key, hint, 5, 100).get();
         assertNotNull(result);
         assertEquals(10, result.longValue());
         Thread.sleep(500);
 
         // Verify on BACKUP
-        Variant current = client.setMode(Mode.BACKUP).get(key, hint).get();
+        Variant current = client.setMode(Mode.BACKUP).get(key, hint,100).get();
         assertEquals(15, current.longValue());
 
         // Unlock
@@ -705,7 +705,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Intruder cannot perform atomic operations on BACKUP
         try {
-            client.setMode(Mode.BACKUP).exchange(key, hint, 20).get();
+            client.setMode(Mode.BACKUP).exchange(key, hint, 20, 999).get();
             fail("Expected exception for intruder");
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
@@ -732,13 +732,13 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // CAS on MASTER - should succeed
-        AtomicCasRes result = client.compareAndSet(key, hint, 100, 200).get();
+        AtomicCasRes result = client.compareAndSet(key, hint, 100, 200, 100).get();
         assertNotNull(result);
         assertTrue(result.getResult());
         Thread.sleep(500);
 
         // Verify on BACKUP
-        Variant current = client.setMode(Mode.BACKUP).get(key, hint).get();
+        Variant current = client.setMode(Mode.BACKUP).get(key, hint,100).get();
         assertEquals(200, current.longValue());
 
         // Unlock
@@ -761,7 +761,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         // atomicSub double with int on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
         try {
-            client.atomicSub(key, hint, 1).get();
+            client.sub(key, hint, 1).get();
             fail("Expected exception for type mismatch");
         } catch (ExecutionException e) {
             // Expected - type mismatch
@@ -777,7 +777,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
     @Test
     @DisplayName("atomicAdd after type switch bytes→int on MASTER, validate on BACKUP")
     void testAtomicAddAfterTypeSwitchBytesToIntOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        String key = "atomic_type_switch_" + UUID.randomUUID();
+        String key = "v" + UUID.randomUUID();
 
         // Create with bytes on MASTER
         KeyHintData hint = client.create(key, v("hello")).get();
@@ -796,6 +796,8 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Verify on BACKUP
         Variant current = client.setMode(Mode.BACKUP).get(key, hint).get();
+        Variant currentMaster = client.setMode(Mode.MASTER).get(key, hint).get();
+        assertEquals(60, currentMaster.longValue());
         assertEquals(60, current.longValue());
         assertTrue(current.isInt());
     }
@@ -815,7 +817,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // atomicSub double with double on MASTER - returns OLD value
-        Number result = client.atomicSub(key, hint, 5.5).get();
+        Number result = client.sub(key, hint, 5.5).get();
         assertNotNull(result);
         Thread.sleep(500);
 
@@ -871,7 +873,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         // atomicSub double with double on MASTER - returns OLD value
-        Number result = client.atomicSub(key, hint, 5.5).get();
+        Number result = client.sub(key, hint, 5.5).get();
         assertNotNull(result);
         Thread.sleep(500);
 
@@ -924,7 +926,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         Number r1 = client.add(key, hint, 50).get();
         assertEquals(100, r1.longValue()); // OLD value
 
-        Number r2 = client.atomicSub(key, hint, 30).get();
+        Number r2 = client.sub(key, hint, 30).get();
         assertEquals(150, r2.longValue()); // OLD value
 
         Number r3 = client.add(key, hint, 10).get();

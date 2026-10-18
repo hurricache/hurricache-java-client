@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -272,5 +273,44 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
         Integer size = client.setMode(Mode.BACKUP).getSize(key).get();
         assertEquals(1, size);
+    }
+
+    @Test
+    @DisplayName("Create set with duplicate ints, validate uniqueness on MASTER and BACKUP without keyHint")
+    void testCreateSetWithDuplicateIntsUniquenessWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
+        String key = "set_no_hint_unique_int_" + UUID.randomUUID();
+        List<Variant> data = List.of(vi(10), vi(20), vi(10));
+
+        KeyHintData hint = client.createSet(key, data).get();
+        assertNotNull(hint);
+        Thread.sleep(500);
+
+        // On MASTER - should have 2 unique elements
+        List<Variant> stream = client.setMode(Mode.MASTER).getSet(key).get();
+        assertEquals(2, stream.size());
+
+        // On BACKUP - should also have 2 unique elements
+        stream = client.setMode(Mode.BACKUP).getSet(key).get();
+        assertEquals(2, stream.size());
+    }
+
+    @Test
+    @DisplayName("addElementUnordered ignores duplicates on MASTER without keyHint")
+    void testAddElementUnorderedDuplicateOnMasterWithoutKeyHint() throws ExecutionException, InterruptedException {
+        String key = "set_no_hint_add_dup_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("item1"));
+
+        KeyHintData hint = client.createSet(key, data).get();
+        Thread.sleep(500);
+
+        // Try to add duplicate on MASTER
+        client.setMode(Mode.MASTER);
+        Integer added = client.addElementUnordered(key, null, List.of(v("item1"))).get();
+        assertEquals(0, added);
+        Thread.sleep(500);
+
+        // Verify on BACKUP - should still have 1 element
+        List<Variant> stream = client.setMode(Mode.BACKUP).getSet(key).get();
+        assertEquals(1, stream.size());
     }
 }

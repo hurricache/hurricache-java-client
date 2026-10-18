@@ -24,7 +24,7 @@ public class StreamBatchMapVariantObserver implements StreamObserver<BatchValueR
     @Override
     public void onNext(BatchValueResponse response) {
         for (int i = 0; i < response.getKeyUnorderedCount(); i++) {
-            byte[] keyBytes = response.getKeyUnordered(i).getPayload().toByteArray();
+            byte[] keyBytes = response.getKeyUnordered(i).getPayload().getPayload().toByteArray();
             Variant variant = extractVariant(response.getValueUnordered(i));
             result.put(Payload.of(keyBytes), variant);
         }
