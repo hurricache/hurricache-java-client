@@ -1,7 +1,10 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
-import com.hurricache.client.FastCacheAsyncStandaloneClient;
+import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.OrderedVariant;
+import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.LockStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -14,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -46,7 +50,16 @@ public abstract class TestBaseCluster {
         return sb.toString();
     }
 
-    protected byte[] createLargePayload(int size) {
+    protected Variant createLargePayload(int size) {
+        byte[] bytes = UUID.randomUUID().toString().getBytes();
+        byte[] payload = new byte[size];
+        System.arraycopy(bytes, 0, payload, 0, bytes.length);
+        for (int i = bytes.length; i < size; i++) {
+            payload[i] = (byte) (i % 128);
+        }
+        return Variant.ofBytes(payload);
+    }
+    protected byte[] createLargePayloadKey(int size) {
         byte[] bytes = UUID.randomUUID().toString().getBytes();
         byte[] payload = new byte[size];
         System.arraycopy(bytes, 0, payload, 0, bytes.length);
@@ -56,12 +69,18 @@ public abstract class TestBaseCluster {
         return payload;
     }
 
+
     @BeforeEach
     void setUp() throws IOException {
-        client = new FastCacheAsyncSmartClient(List.of("127.0.0.1:51000","127.0.0.1:61000"), 0, Duration.ofSeconds(3600)) {
+        client = new FastCacheAsyncSmartClient(List.of("192.168.0.123:51000","192.168.0.123:61000","192.168.0.123:21000"), 0, Duration.ofSeconds(3600)) {
             @Override
             public Duration getDefaultTtl() {
                 return getTestTtl();
+            }
+
+            @Override
+            public int getDefaultClientId() {
+                return 0;
             }
 
         };
@@ -104,5 +123,78 @@ public abstract class TestBaseCluster {
             Assertions.fail(e.getMessage());
         }
     }
+    protected Variant v(String val) {
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
+    }
 
+    protected Payload p(String val) {
+        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected Payload p(byte[] val) {
+        return Payload.of(val);
+    }
+
+    protected String str(Variant payload) {
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
+    }
+    protected String str(Payload payload) {
+        return new String(payload.getValue(), StandardCharsets.UTF_8);
+    }
+
+    protected OrderedPayload op(Long order, String val) {
+        return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
+    }
+
+
+    protected Variant v(byte[] val) {
+        return Variant.ofBytes(val);
+    }
+
+    protected Variant vi(int val) {
+        return Variant.ofLong(val);
+    }
+
+    protected Variant vd(double val) {
+        return Variant.ofDouble(val);
+    }
+
+
+
+    protected OrderedPayload op(byte[] value, Long order) {
+        return OrderedPayload.of(value, order);
+    }
+
+    protected OrderedPayload op(Long order,byte[] value) {
+        return OrderedPayload.of(value, order);
+    }
+    protected OrderedVariant ov(byte[] value, Long order) {
+        return OrderedVariant.of(v(value), order);
+    }
+
+    protected void assertNotFound(CompletableFuture<?> future) {
+        try {
+            future.get();
+            Assertions.fail("Expected NOT_FOUND after TTL expiry");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
+
+    protected void assertInvalidArgument(CompletableFuture<?> future) {
+        try {
+            future.get();
+            Assertions.fail("Expected INVALID_ARGUMENT");
+        } catch (ExecutionException e) {
+            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
+            Assertions.assertEquals(Status.Code.INVALID_ARGUMENT, cause.getStatus().getCode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            Assertions.fail(e.getMessage());
+        }
+    }
 }

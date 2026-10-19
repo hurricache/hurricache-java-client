@@ -18,11 +18,11 @@ public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testTtlMethodsCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(key, createLargePayload(VALUE_SIZE))
+                .create(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -38,11 +38,11 @@ public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testTtlMethodsCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] key = createLargePayload(KEY_SIZE);
+        byte[] key = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(key, createLargePayload(VALUE_SIZE))
+                .create(key, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
@@ -58,43 +58,43 @@ public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testLockingMechanismCreateOnMasterValidateOnBackup() throws ExecutionException, InterruptedException {
-        byte[] lockKey = createLargePayload(KEY_SIZE);
+        byte[] lockKey = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on master
         KeyHintData keyHint = client.setMode(Mode.MASTER)
-                .createKeyValue(lockKey, createLargePayload(VALUE_SIZE))
+                .create(lockKey, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // All other access should be done on backup
         // Client 1 acquires lock
-        LockStatus lockRes = client.setMode(Mode.BACKUP).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
+        LockStatus lockRes = client.setMode(Mode.BACKUP).lock(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
         // Client 2 attempts to lock (should fail based on server logic)
-        LockStatus lockResConflict = client.setMode(Mode.BACKUP).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
+        LockStatus lockResConflict = client.setMode(Mode.BACKUP).lock(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
         Assertions.assertNotEquals(LockStatus.OK, lockResConflict);
     }
 
     @Test
     void testLockingMechanismCreateOnBackupValidateOnMaster() throws ExecutionException, InterruptedException {
-        byte[] lockKey = createLargePayload(KEY_SIZE);
+        byte[] lockKey = createLargePayloadKey(KEY_SIZE);
 
         // Create should be done on backup
         KeyHintData keyHint = client.setMode(Mode.BACKUP)
-                .createKeyValue(lockKey, createLargePayload(VALUE_SIZE))
+                .create(lockKey, createLargePayload(VALUE_SIZE))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(500);
 
         // All other access should be done on master
         // Client 1 acquires lock
-        LockStatus lockRes = client.setMode(Mode.MASTER).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
+        LockStatus lockRes = client.setMode(Mode.MASTER).lock(lockKey, keyHint, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
         // Client 2 attempts to lock (should fail based on server logic)
-        LockStatus lockResConflict = client.setMode(Mode.MASTER).lockObject(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
+        LockStatus lockResConflict = client.setMode(Mode.MASTER).lock(lockKey, keyHint, LockType.WRITE_LOCK, 102, Duration.ofSeconds(30)).get();
         Assertions.assertNotEquals(LockStatus.OK, lockResConflict);
     }
 }

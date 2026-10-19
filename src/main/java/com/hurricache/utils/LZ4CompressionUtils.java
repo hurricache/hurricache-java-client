@@ -2,6 +2,8 @@ package com.hurricache.utils;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.UnsafeByteOperations;
+import com.hurricache.client.intf.OrderedVariant;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.BinaryPayload;
 import com.hurricache.grpc.CompressedInfo;
 import com.hurricache.grpc.Key;
@@ -11,6 +13,7 @@ import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
+import com.hurricache.grpc.ValueType;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4SafeDecompressor;
@@ -157,5 +160,105 @@ public final class LZ4CompressionUtils {
             return buffer.array();
         }
         return byteString.toByteArray();
+    }
+
+    /**
+     * Decompresses a Value (unordered) and returns a Variant (without order).
+     * Handles BinaryPayload.oneof: bytes → decompress, int → intPayload, double → doublePayload.
+     */
+    public static Variant decompressIfNeededToVariant(Value responseValue) {
+        BinaryPayload payload = responseValue.getValue();
+        ValueType valueType = responseValue.hasValueType() ? responseValue.getValueType() : ValueType.AUTO;
+
+        switch (valueType) {
+            case INT:
+                return Variant.ofLong(payload.getIntPayload());
+
+            case DOUBLE:
+                return Variant.ofDouble(payload.getDoublePayload());
+
+            case BYTES:
+            case AUTO:
+            default:
+                // For BYTES/AUTO, check if there's actually an int or double payload
+                if (payload.hasIntPayload()) {
+                    return Variant.ofLong(payload.getIntPayload());
+                }
+                if (payload.hasDoublePayload()) {
+                    return Variant.ofDouble(payload.getDoublePayload());
+                }
+                // It's bytes - decompress if needed
+                ByteString byteString = payload.getPayload();
+                byte[] decompressed;
+                if (responseValue.hasCompressionInfo() && responseValue.getCompressionInfo().getEnabled()) {
+                    int rawSize = responseValue.getCompressionInfo().getRawSize();
+                    LZ4SafeDecompressor decompressor = FACTORY.safeDecompressor();
+                    decompressed = new byte[rawSize];
+                    decompressor.decompress(byteString.asReadOnlyByteBuffer(), ByteBuffer.wrap(decompressed));
+                } else {
+                    ByteBuffer buffer = byteString.asReadOnlyByteBuffer();
+                    if (buffer.hasArray() && buffer.arrayOffset() == 0 && buffer.array().length == byteString.size()) {
+                        decompressed = buffer.array();
+                    } else {
+                        decompressed = byteString.toByteArray();
+                    }
+                }
+                return Variant.ofBytes(decompressed);
+        }
+    }
+
+    /**
+     * Decompresses an OrderedValue and returns a Variant (without order).
+     * Handles BinaryPayload.oneof: bytes → decompress, int → intPayload, double → doublePayload.
+     */
+    public static Variant decompressIfNeededToVariant(OrderedValue responseValue) {
+        BinaryPayload payload = responseValue.getValue();
+        ValueType valueType = responseValue.hasValueType() ? responseValue.getValueType() : ValueType.AUTO;
+
+        switch (valueType) {
+            case INT:
+                return Variant.ofLong(payload.getIntPayload());
+
+            case DOUBLE:
+                return Variant.ofDouble(payload.getDoublePayload());
+
+            case BYTES:
+            case AUTO:
+            default:
+                // For BYTES/AUTO, check if there's actually an int or double payload
+                if (payload.hasIntPayload()) {
+                    return Variant.ofLong(payload.getIntPayload());
+                }
+                if (payload.hasDoublePayload()) {
+                    return Variant.ofDouble(payload.getDoublePayload());
+                }
+                // It's bytes - decompress if needed
+                ByteString byteString = payload.getPayload();
+                byte[] decompressed;
+                if (responseValue.hasCompressionInfo() && responseValue.getCompressionInfo().getEnabled()) {
+                    int rawSize = responseValue.getCompressionInfo().getRawSize();
+                    LZ4SafeDecompressor decompressor = FACTORY.safeDecompressor();
+                    decompressed = new byte[rawSize];
+                    decompressor.decompress(byteString.asReadOnlyByteBuffer(), ByteBuffer.wrap(decompressed));
+                } else {
+                    ByteBuffer buffer = byteString.asReadOnlyByteBuffer();
+                    if (buffer.hasArray() && buffer.arrayOffset() == 0 && buffer.array().length == byteString.size()) {
+                        decompressed = buffer.array();
+                    } else {
+                        decompressed = byteString.toByteArray();
+                    }
+                }
+                return Variant.ofBytes(decompressed);
+        }
+    }
+
+    /**
+     * Decompresses an OrderedValue and returns an OrderedVariant (with order preserved).
+     * Handles BinaryPayload.oneof: bytes → decompress, int → intPayload, double → doublePayload.
+     */
+    public static OrderedVariant decompressIfNeededToOrderedVariant(OrderedValue responseValue) {
+        Variant variant = decompressIfNeededToVariant(responseValue);
+        long order = responseValue.hasOrder() ? responseValue.getOrder() : 0L;
+        return OrderedVariant.of(variant, order);
     }
 }

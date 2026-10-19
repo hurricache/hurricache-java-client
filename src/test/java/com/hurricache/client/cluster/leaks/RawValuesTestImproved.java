@@ -2,7 +2,7 @@ package com.hurricache.client.cluster.leaks;
 
 import com.hurricache.client.cluster.AdvancedTest;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.grpc.KeyHint;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -17,13 +17,13 @@ public class RawValuesTestImproved extends AdvancedTest {
     void createKeyValueLoopLeakTest() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createKeyValue(k, vBytes).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.create(k, Variant.ofBytes(vBytes)).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                byte[] data = client.getAndDeleteValue(k, v.second).get();
-                if (v.first.equals(new String(data, StandardCharsets.UTF_8))) {
+                Variant data = client.pop(k, v.second).get();
+                if (v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -37,7 +37,7 @@ public class RawValuesTestImproved extends AdvancedTest {
     @Test
     void createDeleteKeyValueLoopLeakTest() {
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createKeyValue(k, vBytes).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.create(k, Variant.ofBytes(vBytes)).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
@@ -55,14 +55,14 @@ public class RawValuesTestImproved extends AdvancedTest {
     @Test
     void createUpdateKeyValueLoopLeakTest() {
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createKeyValue(k, vBytes).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.create(k, Variant.ofBytes(vBytes)).get());
 
         AtomicInteger updateGood = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
                 String newValue = createRandomString(VALUE_SIZE);
-                byte[] data = client.updateKeyValue(k, newValue.getBytes(StandardCharsets.UTF_8)).get();
-                if (v.first.equals(new String(data, StandardCharsets.UTF_8))) {
+                Variant data = client.replace(k, Variant.ofBytes(newValue.getBytes(StandardCharsets.UTF_8))).get();
+                if (v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     updateGood.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -86,7 +86,7 @@ public class RawValuesTestImproved extends AdvancedTest {
     void createTTLKeyValueLoopLeakTest() throws InterruptedException {
         // Can utilize different engine collection calls here if expanding to queues/vectors
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap = loadSynchronousLeakBaseline((k, vBytes) -> {
-            KeyHintData keyHint = client.createKeyValue(k, vBytes).get();
+            KeyHintData keyHint = client.create(k, Variant.ofBytes(vBytes)).get();
             client.setTtl(client.serializeKey(k), keyHint, TTL).get();
             return keyHint;
         });
@@ -98,7 +98,7 @@ public class RawValuesTestImproved extends AdvancedTest {
         AtomicInteger cleanlyExpiredCount = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                if (Boolean.FALSE.equals(client.existKey(k, v.second).get())) {
+                if (Boolean.FALSE.equals(client.containsKey(k, v.second).get())) {
                     cleanlyExpiredCount.getAndIncrement();
                 }
             } catch (Exception ignored) {

@@ -2,10 +2,11 @@ package com.hurricache.client.cluster.migration;
 
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.grpc.KeyHint;
 import com.hurricache.utils.Pair;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -30,7 +31,7 @@ public class RawValuesTest extends TestBaseCluster {
             for (int i = 0; i < NUM_OF_KEYS; ++i) {
                 String key = createRandomString(KEY_SIZE);
                 String value = createRandomString(VALUE_SIZE);
-                client.createKeyValue(key, value.getBytes()).thenAccept(keyhint -> {
+                client.create(key, Variant.ofBytes(value.getBytes())).thenAccept(keyhint -> {
                     keyValueMap.put(key, Pair.of(value, keyhint));
                     latch.countDown();
                     count.incrementAndGet();
@@ -57,8 +58,8 @@ public class RawValuesTest extends TestBaseCluster {
             CountDownLatch readlatch = new CountDownLatch(NUM_OF_KEYS);
             long startR = System.currentTimeMillis();
             keyValueMap.forEach((k, v) -> {
-                client.getValue(k, v.second).thenAccept(res -> {
-                    if (v.first.equals(new String(res))) {
+                client.get(k, v.second).thenAccept(res -> {
+                    if (v.first.equals(new String(res.bytesValue(), StandardCharsets.UTF_8))) {
                         good.getAndIncrement();
                     } else {
                         bad.getAndIncrement();
@@ -87,8 +88,8 @@ public class RawValuesTest extends TestBaseCluster {
             CountDownLatch readlatch1 = new CountDownLatch(NUM_OF_KEYS);
             long startR = System.currentTimeMillis();
             keyValueMap.forEach((k, v) -> {
-                client.getValue(k, v.second).thenAccept(res -> {
-                    if (v.first.equals(new String(res))) {
+                client.get(k, v.second).thenAccept(res -> {
+                    if (v.first.equals(new String(res.bytesValue(), StandardCharsets.UTF_8))) {
                         good1.getAndIncrement();
                     } else {
                         bad1.getAndIncrement();
@@ -116,7 +117,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.create(key, Variant.ofBytes(value.getBytes())).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -125,7 +126,7 @@ public class RawValuesTest extends TestBaseCluster {
         AtomicInteger bad = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                if (v.first.equals(new String(client.getAndDeleteValue(k, v.second).get()))) {
+                if (v.first.equals(new String(client.pop(k, v.second).get().bytesValue()))) {
                     good.getAndIncrement();
                 } else {
                     bad.getAndIncrement();
@@ -145,7 +146,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.create(key, Variant.ofBytes(value.getBytes())).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -173,7 +174,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.create(key, Variant.ofBytes(value.getBytes())).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
         System.out.println("Created " + NUM_OF_KEYS_LEAK + " keys");
@@ -183,7 +184,7 @@ public class RawValuesTest extends TestBaseCluster {
             keyValueMap.forEach((k, v) -> {
                 try {
                     String value = createRandomString(VALUE_SIZE);
-                    if (v.first.equals(new String(client.updateKeyValue(k, value.getBytes()).get()))) {
+                    if (v.first.equals(new String(client.replace(k, v.second, Variant.ofBytes(value.getBytes())).get().bytesValue()))) {
                         good.getAndIncrement();
                     } else {
                         bad.getAndIncrement();
@@ -219,7 +220,7 @@ public class RawValuesTest extends TestBaseCluster {
         for (int i = 0; i < NUM_OF_KEYS_LEAK; ++i) {
             String key = createRandomString(KEY_SIZE);
             String value = createRandomString(VALUE_SIZE);
-            KeyHintData keyHint = client.createKeyValue(key, value.getBytes()).get();
+            KeyHintData keyHint = client.create(key, Variant.ofBytes(value.getBytes())).get();
             client.setTtl(client.serializeKey(key), keyHint, TTL).get();
             keyValueMap.put(key, Pair.of(value, keyHint));
         }
@@ -234,7 +235,7 @@ public class RawValuesTest extends TestBaseCluster {
         AtomicInteger bad = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                if (!client.existKey(k, v.second).get()) {
+                if (!client.containsKey(k, v.second).get()) {
                     good.getAndIncrement();
                 } else {
                     bad.getAndIncrement();
