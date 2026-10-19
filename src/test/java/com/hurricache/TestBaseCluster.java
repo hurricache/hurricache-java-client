@@ -78,6 +78,11 @@ public abstract class TestBaseCluster {
                 return getTestTtl();
             }
 
+            @Override
+            public int getDefaultClientId() {
+                return 0;
+            }
+
         };
 
     }

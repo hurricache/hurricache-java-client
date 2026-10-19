@@ -40,7 +40,14 @@ public class KeyHintData {
 
     @Override
     public String toString() {
-        return "KeyHint{" + "strong_hash=" + Integer.toUnsignedLong(strong_hash) + ", week_hash=" + Integer.toUnsignedLong(week_hash) + '}';
+        return "KeyHintData{"
+               + "strong_hash="
+               + strong_hash
+               + ", week_hash="
+               + week_hash
+               + ", wasRelayed="
+               + wasRelayed
+               + '}';
     }
 
     @Override
