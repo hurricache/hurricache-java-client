@@ -2,7 +2,7 @@ package com.hurricache.client.cluster.leaks;
 
 import com.hurricache.client.cluster.AdvancedTest;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -17,13 +17,13 @@ public class QueueTestImproved extends AdvancedTest {
     void createQueueValueLoopLeakTest1() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createQueue(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createQueue(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getHead(k, v.second).get();
-                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                Variant data = client.peekHead(k, v.second).get();
+                if (data != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -50,13 +50,13 @@ public class QueueTestImproved extends AdvancedTest {
     void createQueueValueLoopLeakTest2() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createQueue(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createQueue(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getAndRemoveFront(k, v.second).get();
-                if (data != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                Variant data = client.popHead(k, v.second).get();
+                if (data != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {

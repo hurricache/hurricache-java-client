@@ -1,7 +1,5 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.grpc.KeyHint;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -14,36 +12,36 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing the removed payload.
+     * @return a {@link CompletableFuture} containing the removed variant.
      */
-    CompletableFuture<Payload> getAndRemoveFront(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Variant> popHead(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Payload> getAndRemoveFront(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return getAndRemoveFront(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Variant> popHead(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return popHead(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Payload> getAndRemoveFront(String key) {
-        return getAndRemoveFront(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popHead(String key) {
+        return popHead(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveFront(byte[] key) {
-        return getAndRemoveFront(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popHead(byte[] key) {
+        return popHead(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveFront(String key, KeyHintData hint) {
-        return getAndRemoveFront(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popHead(String key, KeyHintData hint) {
+        return popHead(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveFront(byte[] key, KeyHintData hint) {
-        return getAndRemoveFront(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popHead(byte[] key, KeyHintData hint) {
+        return popHead(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveFront(String key, KeyHintData hint, int clientId) {
-        return getAndRemoveFront(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> popHead(String key, KeyHintData hint, int clientId) {
+        return popHead(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveFront(byte[] key, KeyHintData hint, int clientId) {
-        return getAndRemoveFront(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> popHead(byte[] key, KeyHintData hint, int clientId) {
+        return popHead(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
@@ -53,44 +51,44 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing the head payload.
+     * @return a {@link CompletableFuture} containing the head variant.
      */
-    CompletableFuture<Payload> getHead(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Variant> peekHead(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Payload> getHead(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return getHead(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Variant> peekHead(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return peekHead(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Payload> getHead(String key) {
-        return getHead(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(String key) {
+        return peekHead(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getHead(byte[] key) {
-        return getHead(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(byte[] key) {
+        return peekHead(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getHead(String key, KeyHintData hint) {
-        return getHead(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(String key, KeyHintData hint) {
+        return peekHead(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getHead(byte[] key, KeyHintData hint) {
-        return getHead(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(byte[] key, KeyHintData hint) {
+        return peekHead(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getHead(String key, int clientId) {
-        return getHead(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(String key, int clientId) {
+        return peekHead(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getHead(byte[] key, int clientId) {
-        return getHead(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(byte[] key, int clientId) {
+        return peekHead(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getHead(String key, KeyHintData hint, int clientId) {
-        return getHead(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(String key, KeyHintData hint, int clientId) {
+        return peekHead(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getHead(byte[] key, KeyHintData hint, int clientId) {
-        return getHead(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekHead(byte[] key, KeyHintData hint, int clientId) {
+        return peekHead(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
@@ -100,44 +98,44 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing the tail payload.
+     * @return a {@link CompletableFuture} containing the tail variant.
      */
-    CompletableFuture<Payload> getTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Variant> peekTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Payload> getTail(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return getTail(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Variant> peekTail(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return peekTail(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Payload> getTail(String key) {
-        return getTail(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(String key) {
+        return peekTail(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getTail(byte[] key) {
-        return getTail(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(byte[] key) {
+        return peekTail(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getTail(String key, KeyHintData hint) {
-        return getTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(String key, KeyHintData hint) {
+        return peekTail(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getTail(byte[] key, KeyHintData hint) {
-        return getTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(byte[] key, KeyHintData hint) {
+        return peekTail(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getTail(String key, int clientId) {
-        return getTail(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(String key, int clientId) {
+        return peekTail(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getTail(byte[] key, int clientId) {
-        return getTail(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(byte[] key, int clientId) {
+        return peekTail(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getTail(String key, KeyHintData hint, int clientId) {
-        return getTail(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(String key, KeyHintData hint, int clientId) {
+        return peekTail(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getTail(byte[] key, KeyHintData hint, int clientId) {
-        return getTail(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> peekTail(byte[] key, KeyHintData hint, int clientId) {
+        return peekTail(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
@@ -147,36 +145,36 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing the removed payload.
+     * @return a {@link CompletableFuture} containing the removed variant.
      */
-    CompletableFuture<Payload> getAndRemoveTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Variant> popTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Payload> getAndRemoveTail(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return getAndRemoveTail(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Variant> popTail(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return popTail(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Payload> getAndRemoveTail(String key) {
-        return getAndRemoveTail(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popTail(String key) {
+        return popTail(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveTail(byte[] key) {
-        return getAndRemoveTail(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popTail(byte[] key) {
+        return popTail(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveTail(String key, KeyHintData hint) {
-        return getAndRemoveTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popTail(String key, KeyHintData hint) {
+        return popTail(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveTail(byte[] key, KeyHintData hint) {
-        return getAndRemoveTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> popTail(byte[] key, KeyHintData hint) {
+        return popTail(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveTail(String key, KeyHintData hint, int clientId) {
-        return getAndRemoveTail(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> popTail(String key, KeyHintData hint, int clientId) {
+        return popTail(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Payload> getAndRemoveTail(byte[] key, KeyHintData hint, int clientId) {
-        return getAndRemoveTail(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> popTail(byte[] key, KeyHintData hint, int clientId) {
+        return popTail(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
@@ -184,44 +182,68 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      *
      * @param key      target container key in byte array form.
      * @param hint     optional key routing hint.
-     * @param data     list of payloads to add.
+     * @param data     list of Variant values to add.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing count of elements added.
      */
-    CompletableFuture<Integer> addElementToTail(byte[] key,
-                                                KeyHintData hint,
-                                                List<Payload> data,
-                                                int clientId,
-                                                Duration timeout);
+    CompletableFuture<Integer> pushTail(byte[] key,
+                                        KeyHintData hint,
+                                        List<Variant> data,
+                                        int clientId,
+                                        Duration timeout);
 
-    default CompletableFuture<Integer> addElementToTail(String key, KeyHintData hint, List<Payload> data,
-                                                        int clientId, Duration timeout) {
-        return addElementToTail(serializeKey(key), hint, data, clientId, timeout);
+    default CompletableFuture<Integer> pushTail(String key, KeyHintData hint, List<Variant> data,
+                                                int clientId, Duration timeout) {
+        return pushTail(serializeKey(key), hint, data, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementToTail(String key, List<Payload> data) {
-        return addElementToTail(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushTail(String key, List<Variant> data) {
+        return pushTail(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToTail(byte[] key, List<Payload> data) {
-        return addElementToTail(key, null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushTail(byte[] key, List<Variant> data) {
+        return pushTail(key, null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToTail(String key, KeyHintData hint, List<Payload> data) {
-        return addElementToTail(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushTail(String key, KeyHintData hint, List<Variant> data) {
+        return pushTail(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data) {
-        return addElementToTail(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushTail(byte[] key, KeyHintData hint, List<Variant> data) {
+        return pushTail(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToTail(String key, KeyHintData hint, List<Payload> data, int clientId) {
-        return addElementToTail(serializeKey(key), hint, data, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> pushTail(String key, KeyHintData hint, List<Variant> data, int clientId) {
+        return pushTail(serializeKey(key), hint, data, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToTail(byte[] key, KeyHintData hint, List<Payload> data, int clientId) {
-        return addElementToTail(key, hint, data, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> pushTail(byte[] key, KeyHintData hint, List<Variant> data, int clientId) {
+        return pushTail(key, hint, data, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> pushTail(String key, List<Variant> data, int clientId) {
+        return pushTail(serializeKey(key), null, data, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> pushTail(byte[] key, List<Variant> data, int clientId) {
+        return pushTail(key, null, data, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> pushTail(String key, int clientId, List<Variant> data) {
+        return pushTail(serializeKey(key), null, data, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> pushTail(byte[] key, int clientId, List<Variant> data) {
+        return pushTail(key, null, data, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> pushTail(String key, KeyHintData hint, int clientId, List<Variant> data) {
+        return pushTail(serializeKey(key), hint, data, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> pushTail(byte[] key, KeyHintData hint, int clientId, List<Variant> data) {
+        return pushTail(key, hint, data, clientId, getDefaultTimeout());
     }
 
     /**
@@ -229,44 +251,44 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      *
      * @param key      target container key in byte array form.
      * @param hint     optional key routing hint.
-     * @param data     list of payloads to add.
+     * @param data     list of Variant values to add.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing count of elements added.
      */
-    CompletableFuture<Integer> addElementToHead(byte[] key,
-                                                KeyHintData hint,
-                                                List<Payload> data,
-                                                int clientId,
-                                                Duration timeout);
+    CompletableFuture<Integer> pushHead(byte[] key,
+                                        KeyHintData hint,
+                                        List<Variant> data,
+                                        int clientId,
+                                        Duration timeout);
 
-    default CompletableFuture<Integer> addElementToHead(String key, KeyHintData hint, List<Payload> data,
-                                                        int clientId, Duration timeout) {
-        return addElementToHead(serializeKey(key), hint, data, clientId, timeout);
+    default CompletableFuture<Integer> pushHead(String key, KeyHintData hint, List<Variant> data,
+                                                int clientId, Duration timeout) {
+        return pushHead(serializeKey(key), hint, data, clientId, timeout);
     }
 
-    default CompletableFuture<Integer> addElementToHead(String key, List<Payload> data) {
-        return addElementToHead(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushHead(String key, List<Variant> data) {
+        return pushHead(serializeKey(key), null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToHead(byte[] key, List<Payload> data) {
-        return addElementToHead(key, null, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushHead(byte[] key, List<Variant> data) {
+        return pushHead(key, null, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToHead(String key, KeyHintData hint, List<Payload> data) {
-        return addElementToHead(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushHead(String key, KeyHintData hint, List<Variant> data) {
+        return pushHead(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToHead(byte[] key, KeyHintData hint, List<Payload> data) {
-        return addElementToHead(key, hint, data, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> pushHead(byte[] key, KeyHintData hint, List<Variant> data) {
+        return pushHead(key, hint, data, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToHead(String key, KeyHintData hint, List<Payload> data, int clientId) {
-        return addElementToHead(serializeKey(key), hint, data, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> pushHead(String key, KeyHintData hint, List<Variant> data, int clientId) {
+        return pushHead(serializeKey(key), hint, data, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Integer> addElementToHead(byte[] key, KeyHintData hint, List<Payload> data, int clientId) {
-        return addElementToHead(key, hint, data, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> pushHead(byte[] key, KeyHintData hint, List<Variant> data, int clientId) {
+        return pushHead(key, hint, data, clientId, getDefaultTimeout());
     }
 
     /**
@@ -276,44 +298,44 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing true if successful.
+     * @return a {@link CompletableFuture} containing the count of deleted elements.
      */
-    CompletableFuture<Boolean> removeTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Integer> deleteTail(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Boolean> removeTail(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return removeTail(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Integer> deleteTail(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return deleteTail(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Boolean> removeTail(String key) {
-        return removeTail(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(String key) {
+        return deleteTail(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(byte[] key) {
-        return removeTail(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(byte[] key) {
+        return deleteTail(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(String key, KeyHintData hint) {
-        return removeTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(String key, KeyHintData hint) {
+        return deleteTail(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(byte[] key, KeyHintData hint) {
-        return removeTail(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(byte[] key, KeyHintData hint) {
+        return deleteTail(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(String key, int clientId) {
-        return removeTail(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(String key, int clientId) {
+        return deleteTail(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(byte[] key, int clientId) {
-        return removeTail(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(byte[] key, int clientId) {
+        return deleteTail(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(String key, KeyHintData hint, int clientId) {
-        return removeTail(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(String key, KeyHintData hint, int clientId) {
+        return deleteTail(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeTail(byte[] key, KeyHintData hint, int clientId) {
-        return removeTail(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteTail(byte[] key, KeyHintData hint, int clientId) {
+        return deleteTail(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
@@ -323,43 +345,43 @@ public interface HurriCacheClientDequeBased extends HurriCacheClientInterfaceCom
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing true if successful.
+     * @return a {@link CompletableFuture} containing the count of deleted elements.
      */
-    CompletableFuture<Boolean> removeHead(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Integer> deleteHead(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Boolean> removeHead(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return removeHead(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Integer> deleteHead(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return deleteHead(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Boolean> removeHead(String key) {
-        return removeHead(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(String key) {
+        return deleteHead(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(byte[] key) {
-        return removeHead(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(byte[] key) {
+        return deleteHead(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(String key, KeyHintData hint) {
-        return removeHead(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(String key, KeyHintData hint) {
+        return deleteHead(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(byte[] key, KeyHintData hint) {
-        return removeHead(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(byte[] key, KeyHintData hint) {
+        return deleteHead(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(String key, int clientId) {
-        return removeHead(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(String key, int clientId) {
+        return deleteHead(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(byte[] key, int clientId) {
-        return removeHead(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(byte[] key, int clientId) {
+        return deleteHead(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(String key, KeyHintData hint, int clientId) {
-        return removeHead(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(String key, KeyHintData hint, int clientId) {
+        return deleteHead(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> removeHead(byte[] key, KeyHintData hint, int clientId) {
-        return removeHead(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Integer> deleteHead(byte[] key, KeyHintData hint, int clientId) {
+        return deleteHead(key, hint, clientId, getDefaultTimeout());
     }
 }

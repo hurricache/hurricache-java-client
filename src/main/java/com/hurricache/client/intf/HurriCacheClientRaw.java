@@ -13,95 +13,96 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing deleted value bytes, or {@code null} if not found.
+     * @return a {@link CompletableFuture} containing a {@link Variant} with the deleted value, or {@code null} if not found.
      */
-    CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Variant> pop(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return getAndDeleteValue(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Variant> pop(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return pop(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(String key) {
-        return getAndDeleteValue(key, getDefaultClientId());
+    default CompletableFuture<Variant> pop(String key) {
+        return pop(key, getDefaultClientId());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key) {
-        return getAndDeleteValue(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> pop(byte[] key) {
+        return pop(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint) {
-        return getAndDeleteValue(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> pop(String key, KeyHintData hint) {
+        return pop(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint) {
-        return getAndDeleteValue(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> pop(byte[] key, KeyHintData hint) {
+        return pop(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(String key, int clientId) {
-        return getAndDeleteValue(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> pop(String key, int clientId) {
+        return pop(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, int clientId) {
-        return getAndDeleteValue(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> pop(byte[] key, int clientId) {
+        return pop(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(String key, KeyHintData hint, int clientId) {
-        return getAndDeleteValue(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> pop(String key, KeyHintData hint, int clientId) {
+        return pop(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHintData hint, int clientId) {
-        return getAndDeleteValue(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> pop(byte[] key, KeyHintData hint, int clientId) {
+        return pop(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
      * Creates a standard Key-Value entry in the cache storage.
+     * The value can be bytes, int, or double depending on the {@link Variant} type.
      *
      * @param key      target key in byte array form.
      * @param hint     optional key routing hint.
-     * @param value    payload bytes to store.
+     * @param value    payload to store (Variant: bytes, int, or double).
      * @param ttl      entry expiration duration.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing assigned or calculated {@link KeyHint}.
      */
-    CompletableFuture<KeyHintData> createKeyValue(byte[] key,
-                                                  KeyHintData hint,
-                                                  byte[] value,
-                                                  Duration ttl,
-                                                  int clientId,
-                                                  Duration timeout);
+    CompletableFuture<KeyHintData> create(byte[] key,
+                                          KeyHintData hint,
+                                          Variant value,
+                                          Duration ttl,
+                                          int clientId,
+                                          Duration timeout);
 
-    default CompletableFuture<KeyHintData> createKeyValue(String key, KeyHintData hint, byte[] value,
-                                                         Duration ttl, int clientId, Duration timeout) {
-        return createKeyValue(serializeKey(key), hint, value, ttl, clientId, timeout);
+    default CompletableFuture<KeyHintData> create(String key, KeyHintData hint, Variant value,
+                                                  Duration ttl, int clientId, Duration timeout) {
+        return create(serializeKey(key), hint, value, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value, int clientId, Duration timeout) {
-        return createKeyValue(key, null, value, getDefaultTtl(), clientId, timeout);
+    default CompletableFuture<KeyHintData> create(byte[] key, Variant value, int clientId, Duration timeout) {
+        return create(key, null, value, getDefaultTtl(), clientId, timeout);
     }
 
-    default CompletableFuture<KeyHintData> createKeyValue(String key, byte[] value) {
-        return createKeyValue(serializeKey(key), value, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<KeyHintData> create(String key, Variant value) {
+        return create(serializeKey(key), value, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value) {
-        return createKeyValue(key, value, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<KeyHintData> create(byte[] key, Variant value) {
+        return create(key, value, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createKeyValue(String key, KeyHintData hint, byte[] value, int clientId) {
-        return createKeyValue(serializeKey(key), hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<KeyHintData> create(String key, KeyHintData hint, Variant value, int clientId) {
+        return create(serializeKey(key), hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, KeyHintData hint, byte[] value, int clientId) {
-        return createKeyValue(key, hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<KeyHintData> create(byte[] key, KeyHintData hint, Variant value, int clientId) {
+        return create(key, hint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createKeyValue(String key, byte[] value, int clientId) {
-        return createKeyValue(serializeKey(key), null, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<KeyHintData> create(String key, Variant value, int clientId) {
+        return create(serializeKey(key), null, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createKeyValue(byte[] key, byte[] value, int clientId) {
-        return createKeyValue(key, value, clientId, getDefaultTimeout());
+    default CompletableFuture<KeyHintData> create(byte[] key, Variant value, int clientId) {
+        return create(key, value, clientId, getDefaultTimeout());
     }
 
     /**
@@ -111,87 +112,88 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} with value bytes, or {@code null} if the key does not exist.
+     * @return a {@link CompletableFuture} with a {@link Variant} containing the value, or {@code null} if the key does not exist.
      */
-    CompletableFuture<byte[]> getValue(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Variant> get(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<byte[]> getValue(String key) {
-        return getValue(key, getDefaultClientId());
+    default CompletableFuture<Variant> get(String key) {
+        return get(key, getDefaultClientId());
     }
 
-    default CompletableFuture<byte[]> getValue(byte[] key) {
-        return getValue(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> get(byte[] key) {
+        return get(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(String key, KeyHintData hint) {
-        return getValue(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> get(String key, KeyHintData hint) {
+        return get(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(byte[] key, KeyHintData hint) {
-        return getValue(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> get(byte[] key, KeyHintData hint) {
+        return get(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(String key, int clientId) {
-        return getValue(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> get(String key, int clientId) {
+        return get(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(byte[] key, int clientId) {
-        return getValue(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> get(byte[] key, int clientId) {
+        return get(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(String key, KeyHintData hint, int clientId) {
-        return getValue(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> get(String key, KeyHintData hint, int clientId) {
+        return get(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> getValue(byte[] key, KeyHintData hint, int clientId) {
-        return getValue(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> get(byte[] key, KeyHintData hint, int clientId) {
+        return get(key, hint, clientId, getDefaultTimeout());
     }
 
     /**
      * Replaces payload value of an existing Key-Value entry.
+     * The value can be bytes, int, or double depending on the {@link Variant} type.
      *
      * @param key      target key in byte array form.
      * @param hint     optional key routing hint.
-     * @param value    new payload bytes.
+     * @param value    new payload (Variant: bytes, int, or double).
      * @param ttl      updated TTL duration.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} with previous value bytes if configured, or acknowledgment bytes.
+     * @return a {@link CompletableFuture} with a {@link Variant} containing the previous value if configured, or acknowledgment.
      */
-    CompletableFuture<byte[]> updateKeyValue(byte[] key,
-                                             KeyHintData hint,
-                                             byte[] value,
-                                             Duration ttl,
-                                             int clientId,
-                                             Duration timeout);
+    CompletableFuture<Variant> replace(byte[] key,
+                                       KeyHintData hint,
+                                       Variant value,
+                                       Duration ttl,
+                                       int clientId,
+                                       Duration timeout);
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData hint, byte[] value,
-                                                     Duration ttl, int clientId, Duration timeout) {
-        return updateKeyValue(serializeKey(key), hint, value, ttl, clientId, timeout);
+    default CompletableFuture<Variant> replace(String key, KeyHintData hint, Variant value,
+                                               Duration ttl, int clientId, Duration timeout) {
+        return replace(serializeKey(key), hint, value, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData hint, byte[] value) {
-        return updateKeyValue(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> replace(byte[] key, KeyHintData hint, Variant value) {
+        return replace(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value) {
-        return updateKeyValue(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> replace(String key, Variant value) {
+        return replace(serializeKey(key), null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHintData keyHint, byte[] value, int clientId) {
-        return updateKeyValue(key, keyHint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> replace(byte[] key, KeyHintData keyHint, Variant value, int clientId) {
+        return replace(key, keyHint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData keyHint, byte[] value, int clientId) {
-        return updateKeyValue(serializeKey(key), keyHint, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> replace(String key, KeyHintData keyHint, Variant value, int clientId) {
+        return replace(serializeKey(key), keyHint, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, KeyHintData hint, byte[] value) {
-        return updateKeyValue(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Variant> replace(String key, KeyHintData hint, Variant value) {
+        return replace(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value, int clientId) {
-        return updateKeyValue(serializeKey(key), null, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    default CompletableFuture<Variant> replace(String key, Variant value, int clientId) {
+        return replace(serializeKey(key), null, value, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     /**
@@ -203,33 +205,33 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} returning {@code true} if key exists, {@code false} otherwise.
      */
-    CompletableFuture<Boolean> existKey(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<Boolean> containsKey(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<Boolean> existKey(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return existKey(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Boolean> containsKey(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return containsKey(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Boolean> existKey(String key) {
-        return existKey(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(String key) {
+        return containsKey(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existKey(byte[] key) {
-        return existKey(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(byte[] key) {
+        return containsKey(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existKey(String key, KeyHintData hint) {
-        return existKey(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(String key, KeyHintData hint) {
+        return containsKey(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existKey(byte[] key, KeyHintData hint) {
-        return existKey(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(byte[] key, KeyHintData hint) {
+        return containsKey(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existKey(String key, int clientId) {
-        return existKey(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(String key, int clientId) {
+        return containsKey(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<Boolean> existKey(byte[] key, int clientId) {
-        return existKey(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<Boolean> containsKey(byte[] key, int clientId) {
+        return containsKey(key, null, clientId, getDefaultTimeout());
     }
 }
