@@ -3,895 +3,443 @@ package com.hurricache.client.standalone.simple;
 import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
 import com.hurricache.grpc.LockStatus;
 import com.hurricache.grpc.LockType;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
-/**
- * Comprehensive tests for HashedMap (MAP container) operations.
- */
 public class HashMapOperationsTest extends TestBase {
 
-    private static final Duration TEST_TIMEOUT = Duration.ofSeconds(2);
-    private static final int DEFAULT_CLIENT_ID = 101;
     private static final int OWNER_CLIENT_ID = 100;
     private static final int INTRUDER_CLIENT_ID = 200;
 
-    private String baseKey;
-
-    @BeforeEach
-    void setUp() {
-        baseKey = "hashmap_test_" + UUID.randomUUID();
-    }
-
-
-    private Payload p(String val) {
-        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private String str(Payload payload) {
-        return new String(payload.getValue(), StandardCharsets.UTF_8);
-    }
-
     // =========================================================================
-    // 14. UNSUPPORTED METHODS FOR MAP
+    // 1. CREATE + STREAM MAP
     // =========================================================================
 
     @Test
-    @DisplayName("Methods not applicable to MAP should throw an error")
-    void testUnsupportedMethodsForMap() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_unsupported";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        // getElementAtPosition — not applicable to MAP
-        try {
-            client.getElementAtPosition(mapKey, null, 0).get();
-            fail("getElementAtPosition should throw an error for MAP");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
-        }
-
-        // getAndRemoveElementAtPosition — not applicable to MAP
-        try {
-            client.getAndRemoveElementAtPosition(mapKey, null, 0).get();
-            fail("getAndRemoveElementAtPosition should throw an error for MAP");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
-        }
-
-        // getHead — not applicable to MAP
-        try {
-            client.getHead(mapKey, null).get();
-            fail("getHead should throw an error for MAP");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
-        }
-
-        // getTail — not applicable to MAP
-        try {
-            client.getTail(mapKey, null).get();
-            fail("getTail should throw an error for MAP");
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
-        }
-
-        // addElementToPosition — not applicable to MAP (skipped, as method may be supported)
-        // try {
-        //     client.addElementToPosition(mapKey, null, List.of(p("v1")), 0).get();
-        //     fail("addElementToPosition should throw an error for MAP");
-        // } catch (ExecutionException e) {
-        //     StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-        //     assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode());
-        // }
-    }
-
-    // =========================================================================
-    // 13.1. LOCK EXPIRATION OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("READ_LOCK for 2s: after expiration another client can read")
-    void testReadLockExpiration() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_read_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        // Acquire READ_LOCK for 2 seconds
-        LockStatus lock = client.lockObject(mapKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
-        assertEquals(LockStatus.OK, lock);
-
-        // Wait for expiration
-        Thread.sleep(3000);
-
-        // Now another client can read
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(val);
-        assertEquals("v1", new String(val, StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("WRITE_LOCK for 2s: after expiration another client can acquire WRITE_LOCK")
-    void testWriteLockExpiration() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_write_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        // Acquire WRITE_LOCK for 2 seconds
-        LockStatus lock = client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
-        assertEquals(LockStatus.OK, lock);
-
-        // Wait for expiration
-        Thread.sleep(3000);
-
-        // Now intruder can get WRITE_LOCK
-        LockStatus newLock = client.lockObject(mapKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, newLock);
-
-        client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
-    }
-
-    @Test
-    @DisplayName("GLOBAL for 2s: after expiration another client can acquire WRITE_LOCK")
-    void testGlobalLockExpiration() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_global_lock_exp";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        // Acquire GLOBAL LOCK for 2 seconds
-        LockStatus lock = client.lockObject(mapKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
-        assertEquals(LockStatus.OK, lock);
-
-        // Wait for expiration
-        Thread.sleep(3000);
-
-        // Now intruder can get WRITE_LOCK
-        LockStatus newLock = client.lockObject(mapKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, newLock);
-
-        client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
-    }
-
-    @Test
-    @DisplayName("Any lock for 2s: after expiration new lock OK for another client")
-    void testLockExpirationAllowsNewLock() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_lock_exp_any";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        // Acquire READ_LOCK for 2 seconds
-        LockStatus lock = client.lockObject(mapKey, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(2)).get();
-        assertEquals(LockStatus.OK, lock);
-
-        // Wait for expiration
-        Thread.sleep(3000);
-
-        // Now intruder can get WRITE_LOCK
-        LockStatus newLock = client.lockObject(mapKey, LockType.WRITE_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, newLock);
-
-        client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
-    }
-
-    // =========================================================================
-    // 13. LOCKING OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("READ_LOCK: multiple clients can read in parallel")
-    void testReadLockParallelReads() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_read_lock";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        LockStatus lock1 = client.lockObject(mapKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock1, "First client should get READ_LOCK");;
-
-        LockStatus lock2 = client.lockObject(mapKey, LockType.READ_LOCK, INTRUDER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.CANT_LOCK, lock2, "Second client should not get READ_LOCK");;
-
-        // Both can read
-        byte[] val1 = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(val1);
-
-        byte[] val2 = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(val2);
-
-        // Release locks
-        client.unlockObject(mapKey, DEFAULT_CLIENT_ID).get();
-        client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
-    }
-
-    @Test
-    @DisplayName("WRITE_LOCK: only owner reads and writes, others blocked")
-    void testWriteLockExclusiveAccess() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_write_lock";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        LockStatus lock = client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Owner should get WRITE_LOCK");;
-
-        // Owner can read
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(val);
-
-        // Owner can add elements
-        List<Payload> keys = List.of(p("k2"));
-        List<Payload> values = List.of(p("v2"));
-        Integer added = client.addElementHashMap(bytes(mapKey), null, keys, values, OWNER_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(1, added);
-
-        // Intruder cannot read
-        assertDenied(client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
-
-        // Intruder cannot add
-        List<Payload> intruderKeys = List.of(p("k3"));
-        List<Payload> intruderValues = List.of(p("v3"));
-        assertDenied(client.addElementHashMap(bytes(mapKey), null, intruderKeys, intruderValues, INTRUDER_CLIENT_ID, TEST_TIMEOUT));
-
-        // Release lock
-        client.unlockObject(mapKey, OWNER_CLIENT_ID).get();
-    }
-
-    @Test
-    @DisplayName("GLOBAL: only owner can do any operations, all others are blocked")
-    void testGlobalLockExclusiveAccess() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_global_lock";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        LockStatus lock = client.lockObject(mapKey, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock, "Owner should get GLOBAL LOCK");;
-
-        // Owner can read
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), OWNER_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(val);
-
-        // Intruder cannot read
-        assertDenied(client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), INTRUDER_CLIENT_ID, TEST_TIMEOUT));
-
-        // Intruder cannot add
-        List<Payload> intruderKeys = List.of(p("k2"));
-        List<Payload> intruderValues = List.of(p("v2"));
-        assertDenied(client.addElementHashMap(bytes(mapKey), null, intruderKeys, intruderValues, INTRUDER_CLIENT_ID, TEST_TIMEOUT));
-
-        // Intruder cannot unlock
-        LockStatus unlockStatus = client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
-        assertEquals(LockStatus.CANT_UNLOCK, unlockStatus);
-
-        // Release lock by owner
-        client.unlockObject(mapKey, OWNER_CLIENT_ID).get();
-    }
-
-    @Test
-    @DisplayName("unlockObject: only owner can unlock")
-    void testUnlockByOwnerOnly() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_unlock_owner";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        LockStatus lock = client.lockObject(mapKey, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock);
-
-        // Intruder tries to unlock
-        LockStatus status = client.unlockObject(mapKey, INTRUDER_CLIENT_ID).get();
-        assertEquals(LockStatus.CANT_UNLOCK, status);
-
-        // Owner unlocks
-        LockStatus validUnlock = client.unlockObject(mapKey, OWNER_CLIENT_ID).get();
-        assertEquals(LockStatus.OK, validUnlock);
-    }
-
-    @Test
-    @DisplayName("READ_LOCK: read OK, but write is denied")
-    void testReadLockBlocksWrites() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_read_lock_writes";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        LockStatus lock = client.lockObject(mapKey, LockType.READ_LOCK, DEFAULT_CLIENT_ID, Duration.ofSeconds(30)).get();
-        assertEquals(LockStatus.OK, lock);
-
-        // Read under READ_LOCK OK
-        byte[] val = client.getContainerValue(bytes(mapKey), null, p("k1").getValue(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(val);
-
-        // Write is denied
-        List<Payload> keys = List.of(p("k2"));
-        List<Payload> values = List.of(p("v2"));
-        assertDenied(client.addElementHashMap(bytes(mapKey), null, keys, values, DEFAULT_CLIENT_ID, TEST_TIMEOUT));
-
-        client.unlockObject(mapKey, DEFAULT_CLIENT_ID).get();
-    }
-
-    // =========================================================================
-    // 12. TTL OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("setTtl sets TTL on container")
-    void testSetTtl() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_ttl_set";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        Boolean setResult = client.setTtl(bytes(mapKey), null, 100, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertTrue(setResult, "TTL should be successfully set");;
-    }
-
-    @Test
-    @DisplayName("getTtl gets container TTL")
-    void testGetTtl() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_ttl_get";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        client.setTtl(bytes(mapKey), null, 100, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-
-        Long ttl = client.getTtl(bytes(mapKey), null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(ttl);
-        assertTrue(ttl > 0, "TTL should be greater than 0");;
-    }
-
-    @Test
-    @DisplayName("After TTL expiration getContainerValue returns NOT_FOUND")
-    void testTtlExpiration() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_ttl_expire";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        // Set TTL = 1 second
-        client.setTtl(bytes(mapKey), null, 1, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-
-        // Wait for TTL expiration
-        Thread.sleep(1500);
-
-        // Verify container is deleted - getContainerValue will return NOT_FOUND
-        assertNotFound(client.getContainerValue(bytes(mapKey), null, p("k1").getValue()));
-    }
-
-    // =========================================================================
-    // 11. GET AND REMOVE CONTAINER VALUE OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("getAndRemoveContainerValue extracts and removes element")
-    void testGetAndRemoveContainerValue() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_get_remove";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        byte[] removedValue = client.getAndRemoveContainerValue(bytes(mapKey), null, p("k1").getValue()).get();
-        assertNotNull(removedValue);
-        assertEquals("v1", new String(removedValue, StandardCharsets.UTF_8));
-
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(1, result.size(), "1 element remains");
-        assertFalse(result.containsKey(p("k1")));
-    }
-
-    @Test
-    @DisplayName("getAndRemoveContainerValue for non-existent key returns NOT_FOUND")
-    void testGetAndRemoveContainerValueNotFound() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_get_remove_nf";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        ExecutionException ex = Assertions.assertThrows(
-                ExecutionException.class,
-                () -> client.getAndRemoveContainerValue(bytes(mapKey), null, p("nonexistent").getValue()).get()
-        );
-        Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
-        assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
-    }
-
-    // =========================================================================
-    // 10. GET AND UPDATE CONTAINER VALUE OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("getContainerValue gets value by key")
-    void testGetContainerValue() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_get_val";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        byte[] value = client.getContainerValue(bytes(mapKey), null, p("k1").getValue()).get();
-        assertNotNull(value);
-        assertEquals("v1", new String(value, StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("getContainerValue for non-existent key returns NOT_FOUND")
-    void testGetContainerValueNotFound() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_get_val_nf";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        ExecutionException ex = Assertions.assertThrows(
-                ExecutionException.class,
-                () -> client.getContainerValue(bytes(mapKey), null, p("nonexistent").getValue()).get()
-        );
-        Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
-        assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
-    }
-
-    @Test
-    @DisplayName("updateContainerValue updates value and returns old one")
-    void testUpdateContainerValue() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_update";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("old_value")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        byte[] elemKey = bytes("k1");
-        byte[] oldValue = client.updateContainerValue(bytes(mapKey), null, elemKey, p("new_value").getValue()).get();
-        assertNotNull(oldValue, "oldValue should not be null");;
-        assertEquals("old_value", new String(oldValue, StandardCharsets.UTF_8));
-
-        byte[] newValue = client.getContainerValue(bytes(mapKey), null, elemKey).get();
-        assertEquals("new_value", new String(newValue, StandardCharsets.UTF_8));
-    }
-
-    @Test
-    @DisplayName("updateContainerValue for non-existent key returns NOT_FOUND")
-    void testUpdateContainerValueNotFound() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_update_nf";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        ExecutionException ex = Assertions.assertThrows(
-                ExecutionException.class,
-                () -> client.updateContainerValue(bytes(mapKey), null, p("nonexistent").getValue(), p("new").getValue()).get()
-        );
-        Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
-        assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
-    }
-
-    // =========================================================================
-    // 9. GET SIZE OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("getSize for empty map returns 0")
-    void testGetSizeEmptyMap() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_size_empty";
-        client.createMap(mapKey, Map.of()).get();
-
-        Integer size = client.getSize(mapKey, null).get();
-        assertEquals(0, size, "Empty map should have size 0");;
-    }
-
-    @Test
-    @DisplayName("getSize for map with elements returns correct count")
-    void testGetSizeWithElements() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_size_with";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2"),
-                p("k3"), p("v3")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        Integer size = client.getSize(mapKey, null).get();
-        assertEquals(3, size, "Map should contain 3 elements");;
-    }
-
-    // =========================================================================
-    // 8. REMOVE CONTAINER OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("remove deletes existing container")
-    void testRemoveExistingContainer() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_cont";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        Boolean removed = client.remove(bytes(mapKey), null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertTrue(removed, "Container should be removed");;
-
-        // Verify container is actually removed
-        try {
-            client.streamMap(mapKey).get();
-            fail("streamMap of removed container should throw an error");;
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
-        }
-    }
-
-    @Test
-    @DisplayName("remove of non-existent container returns NOT_FOUND")
-    void testRemoveNonExistentContainer() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_nonexist";
-
-        ExecutionException ex = Assertions.assertThrows(
-                ExecutionException.class,
-                () -> client.remove(bytes(mapKey), null, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get()
-        );
-        Assertions.assertInstanceOf(StatusRuntimeException.class, ex.getCause());
-        assertEquals(Status.Code.NOT_FOUND, ((StatusRuntimeException) ex.getCause()).getStatus().getCode());
-    }
-
-    // =========================================================================
-    // 7. REMOVE ELEMENT AT POSITION (NOT SUPPORTED FOR MAP)
-    // =========================================================================
-
-    @Test
-    @DisplayName("removeElementAtPosition not supported for MAP - returns error")
-    void testRemoveElementAtPositionNotSupported() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_pos";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        try {
-            client.removeElementAtPosition(bytes(mapKey), null, 0, 0).get();
-            fail("removeElementAtPosition should throw an error for MAP");;
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            assertEquals(Status.Code.INTERNAL, cause.getStatus().getCode(), "Should be INTERNAL error");;
-        }
-    }
-
-    // =========================================================================
-    // 6. CONTAINS CONTAINER KEY OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("containsContainerKey checks existing key")
-    void testContainsContainerKeyExists() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_contains_exist";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        Boolean exists = client.containsContainerKey(bytes(mapKey), null, p("k1").getValue()).get();
-        assertTrue(exists, "Key k1 should exist");;
-    }
-
-    @Test
-    @DisplayName("containsContainerKey checks non-existent key")
-    void testContainsContainerKeyNotExists() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_contains_notexist";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        Boolean notExists = client.containsContainerKey(bytes(mapKey), null, p("nonexistent").getValue()).get();
-        assertFalse(notExists, "Key nonexistent should not exist");;
-    }
-
-    // =========================================================================
-    // 5. REMOVE FROM CONTAINER WITH CONTAINERTYPE OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("removeFromContainer with ContainerType.MAP removes by key and value")
-    void testRemoveFromContainerWithType() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_type";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        List<Payload> keys = List.of(Payload.of(p("k1").getValue()));
-        List<Payload> values = List.of(Payload.of(p("v1").getValue()));
-
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.MAP, keys, values).get();
-        assertEquals(1, removed, "1 element should be removed");;
-
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(1, result.size());
-        assertFalse(result.containsKey(p("k1")));
-    }
-
-    @Test
-    @DisplayName("removeFromContainer with ContainerType.MAP removes by key even if value does not match")
-    void testRemoveFromContainerWithTypeByWrongValue() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_type";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        List<Payload> keys = List.of(Payload.of(p("k1").getValue()));
-        List<Payload> values = List.of(Payload.of(p("wrong_value").getValue()));
-
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, ContainerType.MAP, keys, values).get();
-        assertEquals(0, removed, "Element removed by key");;
-
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(2, result.size(), "1 element remains");
-    }
-
-    // =========================================================================
-    // 4. REMOVE FROM CONTAINER BY KEY OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("removeFromContainer removes element by key and returns 1")
-    void testRemoveFromContainerByKey() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_key";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2"),
-                p("k3"), p("v3")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("k2").getValue()).get();
-        assertEquals(1, removed, "1 element should be removed");;
-
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(2, result.size(), "2 elements remain");;
-        assertFalse(result.containsKey(p("k2")));
-    }
-
-    @Test
-    @DisplayName("removeFromContainer returns 0 for non-existent key")
-    void testRemoveFromContainerByKeyNotFound() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_key_nf";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-        client.createMap(mapKey, initialData).get();
-
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("nonexistent").getValue()).get();
-        assertEquals(0, removed, "Nothing removed (element not found)");;
-    }
-
-    @Test
-    @DisplayName("removeFromContainer from empty container returns 0")
-    void testRemoveFromContainerFromEmptyMap() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_remove_empty";
-        client.createMap(mapKey, Map.of()).get();
-
-        Integer removed = client.removeFromContainer(bytes(mapKey), null, p("k1").getValue()).get();
-        assertEquals(0, removed, "Nothing removed from empty container");;
-    }
-
-    // =========================================================================
-    // 3. ADD ELEMENT HASHMAP OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("addElementHashMap adds elements and returns count")
-    void testAddElementHashMap() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_add";
-        client.createMap(mapKey, Map.of()).get();
-
-        List<Payload> keys = List.of(p("k1"), p("k2"), p("k3"));
-        List<Payload> values = List.of(p("v1"), p("v2"), p("v3"));
-
-        Integer added = client.addElementHashMap(bytes(mapKey), null, keys, values, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(3, added, "3 elements should be added");;
-
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(3, result.size());
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k2".equals(str(e.getKey())) && "v2".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k3".equals(str(e.getKey())) && "v3".equals(str(e.getValue()))));
-    }
-
-    @Test
-    @DisplayName("addElementHashMap does not allow duplicate keys")
-    void testAddElementHashMapNoDuplicates() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_add_nodup";
-        client.createMap(mapKey, Map.of()).get();
-
-        // Add unique keys
-        List<Payload> keys1 = List.of(p("k1"), p("k2"));
-        List<Payload> values1 = List.of(p("v1"), p("v2"));
-        Integer added1 = client.addElementHashMap(bytes(mapKey), null, keys1, values1, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(2, added1);
-
-        // Try to add duplicate k1 - should return 0
-        List<Payload> keys2 = List.of(p("k1"));
-        List<Payload> values2 = List.of(p("v1_new"));
-        Integer added2 = client.addElementHashMap(bytes(mapKey), null, keys2, values2, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(0, added2, "Duplicate key should not be added");;
-
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(2, result.size(), "Should have 2 elements in total");;
-    }
-
-    @Test
-    @DisplayName("addElementHashMap with empty list returns 0")
-    void testAddElementHashMapEmptyList() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_add_empty";
-        client.createMap(mapKey, Map.of()).get();
-
-        Integer added = client.addElementHashMap(bytes(mapKey), null, List.of(), List.of(), DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertEquals(0, added, "Adding empty list should return 0");;
-
-        Map<Payload, Payload> result = client.streamMap(mapKey).get();
-        assertEquals(0, result.size());
-    }
-
-    // =========================================================================
-    // 2. STREAM MAP OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("streamMap of empty HashedMap returns empty response")
-    void testStreamMapEmpty() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_stream_empty";
-
-        KeyHintData hint = client.createMap(mapKey, Map.of()).get();
-        assertNotNull(hint);
-
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
-        assertNotNull(result);
-        assertEquals(0, result.size(), "streamMap of empty map should return empty map");;
-    }
-
-    @Test
-    @DisplayName("streamMap returns all container content")
-    void testStreamMapWithData() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_stream_data";
-        Map<Payload, Payload> initialData = Map.of(
-                p("elem1"), p("val1"),
-                p("elem2"), p("val2"),
-                p("elem3"), p("val3"),
-                p("elem4"), p("val4"),
-                p("elem5"), p("val5")
-        );
-
-        KeyHintData hint = client.createMap(mapKey, initialData).get();
-        assertNotNull(hint);
-
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
-        assertNotNull(result);
-        assertEquals(5, result.size(), "streamMap should return all 5 elements");;
-    }
-
-    @Test
-    @DisplayName("streamMap with explicit clientId")
-    void testStreamMapWithClientId() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_stream_cid";
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1")
-        );
-
-        KeyHintData hint = client.createMap(mapKey, initialData).get();
-        assertNotNull(hint);
-
-        Map<Payload, Payload> result = client.streamMap(bytes(mapKey), hint, DEFAULT_CLIENT_ID, TEST_TIMEOUT).get();
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.getValue()))));
-    }
-
-    // =========================================================================
-    // 1. CREATE MAP OPERATIONS
-    // =========================================================================
-
-    @Test
-    @DisplayName("Creating empty HashedMap")
+    @DisplayName("Create empty map")
     void testCreateEmptyMap() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_empty";
+        String key = "map_empty_" + UUID.randomUUID();
 
-        KeyHintData hint = client.createMap(mapKey, Map.of()).get();
-        assertNotNull(hint, "KeyHint should be created");
+        KeyHintData hint = client.createMap(key, new HashMap<>()).get();
+        assertNotNull(hint);
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
-        assertNotNull(result);
-        assertEquals(0, result.size(), "Empty map should return empty map");;
+        Integer size = client.getSize(key).get();
+        assertEquals(0, size);
     }
 
     @Test
-    @DisplayName("Creating HashedMap with initial data")
-    void testCreateMapWithInitialData() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_initial";
+    @DisplayName("Create map with bytes key-value")
+    void testCreateMapWithBytes() throws ExecutionException, InterruptedException {
+        String key = "map_bytes_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+        data.put(p("key2"), v("value2"));
+        data.put(p("key3"), v("value3"));
 
-        Map<Payload, Payload> initialData = Map.of(
-                p("k1"), p("v1"),
-                p("k2"), p("v2"),
-                p("k3"), p("v3")
-        );
+        KeyHintData hint = client.createMap(key, data).get();
+        assertNotNull(hint);
 
-        KeyHintData hint = client.createMap(mapKey, initialData).get();
-        assertNotNull(hint, "KeyHint should be created");
+        Map<Payload, Variant> stream = client.getMap(key).get();
+        assertEquals(3, stream.size());
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
-        assertNotNull(result);
-        assertEquals(3, result.size(), "Map should contain 3 elements");
-        // Check via stream since streamMap returns new Payload objects
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k1".equals(str(e.getKey())) && "v1".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k2".equals(str(e.getKey())) && "v2".equals(str(e.getValue()))));
-        assertTrue(result.entrySet().stream().anyMatch(e -> "k3".equals(str(e.getKey())) && "v3".equals(str(e.getValue()))));
+        // Collect values and check by type/content
+        List<Variant> values = new ArrayList<>(stream.values());
+        assertEquals(3, values.size());
+
+        // Find "value1" among the values
+        Variant found = values.stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.BYTES)
+            .filter(v -> new String(v.bytesValue(), java.nio.charset.StandardCharsets.UTF_8).equals("value1"))
+            .findFirst()
+            .orElse(null);
+        assertNotNull(found);
     }
 
     @Test
-    @DisplayName("Creating large HashedMap with automatic chunking")
-    void testCreateMapWithLargeDataChunking() throws ExecutionException, InterruptedException {
-        String mapKey = baseKey + "_large";
-        int elementCount = 1500;
-        Map<Payload, Payload> largeData = new java.util.HashMap<>();
+    @DisplayName("Create map with int values")
+    void testCreateMapWithInt() throws ExecutionException, InterruptedException {
+        String key = "map_int_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("k1"), vi(10));
+        data.put(p("k2"), vi(20));
+        data.put(p("k3"), vi(30));
 
-        for (int i = 0; i < elementCount; i++) {
-            largeData.put(p("key_" + i), p("value_" + i + "_" + UUID.randomUUID()));
-        }
+        KeyHintData hint = client.createMap(key, data).get();
+        assertNotNull(hint);
 
-        KeyHintData hint = client.createMap(mapKey, largeData).get();
-        assertNotNull(hint, "KeyHint should be created");
+        Map<Payload, Variant> stream = client.getMap(key).get();
+        assertEquals(3, stream.size());
 
-        Map<Payload, Payload> result = client.streamMap(mapKey, hint).get();
-        assertNotNull(result);
-        assertEquals(elementCount, result.size(), "Map should contain " + elementCount + " elements");;
+        // Collect values by type
+        List<Long> ints = stream.values().stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.INT)
+            .map(Variant::longValue)
+            .sorted()
+            .collect(Collectors.toList());
+        assertEquals(3, ints.size());
+        assertEquals(10, ints.get(0));
+        assertEquals(20, ints.get(1));
+        assertEquals(30, ints.get(2));
+    }
+
+    @Test
+    @DisplayName("Create map with double values")
+    void testCreateMapWithDouble() throws ExecutionException, InterruptedException {
+        String key = "map_double_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("k1"), vd(1.1));
+        data.put(p("k2"), vd(2.2));
+        data.put(p("k3"), vd(3.3));
+
+        KeyHintData hint = client.createMap(key, data).get();
+        assertNotNull(hint);
+
+        Map<Payload, Variant> stream = client.getMap(key).get();
+        assertEquals(3, stream.size());
+
+        // Collect double values
+        List<Double> doubles = stream.values().stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.DOUBLE)
+            .map(Variant::doubleValue)
+            .sorted()
+            .collect(Collectors.toList());
+        assertEquals(3, doubles.size());
+        assertEquals(1.1, doubles.get(0), 0.001);
+        assertEquals(2.2, doubles.get(1), 0.001);
+        assertEquals(3.3, doubles.get(2), 0.001);
+    }
+
+    @Test
+    @DisplayName("Create map with mixed types")
+    void testCreateMapMixedTypes() throws ExecutionException, InterruptedException {
+        String key = "map_mixed_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("str"), v("hello"));
+        data.put(p("int"), vi(42));
+        data.put(p("dbl"), vd(3.14));
+
+        KeyHintData hint = client.createMap(key, data).get();
+        assertNotNull(hint);
+
+        Map<Payload, Variant> stream = client.getMap(key).get();
+        assertEquals(3, stream.size());
+
+        // Collect values by type
+        List<Variant> bytesVals = stream.values().stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.BYTES)
+            .collect(Collectors.toList());
+        List<Variant> intVals = stream.values().stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.INT)
+            .collect(Collectors.toList());
+        List<Variant> dblVals = stream.values().stream()
+            .filter(v -> v.type() == com.hurricache.client.intf.Variant.Type.DOUBLE)
+            .collect(Collectors.toList());
+
+        assertEquals(1, bytesVals.size());
+        assertEquals(1, intVals.size());
+        assertEquals(1, dblVals.size());
+
+        assertEquals("hello", new String(bytesVals.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals(42, intVals.get(0).longValue());
+        assertEquals(3.14, dblVals.get(0).doubleValue(), 0.001);
+    }
+
+    // =========================================================================
+    // 2. GET/UPDATE/DELETE VALUE IN CONTAINER
+    // =========================================================================
+
+    @Test
+    @DisplayName("getValueInContainerByKey")
+    void testGetValueInContainer() throws ExecutionException, InterruptedException {
+        String key = "map_get_value_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+        data.put(p("key2"), vi(100));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        Variant value = client.getInContainer(key, null, "key1".getBytes()).get();
+        assertNotNull(value);
+        assertEquals("value1", new String(value.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        value = client.getInContainer(key, null, "key2".getBytes()).get();
+        assertNotNull(value);
+        assertEquals(100, value.longValue());
+    }
+
+    @Test
+    @DisplayName("existInContainerByKey")
+    void testExistInContainer() throws ExecutionException, InterruptedException {
+        String key = "map_exist_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        Boolean exists = client.containsKey(key, null, "key1".getBytes()).get();
+        assertTrue(exists);
+
+        exists = client.containsKey(key, null, "key_missing".getBytes()).get();
+        assertFalse(exists);
+    }
+
+    @Test
+    @DisplayName("updateContainerValue")
+    void testUpdateContainerValue() throws ExecutionException, InterruptedException {
+        String key = "map_update_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("old_value"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        Variant previous = client.update(key, null, "key1".getBytes(), v("new_value")).get();
+        assertNotNull(previous);
+        assertEquals("old_value", new String(previous.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Variant current = client.getInContainer(key, null, "key1".getBytes()).get();
+        assertEquals("new_value", new String(current.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("updateContainerValue with type switch")
+    void testUpdateContainerValueWithTypeSwitch() throws ExecutionException, InterruptedException {
+        String key = "map_update_type_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("text"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        // Update from bytes to int
+        Variant previous = client.update(key, null, "key1".getBytes(), vi(42)).get();
+        assertEquals("text", new String(previous.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Variant current = client.getInContainer(key, null, "key1".getBytes()).get();
+        assertEquals(42, current.longValue());
+
+        // Update from int to double
+        previous = client.update(key, null, "key1".getBytes(), vd(3.14)).get();
+        assertEquals(42, previous.longValue());
+
+        current = client.getInContainer(key, null, "key1".getBytes()).get();
+        assertEquals(3.14, current.doubleValue(), 0.001);
+    }
+
+    @Test
+    @DisplayName("getAndDeleteValueInContainer")
+    void testGetAndDeleteValueInContainer() throws ExecutionException, InterruptedException {
+        String key = "map_get_delete_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+        data.put(p("key2"), vi(100));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        Variant deleted = client.popInContainer(key, null, "key1".getBytes()).get();
+        assertNotNull(deleted);
+        assertEquals("value1", new String(deleted.bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        Boolean exists = client.containsKey(key, null, "key1".getBytes()).get();
+        assertFalse(exists);
+
+        exists = client.containsKey(key, null, "key2".getBytes()).get();
+        assertTrue(exists);
+    }
+
+    @Test
+    @DisplayName("removeInContainerByKey")
+    void testRemoveInContainerByKey() throws ExecutionException, InterruptedException {
+        String key = "map_remove_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+        data.put(p("key2"), v("value2"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        Integer removed = client.remove(key, null, "key1".getBytes()).get();
+        assertEquals(1, removed);
+
+        Map<Payload, Variant> stream = client.getMap(key).get();
+        assertEquals(1, stream.size());
+    }
+
+    // =========================================================================
+    // 3. ADD ELEMENT TO MAP
+    // =========================================================================
+
+    @Test
+    @DisplayName("addElementHashMap")
+    void testAddElementHashMap() throws ExecutionException, InterruptedException {
+        String key = "map_add_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value1"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        Integer added = client.putAll(key, hint,
+                                      List.of(p("key2"), p("key3")),
+                                      List.of(vi(100), vd(3.14))).get();
+        assertEquals(2, added);
+
+        Map<Payload, Variant> stream = client.getMap(key).get();
+        assertEquals(3, stream.size());
+    }
+
+    // =========================================================================
+    // 4. DELETE FROM MAP
+    // =========================================================================
+
+    @Test
+    @DisplayName("deleteFromContainerByKeyValue")
+    void testDeleteFromContainerByKeyValue() throws ExecutionException, InterruptedException {
+        String key = "map_delete_value_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("k1"), v("val"));
+        data.put(p("k2"), v("val"));
+        data.put(p("k3"), v("other"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        // Delete by both key AND value - delete k1 and k2 which have "val"
+        Integer deleted = client.removeFromContainerByKeyAndValue(key, ContainerType.MAP,
+                List.of(p("k1"), p("k2")), List.of(v("val"), v("val"))).get();
+        assertEquals(2, deleted);
+
+        Map<Payload, Variant> stream = client.getMap(key).get();
+        assertEquals(1, stream.size());
+    }
+
+    // =========================================================================
+    // 5. SIZE
+    // =========================================================================
+
+    @Test
+    @DisplayName("getSize")
+    void testGetSize() throws ExecutionException, InterruptedException {
+        String key = "map_size_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("k1"), v("v1"));
+        data.put(p("k2"), v("v2"));
+        data.put(p("k3"), v("v3"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        Integer size = client.getSize(key).get();
+        assertEquals(3, size);
+    }
+
+    // =========================================================================
+    // 6. LOCK OPERATIONS
+    // =========================================================================
+
+    @Test
+    @DisplayName("READ_LOCK on map: owner and intruder can both read, neither can write")
+    void testReadLock() throws ExecutionException, InterruptedException {
+        String key = "map_read_lock_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        LockStatus lock = client.lock(key, LockType.READ_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Owner can read
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
+
+        // Intruder can ALSO read (shared access)
+        Map<Payload, Variant> intruderVal = client.getMap(key, null, INTRUDER_CLIENT_ID).get();
+        assertNotNull(intruderVal);
+
+        // Neither can write
+        assertDenied(client.putAll(key, hint, List.of(p("key2")), List.of(v("value2")), OWNER_CLIENT_ID));
+        assertDenied(client.putAll(key, hint, List.of(p("key2")), List.of(v("value2")), INTRUDER_CLIENT_ID));
+
+        client.unlock(key, OWNER_CLIENT_ID).get();
+    }
+
+    @Test
+    @DisplayName("WRITE_LOCK on map: owner can read/write, intruder denied")
+    void testWriteLock() throws ExecutionException, InterruptedException {
+        String key = "map_write_lock_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Owner can read and write
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
+
+        client.putAll(key, hint,
+                      List.of(p("key2")),
+                      List.of(v("added")),
+                      OWNER_CLIENT_ID).get();
+
+        // Intruder denied - use INTRUDER_CLIENT_ID explicitly
+        assertDenied(client.getMap(key, null, INTRUDER_CLIENT_ID));
+
+        client.unlock(key, OWNER_CLIENT_ID).get();
+    }
+
+    @Test
+    @DisplayName("GLOBAL_LOCK on map: only owner can access")
+    void testGlobalLock() throws ExecutionException, InterruptedException {
+        String key = "map_global_lock_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        LockStatus lock = client.lock(key, LockType.GLOBAL, OWNER_CLIENT_ID, Duration.ofSeconds(30)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        // Owner can access
+        Map<Payload, Variant> val = client.getMap(key, null, OWNER_CLIENT_ID).get();
+        assertNotNull(val);
+
+        // Intruder denied - use INTRUDER_CLIENT_ID explicitly
+        assertDenied(client.getMap(key, null, INTRUDER_CLIENT_ID));
+
+        client.unlock(key, OWNER_CLIENT_ID).get();
+    }
+    @Test
+    @DisplayName("Lock expiration on map")
+    void testLockExpiration() throws ExecutionException, InterruptedException {
+        String key = "map_lock_expire_" + UUID.randomUUID();
+        Map<Payload, Variant> data = new HashMap<>();
+        data.put(p("key1"), v("value"));
+
+        KeyHintData hint = client.createMap(key, data).get();
+
+        LockStatus lock = client.lock(key, LockType.WRITE_LOCK, OWNER_CLIENT_ID, Duration.ofSeconds(1)).get();
+        assertEquals(LockStatus.OK, lock);
+
+        Thread.sleep(2000);
+
+        // Lock should expire, intruder can access
+        Map<Payload, Variant> val = client.getMap(key, null, INTRUDER_CLIENT_ID).get();
+        assertNotNull(val);
     }
 }

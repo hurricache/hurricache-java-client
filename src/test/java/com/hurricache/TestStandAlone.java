@@ -2,10 +2,14 @@ package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.OrderedPayload;
+import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -66,6 +70,28 @@ public abstract class TestStandAlone {
         if (client != null) {
             client.shutdown();
         }
+    }
+    protected Variant v(String val) {
+        return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected Payload p(String val) {
+        return Payload.of(val.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected Payload p(byte[] val) {
+        return Payload.of(val);
+    }
+
+    protected String str(Variant payload) {
+        return new String(payload.bytesValue(), StandardCharsets.UTF_8);
+    }
+    protected String str(Payload payload) {
+        return new String(payload.getValue(), StandardCharsets.UTF_8);
+    }
+
+    protected OrderedPayload op(Long order, String val) {
+        return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
     }
 
 }

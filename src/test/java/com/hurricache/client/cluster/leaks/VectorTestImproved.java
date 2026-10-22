@@ -2,7 +2,7 @@ package com.hurricache.client.cluster.leaks;
 
 import com.hurricache.client.cluster.AdvancedTest;
 import com.hurricache.client.intf.KeyHintData;
-import com.hurricache.client.intf.Payload;
+import com.hurricache.client.intf.Variant;
 import com.hurricache.utils.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -17,13 +17,13 @@ public class VectorTestImproved extends AdvancedTest {
     void createVectorValueLoopLeakTest1() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getHead(k, v.second).get();
-                if (data != null && data.getValue() != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                Variant data = client.peekHead(k, v.second).get();
+                if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -50,13 +50,13 @@ public class VectorTestImproved extends AdvancedTest {
     void createVectorValueLoopLeakTest2() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getAndRemoveFront(k, v.second).get();
-                if (data != null && data.getValue() != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                Variant data = client.popHead(k, v.second).get();
+                if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -83,13 +83,13 @@ public class VectorTestImproved extends AdvancedTest {
     void createVectorValueLoopLeakTest3() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getAndRemoveElementAtPosition(client.serializeKey(k), v.second, 0).get();
-                if (data != null && data.getValue() != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                Variant data = client.popAt(client.serializeKey(k), v.second, 0).get();
+                if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {
@@ -116,13 +116,13 @@ public class VectorTestImproved extends AdvancedTest {
     void createListValueLoopLeakTest4() {
         // Easily test standard values by passing the creator lambda
         ConcurrentHashMap<String, Pair<String, KeyHintData>> keyValueMap
-                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Payload.of(vBytes))).get());
+                = loadSynchronousLeakBaseline((k, vBytes) -> client.createVector(k, List.of(Variant.ofBytes(vBytes))).get());
 
         AtomicInteger good = new AtomicInteger();
         keyValueMap.forEach((k, v) -> {
             try {
-                Payload data = client.getAndRemoveTail(client.serializeKey(k), v.second).get();
-                if (data != null && data.getValue() != null && v.first.equals(new String(data.getValue(), StandardCharsets.UTF_8))) {
+                Variant data = client.popTail(client.serializeKey(k), v.second).get();
+                if (data != null && data.bytesValue() != null && v.first.equals(new String(data.bytesValue(), StandardCharsets.UTF_8))) {
                     good.getAndIncrement();
                 }
             } catch (Exception ignored) {

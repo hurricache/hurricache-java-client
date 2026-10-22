@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceCommon,HurriCacheClientMapBased,HurriCacheClientWeightBasedContainers{
     /**
-     * Creates an OrderedMap container where keys are instance of {@link OrderedPayload}.
+     * Creates an OrderedMap container where keys are instance of {@link OrderedVariant}.
      *
      * @param key          target container key in byte array form.
      * @param keyHint      optional key routing hint.
@@ -18,24 +18,24 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
      */
-    CompletableFuture<KeyHintData> createOrderedMap(byte[] key, KeyHintData keyHint, Map<OrderedPayload, Payload> initialValue,
+    CompletableFuture<KeyHintData> createOrderedMap(byte[] key, KeyHintData keyHint, Map<OrderedPayload, Variant> initialValue,
                                                     Duration ttl,
                                                     int clientId,
                                                     Duration timeout);
 
     default CompletableFuture<KeyHintData> createOrderedMap(String key, KeyHintData keyHint,
-                                                            Map<OrderedPayload, Payload> initialValue,
+                                                            Map<OrderedPayload, Variant> initialValue,
                                                             Duration ttl, int clientId, Duration timeout) {
         return createOrderedMap(serializeKey(key), keyHint, initialValue, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<KeyHintData> createOrderedMap(String key, Map<OrderedPayload, Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createOrderedMap(String key, Map<OrderedPayload, Variant> initialValue) {
         return createOrderedMap(serializeKey(key), null, initialValue == null
         ? Collections.emptyMap()
         : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createOrderedMap(byte[] key, Map<OrderedPayload, Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createOrderedMap(byte[] key, Map<OrderedPayload, Variant> initialValue) {
         return createOrderedMap(key, null, initialValue == null
         ? Collections.emptyMap()
         : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
@@ -50,30 +50,46 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
      * @param timeout  execution timeout duration.
      * @return a {@link CompletableFuture} containing all ordered map entries.
      */
-    CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key,
-                                                                     KeyHintData hint,
-                                                                     int clientId,
-                                                                     Duration timeout);
+    CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(byte[] key,
+                                                                  KeyHintData hint,
+                                                                  int clientId,
+                                                                  Duration timeout);
 
-    default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(String key, KeyHintData hint,
-                                                                             int clientId, Duration timeout) {
-        return streamOrderedMap(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(String key, KeyHintData hint,
+                                                                          int clientId, Duration timeout) {
+        return getOrderedMap(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(String key) {
-        return streamOrderedMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(String key) {
+        return getOrderedMap(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key) {
-        return streamOrderedMap(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(byte[] key) {
+        return getOrderedMap(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(String key, KeyHintData hint) {
-        return streamOrderedMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(String key, KeyHintData hint) {
+        return getOrderedMap(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<OrderedPayload, Payload>> streamOrderedMap(byte[] key, KeyHintData hint) {
-        return streamOrderedMap(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(byte[] key, KeyHintData hint) {
+        return getOrderedMap(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(String key, KeyHintData hint, int clientId) {
+        return getOrderedMap(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(byte[] key, KeyHintData hint, int clientId) {
+        return getOrderedMap(key, hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(String key, int clientId) {
+        return getOrderedMap(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getOrderedMap(byte[] key, int clientId) {
+        return getOrderedMap(key, null, clientId, getDefaultTimeout());
     }
 
     /**
@@ -82,7 +98,7 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
      * @param key          target container key in byte array form.
      * @param hint         optional key routing hint.
      * @param container_keys list of ordered payload keys.
-     * @param container_values list of associated values.
+     * @param container_values list of associated Variant values.
      * @param clientId     identifier of the issuing client.
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} containing count of elements added.
@@ -90,46 +106,46 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
     CompletableFuture<Integer> addElementOrderedMap(byte[] key,
                                                     KeyHintData hint,
                                                     List<OrderedPayload> container_keys,
-                                                    List<Payload> container_values,
+                                                    List<Variant> container_values,
                                                     int clientId,
                                                     Duration timeout);
 
     default CompletableFuture<Integer> addElementOrderedMap(String key, KeyHintData hint,
                                                             List<OrderedPayload> container_keys,
-                                                            List<Payload> container_values,
+                                                            List<Variant> container_values,
                                                             int clientId, Duration timeout) {
         return addElementOrderedMap(serializeKey(key), hint, container_keys, container_values, clientId, timeout);
     }
 
     default CompletableFuture<Integer> addElementOrderedMap(byte[] key, KeyHintData hint,
                                                             List<OrderedPayload> container_keys,
-                                                            List<Payload> container_values) {
+                                                            List<Variant> container_values) {
         return addElementOrderedMap(key, hint, container_keys, container_values,
                                     getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Integer> addElementOrderedMap(String key, KeyHintData hint,
                                                             List<OrderedPayload> container_keys,
-                                                            List<Payload> container_values) {
+                                                            List<Variant> container_values) {
         return addElementOrderedMap(serializeKey(key), hint, container_keys, container_values,
                                     getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Integer> addElementOrderedMap(byte[] key, List<OrderedPayload> container_keys,
-                                                            List<Payload> container_values) {
+                                                            List<Variant> container_values) {
         return addElementOrderedMap(key, null, container_keys, container_values,
                                     getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Integer> addElementOrderedMap(String key, List<OrderedPayload> container_keys,
-                                                            List<Payload> container_values) {
+                                                            List<Variant> container_values) {
         return addElementOrderedMap(serializeKey(key), null, container_keys, container_values,
                                     getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<Integer> addElementOrderedMap(String key, KeyHintData hint,
                                                             List<OrderedPayload> container_keys,
-                                                            List<Payload> container_values,
+                                                            List<Variant> container_values,
                                                             int clientId) {
         return addElementOrderedMap(serializeKey(key), hint, container_keys, container_values,
                                     clientId, getDefaultTimeout());
@@ -137,8 +153,22 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
 
     default CompletableFuture<Integer> addElementOrderedMap(byte[] key, KeyHintData hint,
                                                             List<OrderedPayload> container_keys,
-                                                            List<Payload> container_values,
+                                                            List<Variant> container_values,
                                                             int clientId) {
+        return addElementOrderedMap(key, hint, container_keys, container_values,
+                                    clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> addElementOrderedMap(String key, KeyHintData hint, int clientId,
+                                                            List<OrderedPayload> container_keys,
+                                                            List<Variant> container_values) {
+        return addElementOrderedMap(serializeKey(key), hint, container_keys, container_values,
+                                    clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Integer> addElementOrderedMap(byte[] key, KeyHintData hint, int clientId,
+                                                            List<OrderedPayload> container_keys,
+                                                            List<Variant> container_values) {
         return addElementOrderedMap(key, hint, container_keys, container_values,
                                     clientId, getDefaultTimeout());
     }
@@ -157,49 +187,49 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} containing matching map entries.
      */
-    CompletableFuture<Map<OrderedPayload,Payload>> streamElementInRangeOrderedMap(byte[] key,
-                                                                           KeyHintData hint,
-                                                                           long startWeight,
-                                                                           long endWeight,
-                                                                           boolean reverse,
-                                                                           int clientId,
-                                                                           Duration timeout);
+    CompletableFuture<Map<OrderedPayload,Variant>> getElementInRangeOrderedMap(byte[] key,
+                                                                               KeyHintData hint,
+                                                                               long startWeight,
+                                                                               long endWeight,
+                                                                               boolean reverse,
+                                                                               int clientId,
+                                                                               Duration timeout);
 
-    default CompletableFuture<Map<OrderedPayload,Payload>> streamElementInRangeOrderedMap(String key,
-                                                                                           KeyHintData hint,
-                                                                                           long startWeight,
-                                                                                           long endWeight,
-                                                                                           boolean reverse,
-                                                                                           int clientId,
-                                                                                           Duration timeout) {
-        return streamElementInRangeOrderedMap(serializeKey(key), hint, startWeight, endWeight, reverse, clientId, timeout);
+    default CompletableFuture<Map<OrderedPayload,Variant>> getElementInRangeOrderedMap(String key,
+                                                                                       KeyHintData hint,
+                                                                                       long startWeight,
+                                                                                       long endWeight,
+                                                                                       boolean reverse,
+                                                                                       int clientId,
+                                                                                       Duration timeout) {
+        return getElementInRangeOrderedMap(serializeKey(key), hint, startWeight, endWeight, reverse, clientId, timeout);
     }
 
-    default CompletableFuture<Map<OrderedPayload,Payload>> streamElementInRangeOrderedMap(byte[] key,
-                                                                                           KeyHintData hint,
-                                                                                           long startWeight,
-                                                                                           long endWeight,
-                                                                                           boolean reverse) {
-        return streamElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse,
-                                              getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<OrderedPayload,Variant>> getElementInRangeOrderedMap(byte[] key,
+                                                                                       KeyHintData hint,
+                                                                                       long startWeight,
+                                                                                       long endWeight,
+                                                                                       boolean reverse) {
+        return getElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse,
+                                           getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<OrderedPayload,Payload>> streamElementInRangeOrderedMap(String key,
-                                                                                           KeyHintData hint,
-                                                                                           long startWeight,
-                                                                                           long endWeight,
-                                                                                           boolean reverse) {
-        return streamElementInRangeOrderedMap(serializeKey(key), hint, startWeight, endWeight, reverse,
-                                              getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<Map<OrderedPayload,Variant>> getElementInRangeOrderedMap(String key,
+                                                                                       KeyHintData hint,
+                                                                                       long startWeight,
+                                                                                       long endWeight,
+                                                                                       boolean reverse) {
+        return getElementInRangeOrderedMap(serializeKey(key), hint, startWeight, endWeight, reverse,
+                                           getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<Map<OrderedPayload,Payload>> streamElementInRangeOrderedMap(byte[] key,
-                                                                                           KeyHintData hint,
-                                                                                           long startWeight,
-                                                                                           long endWeight,
-                                                                                           boolean reverse,
-                                                                                           int clientId) {
-        return streamElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse,
-                                              clientId, getDefaultTimeout());
+    default CompletableFuture<Map<OrderedPayload,Variant>> getElementInRangeOrderedMap(byte[] key,
+                                                                                       KeyHintData hint,
+                                                                                       long startWeight,
+                                                                                       long endWeight,
+                                                                                       boolean reverse,
+                                                                                       int clientId) {
+        return getElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse,
+                                           clientId, getDefaultTimeout());
     }
 }

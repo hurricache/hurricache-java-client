@@ -136,51 +136,51 @@ public interface HurriCacheClientInterfaceCommon {
      * @param timeout  execution timeout duration.
      * @return resulting {@link LockStatus}.
      */
-    CompletableFuture<LockStatus> lockObject(byte[] key,
-                                             KeyHintData hint,
-                                             LockType type,
-                                             int clientId,
-                                             Duration duration,
-                                             Duration timeout);
+    CompletableFuture<LockStatus> lock(byte[] key,
+                                       KeyHintData hint,
+                                       LockType type,
+                                       int clientId,
+                                       Duration duration,
+                                       Duration timeout);
 
-    default CompletableFuture<LockStatus> lockObject(byte[] key, KeyHintData hint, LockType type, Duration duration) {
-        return lockObject(key, hint, type, getDefaultClientId(), duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(byte[] key, KeyHintData hint, LockType type, Duration duration) {
+        return lock(key, hint, type, getDefaultClientId(), duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(String key,
-                                                     KeyHintData hint,
-                                                     LockType type,
-                                                     int clientId,
-                                                     Duration duration) {
-        return lockObject(serializeKey(key), hint, type, clientId, duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(String key,
+                                               KeyHintData hint,
+                                               LockType type,
+                                               int clientId,
+                                               Duration duration) {
+        return lock(serializeKey(key), hint, type, clientId, duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(byte[] key,
-                                                     KeyHintData hint,
-                                                     LockType type,
-                                                     int clientId,
-                                                     Duration duration) {
-        return lockObject(key, hint, type, clientId, duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(byte[] key,
+                                               KeyHintData hint,
+                                               LockType type,
+                                               int clientId,
+                                               Duration duration) {
+        return lock(key, hint, type, clientId, duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(String key, LockType type, int clientId, Duration duration) {
-        return lockObject(serializeKey(key), null, type, clientId, duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(String key, LockType type, int clientId, Duration duration) {
+        return lock(serializeKey(key), null, type, clientId, duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(String key, LockType type, Duration duration) {
-        return lockObject(serializeKey(key), null, type, getDefaultClientId(), duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(String key, LockType type, Duration duration) {
+        return lock(serializeKey(key), null, type, getDefaultClientId(), duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(String key, KeyHintData hint, LockType type, Duration duration) {
-        return lockObject(serializeKey(key), hint, type, getDefaultClientId(), duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(String key, KeyHintData hint, LockType type, Duration duration) {
+        return lock(serializeKey(key), hint, type, getDefaultClientId(), duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(byte[] key, LockType type, Duration duration) {
-        return lockObject(key, null, type, getDefaultClientId(), duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(byte[] key, LockType type, Duration duration) {
+        return lock(key, null, type, getDefaultClientId(), duration, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> lockObject(byte[] key, LockType type, int clientId, Duration duration) {
-        return lockObject(key, null, type, clientId, duration, getDefaultTimeout());
+    default CompletableFuture<LockStatus> lock(byte[] key, LockType type, int clientId, Duration duration) {
+        return lock(key, null, type, clientId, duration, getDefaultTimeout());
     }
 
     /**
@@ -192,38 +192,38 @@ public interface HurriCacheClientInterfaceCommon {
      * @param timeout  execution timeout duration.
      * @return resulting {@link LockStatus}.
      */
-    CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<LockStatus> unlock(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<LockStatus> unlockObject(String key, KeyHintData hint, int clientId) {
-        return unlockObject(serializeKey(key), hint, clientId, getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(String key, KeyHintData hint, int clientId) {
+        return unlock(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint) {
-        return unlockObject(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(byte[] key, KeyHintData hint) {
+        return unlock(key, hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHintData hint, int clientId) {
-        return unlockObject(key, hint, clientId, getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(byte[] key, KeyHintData hint, int clientId) {
+        return unlock(key, hint, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(String key, int clientId) {
-        return unlockObject(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(String key, int clientId) {
+        return unlock(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(String key) {
-        return unlockObject(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(String key) {
+        return unlock(serializeKey(key), null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(String key, KeyHintData hint) {
-        return unlockObject(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(String key, KeyHintData hint) {
+        return unlock(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(byte[] key) {
-        return unlockObject(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(byte[] key) {
+        return unlock(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<LockStatus> unlockObject(byte[] key, int clientId) {
-        return unlockObject(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<LockStatus> unlock(byte[] key, int clientId) {
+        return unlock(key, null, clientId, getDefaultTimeout());
     }
 
     /**

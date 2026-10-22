@@ -1,7 +1,5 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.grpc.KeyHint;
-
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -13,23 +11,23 @@ public interface HurriCacheClientList extends HurriCacheClientInterfaceCommon,Hu
      *
      * @param key          target container key in byte array form.
      * @param keyHint      optional key routing hint.
-     * @param initialValue initial sequence of {@link Payload} elements.
+     * @param initialValue initial sequence of {@link Variant} elements.
      * @param ttl          container expiration duration.
      * @param clientId     identifier of the issuing client.
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
      */
-    CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
+    CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Variant> initialValue,
                                               Duration ttl,
                                               int clientId,
                                               Duration timeout);
 
-    default CompletableFuture<KeyHintData> createList(String key, KeyHintData keyHint, List<Payload> initialValue,
+    default CompletableFuture<KeyHintData> createList(String key, KeyHintData keyHint, List<Variant> initialValue,
                                                       Duration ttl, int clientId, Duration timeout) {
         return createList(serializeKey(key), keyHint, initialValue, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue, Duration ttl) {
+    default CompletableFuture<KeyHintData> createList(byte[] key, List<Variant> initialValue, Duration ttl) {
         return createList(key, null, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -37,27 +35,27 @@ public interface HurriCacheClientList extends HurriCacheClientInterfaceCommon,Hu
         return createList(key, Collections.emptyList());
     }
 
-    default CompletableFuture<KeyHintData> createList(byte[] key, List<Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createList(byte[] key, List<Variant> initialValue) {
         return createList(key, null, initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createList(String key, List<Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createList(String key, List<Variant> initialValue) {
         return createList(serializeKey(key), null, initialValue == null
                                                    ? Collections.emptyList()
                                                    : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Variant> initialValue) {
         return createList(key, keyHint, initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createList(String key, KeyHintData keyHint, List<Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createList(String key, KeyHintData keyHint, List<Variant> initialValue) {
         return createList(serializeKey(key), keyHint, initialValue == null
                                                    ? Collections.emptyList()
                                                    : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createList(String key, List<Payload> initialValue, int clientId) {
+    default CompletableFuture<KeyHintData> createList(String key, List<Variant> initialValue, int clientId) {
         return createList(serializeKey(key), null, initialValue == null
                                                    ? Collections.emptyList()
                                                    : initialValue,
@@ -73,35 +71,43 @@ public interface HurriCacheClientList extends HurriCacheClientInterfaceCommon,Hu
      * @param hint     optional key routing hint.
      * @param clientId identifier of the issuing client.
      * @param timeout  execution timeout duration.
-     * @return a {@link CompletableFuture} containing list of all {@link Payload} elements.
+     * @return a {@link CompletableFuture} containing list of all {@link Variant} elements.
      */
-    CompletableFuture<List<Payload>> streamList(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+    CompletableFuture<List<Variant>> getList(byte[] key, KeyHintData hint, int clientId, Duration timeout);
 
-    default CompletableFuture<List<Payload>> streamList(String key, KeyHintData hint, int clientId, Duration timeout) {
-        return streamList(serializeKey(key), hint, clientId, timeout);
+    default CompletableFuture<List<Variant>> getList(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return getList(serializeKey(key), hint, clientId, timeout);
     }
 
-    default CompletableFuture<List<Payload>> streamList(String key) {
-        return streamList(key, getDefaultClientId());
+    default CompletableFuture<List<Variant>> getList(String key) {
+        return getList(key, getDefaultClientId());
     }
 
-    default CompletableFuture<List<Payload>> streamList(byte[] key) {
-        return streamList(key, null, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(byte[] key) {
+        return getList(key, null, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamList(String key, int clientId) {
-        return streamList(serializeKey(key), null, clientId, getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(String key, int clientId) {
+        return getList(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamList(byte[] key, int clientId) {
-        return streamList(key, null, clientId, getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(byte[] key, int clientId) {
+        return getList(key, null, clientId, getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamList(String key, KeyHintData hint) {
-        return streamList(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(String key, KeyHintData hint) {
+        return getList(serializeKey(key), hint, getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<List<Payload>> streamList(byte[] key, KeyHintData hint) {
-        return streamList(key, hint, getDefaultClientId(), getDefaultTimeout());
+    default CompletableFuture<List<Variant>> getList(byte[] key, KeyHintData hint) {
+        return getList(key, hint, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getList(String key, KeyHintData hint, int clientId) {
+        return getList(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getList(byte[] key, KeyHintData hint, int clientId) {
+        return getList(key, hint, clientId, getDefaultTimeout());
     }
 }

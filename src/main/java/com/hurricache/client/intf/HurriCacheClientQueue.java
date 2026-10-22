@@ -7,29 +7,31 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.hurricache.client.intf.Variant;
+
 public interface HurriCacheClientQueue extends HurriCacheClientInterfaceCommon,HurriCacheClientDequeBased {
     /**
      * Creates a Queue container.
      *
      * @param key          target container key in byte array form.
      * @param keyHint      optional key routing hint.
-     * @param initialValue initial sequence of {@link Payload} elements.
+     * @param initialValue initial sequence of {@link Variant} elements.
      * @param ttl          container expiration duration.
      * @param clientId     identifier of the issuing client.
      * @param timeout      execution timeout duration.
      * @return a {@link CompletableFuture} with created {@link KeyHintData}.
      */
-    CompletableFuture<KeyHintData> createQueue(byte[] key, KeyHintData keyHint, List<Payload> initialValue,
+    CompletableFuture<KeyHintData> createQueue(byte[] key, KeyHintData keyHint, List<Variant> initialValue,
                                                Duration ttl,
                                                int clientId,
                                                Duration timeout);
 
-    default CompletableFuture<KeyHintData> createQueue(String key, KeyHintData keyHint, List<Payload> initialValue,
+    default CompletableFuture<KeyHintData> createQueue(String key, KeyHintData keyHint, List<Variant> initialValue,
                                                        Duration ttl, int clientId, Duration timeout) {
         return createQueue(serializeKey(key), keyHint, initialValue, ttl, clientId, timeout);
     }
 
-    default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue, Duration ttl) {
+    default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Variant> initialValue, Duration ttl) {
         return createQueue(key, null, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
 
@@ -41,19 +43,19 @@ public interface HurriCacheClientQueue extends HurriCacheClientInterfaceCommon,H
                            getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createQueue(byte[] key, List<Variant> initialValue) {
         return createQueue(key, null, initialValue == null
                                       ? Collections.emptyList()
                                       : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createQueue(String key, List<Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createQueue(String key, List<Variant> initialValue) {
         return createQueue(serializeKey(key), null, initialValue == null
                                                     ? Collections.emptyList()
                                                     : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
-    default CompletableFuture<KeyHintData> createQueue(String key, KeyHintData keyHint, List<Payload> initialValue) {
+    default CompletableFuture<KeyHintData> createQueue(String key, KeyHintData keyHint, List<Variant> initialValue) {
         return createQueue(serializeKey(key), keyHint, initialValue == null
                                                     ? Collections.emptyList()
                                                     : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
