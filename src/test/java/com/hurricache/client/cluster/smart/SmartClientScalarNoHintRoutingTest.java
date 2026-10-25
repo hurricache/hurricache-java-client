@@ -84,7 +84,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
 
         // Update to int on MASTER without keyHint
         client.setMode(Mode.MASTER);
-        client.replace(key, vi(42)).get();
+        Variant variant = client.replace(key, vi(42)).get();
         Thread.sleep(500);
 
         // Verify on BACKUP without keyHint
