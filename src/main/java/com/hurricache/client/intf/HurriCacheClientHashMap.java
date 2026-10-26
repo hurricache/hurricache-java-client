@@ -29,8 +29,30 @@ public interface HurriCacheClientHashMap extends HurriCacheClientInterfaceCommon
         : initialValue, ttl, clientId, timeout);
     }
 
+    default CompletableFuture<KeyHintData> createMap(String key, KeyHintData keyHint, Map<Payload, Variant> initialValue,
+                                                     int clientId) {
+        return createMap(key, keyHint, initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createMap(String key, KeyHintData keyHint, Map<Payload, Variant> initialValue) {
+        return createMap(key, keyHint, initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
     default CompletableFuture<KeyHintData> createMap(String key, Map<Payload, Variant> initialValue) {
         return createMap(serializeKey(key), null, initialValue == null
+        ? Collections.emptyMap()
+        : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createMap(byte[] key, KeyHintData keyHint, Map<Payload, Variant> initialValue,
+                                                     int clientId) {
+        return createMap(key, keyHint, initialValue == null
+        ? Collections.emptyMap()
+        : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<KeyHintData> createMap(byte[] key, KeyHintData keyHint, Map<Payload, Variant> initialValue) {
+        return createMap(key, keyHint, initialValue == null
         ? Collections.emptyMap()
         : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
@@ -81,10 +103,24 @@ public interface HurriCacheClientHashMap extends HurriCacheClientInterfaceCommon
         return getMap(key, hint, clientId, getDefaultTimeout());
     }
 
+    /**
+     * Dumps all entries from an unordered Map container with an explicit client identifier and no routing hint.
+     *
+     * @param key      target container key as a string (UTF-8 encoded).
+     * @param clientId identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing all map entries.
+     */
     default CompletableFuture<Map<Payload, Variant>> getMap(String key, int clientId) {
         return getMap(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 
+    /**
+     * Dumps all entries from an unordered Map container with an explicit client identifier and no routing hint.
+     *
+     * @param key      target container key in byte array form.
+     * @param clientId identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing all map entries.
+     */
     default CompletableFuture<Map<Payload, Variant>> getMap(byte[] key, int clientId) {
         return getMap(key, null, clientId, getDefaultTimeout());
     }

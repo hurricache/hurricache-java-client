@@ -71,6 +71,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     private final Duration defaultTimeout;
     private final int defaultCompressionThreshold;
     private final String target;
+    private final boolean ownedChannel;
 
     public FastCacheAsyncSimpleClient(String host,
                                       int port,
@@ -87,6 +88,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         this.defaultTimeout = timeout;
         this.defaultCompressionThreshold = defaultCompressionThreshold;
         this.target = host + ":" + port;
+        this.ownedChannel = true;
     }
 
     public FastCacheAsyncSimpleClient(String host, int port, int defaultClientId, Duration timeout) {
@@ -121,12 +123,21 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                       int defaultClientId,
                                       Duration duration,
                                       int defaultCompressionThreshold) {
+        this(channel, defaultClientId, duration, defaultCompressionThreshold, false);
+    }
+
+    public FastCacheAsyncSimpleClient(ManagedChannel channel,
+                                      int defaultClientId,
+                                      Duration duration,
+                                      int defaultCompressionThreshold,
+                                      boolean ownedChannel) {
         this.channel = channel;
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = duration;
         this.defaultCompressionThreshold = defaultCompressionThreshold;
-        this.target = channel.toString();
+        this.target = channel.authority();
+        this.ownedChannel = ownedChannel;
     }
 
     @Override
@@ -1255,10 +1266,11 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // =========================================================================
 
     private HurriCacheGrpcServiceGrpc.HurriCacheGrpcServiceStub getStub(Duration timeout) {
-        if (timeout == null || timeout.isZero()) {
+        Duration effectiveTimeout = (timeout == null || timeout.isZero()) ? defaultTimeout : timeout;
+        if (effectiveTimeout == null || effectiveTimeout.isZero()) {
             return asyncStub;
         }
-        return asyncStub.withDeadlineAfter(timeout);
+        return asyncStub.withDeadlineAfter(effectiveTimeout);
     }
 
     @Override
@@ -1438,7 +1450,18 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     @Override
     public void shutdown() {
+        if (!ownedChannel) {
+            return;
+        }
         channel.shutdown();
+        try {
+            if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
+                channel.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            channel.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override

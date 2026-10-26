@@ -77,6 +77,31 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
         return create(serializeKey(key), hint, value, ttl, clientId, timeout);
     }
 
+    /**
+     * Creates a standard Key-Value entry for a string key (encoded as UTF-8),
+     * using the default client ID, TTL, and execution timeout.
+     *
+     * @param key   target key string.
+     * @param hint  optional key routing hint.
+     * @param value payload to store (Variant: bytes, int, or double).
+     * @return a {@link CompletableFuture} containing assigned or calculated {@link KeyHint}.
+     */
+    default CompletableFuture<KeyHintData> create(String key, KeyHintData hint, Variant value) {
+        return create(serializeKey(key), hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Creates a standard Key-Value entry using the default client ID, TTL, and execution timeout.
+     *
+     * @param key   target key in byte array form.
+     * @param hint  optional key routing hint.
+     * @param value payload to store (Variant: bytes, int, or double).
+     * @return a {@link CompletableFuture} containing assigned or calculated {@link KeyHint}.
+     */
+    default CompletableFuture<KeyHintData> create(byte[] key, KeyHintData hint, Variant value) {
+        return create(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
     default CompletableFuture<KeyHintData> create(byte[] key, Variant value, int clientId, Duration timeout) {
         return create(key, null, value, getDefaultTtl(), clientId, timeout);
     }
@@ -115,6 +140,19 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
      * @return a {@link CompletableFuture} with a {@link Variant} containing the value, or {@code null} if the key does not exist.
      */
     CompletableFuture<Variant> get(byte[] key, KeyHintData hint, int clientId, Duration timeout);
+
+    /**
+     * Fetches payload value associated with the specified string key (encoded as UTF-8).
+     *
+     * @param key      target key string.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} with a {@link Variant} containing the value, or {@code null} if the key does not exist.
+     */
+    default CompletableFuture<Variant> get(String key, KeyHintData hint, int clientId, Duration timeout) {
+        return get(serializeKey(key), hint, clientId, timeout);
+    }
 
     default CompletableFuture<Variant> get(String key) {
         return get(key, getDefaultClientId());
@@ -172,6 +210,18 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
         return replace(serializeKey(key), hint, value, ttl, clientId, timeout);
     }
 
+    /**
+     * Replaces payload value of an existing Key-Value entry,
+     * using the default client ID, TTL, and execution timeout.
+     *
+     * @param key   target key in byte array form.
+     * @param value new payload (Variant: bytes, int, or double).
+     * @return a {@link CompletableFuture} with a {@link Variant} containing the previous value if configured, or acknowledgment.
+     */
+    default CompletableFuture<Variant> replace(byte[] key, Variant value) {
+        return replace(key, null, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
     default CompletableFuture<Variant> replace(byte[] key, KeyHintData hint, Variant value) {
         return replace(key, hint, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
@@ -209,6 +259,31 @@ public interface HurriCacheClientRaw extends HurriCacheClientInterfaceCommon{
 
     default CompletableFuture<Boolean> containsKey(String key, KeyHintData hint, int clientId, Duration timeout) {
         return containsKey(serializeKey(key), hint, clientId, timeout);
+    }
+
+    /**
+     * Checks whether the specified string key (encoded as UTF-8) exists in the storage,
+     * using the default execution timeout.
+     *
+     * @param key      target key string.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @return a {@link CompletableFuture} returning {@code true} if key exists, {@code false} otherwise.
+     */
+    default CompletableFuture<Boolean> containsKey(String key, KeyHintData hint, int clientId) {
+        return containsKey(serializeKey(key), hint, clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Checks whether the specified key exists in the storage, using the default execution timeout.
+     *
+     * @param key      target key in byte array form.
+     * @param hint     optional key routing hint.
+     * @param clientId identifier of the issuing client.
+     * @return a {@link CompletableFuture} returning {@code true} if key exists, {@code false} otherwise.
+     */
+    default CompletableFuture<Boolean> containsKey(byte[] key, KeyHintData hint, int clientId) {
+        return containsKey(key, hint, clientId, getDefaultTimeout());
     }
 
     default CompletableFuture<Boolean> containsKey(String key) {

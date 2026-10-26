@@ -65,6 +65,38 @@ public interface HurriCacheClientList extends HurriCacheClientInterfaceCommon,Hu
     }
 
     /**
+     * Creates a List container with the default TTL and default execution timeout.
+     *
+     * @param key          target container key in String form (UTF-8 encoded).
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @param clientId     identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createList(String key, KeyHintData keyHint, List<Variant> initialValue,
+                                                      int clientId) {
+        return createList(serializeKey(key), keyHint, initialValue == null
+                                                   ? Collections.emptyList()
+                                                   : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Creates a List container with the default TTL and default execution timeout.
+     *
+     * @param key          target container key in byte array form.
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @param clientId     identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createList(byte[] key, KeyHintData keyHint, List<Variant> initialValue,
+                                                      int clientId) {
+        return createList(key, keyHint, initialValue == null
+                                        ? Collections.emptyList()
+                                        : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
      * Streams or retrieves all elements contained in a List container.
      *
      * @param key      target container key in byte array form.

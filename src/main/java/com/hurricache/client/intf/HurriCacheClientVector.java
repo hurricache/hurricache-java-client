@@ -23,6 +23,22 @@ public interface HurriCacheClientVector  extends HurriCacheClientInterfaceCommon
                                                 int clientId,
                                                 Duration timeout);
 
+    /**
+     * Creates a Vector container (dynamic indexed array).
+     *
+     * @param key          target container key in String form (UTF-8 encoded).
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createVector(String key, KeyHintData keyHint, List<Variant> initialValue,
+                                                        Duration ttl, int clientId, Duration timeout) {
+        return createVector(serializeKey(key), keyHint, initialValue, ttl, clientId, timeout);
+    }
+
     default CompletableFuture<KeyHintData> createVector(byte[] key, List<Variant> initialValue, Duration ttl) {
         return createVector(key, null, initialValue, ttl, getDefaultClientId(), getDefaultTimeout());
     }
@@ -45,6 +61,52 @@ public interface HurriCacheClientVector  extends HurriCacheClientInterfaceCommon
         return createVector(serializeKey(key), keyHint, initialValue == null
                                                      ? Collections.emptyList()
                                                      : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Creates a Vector container with the default TTL and default execution timeout.
+     *
+     * @param key          target container key in String form (UTF-8 encoded).
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @param clientId     identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createVector(String key, KeyHintData keyHint, List<Variant> initialValue,
+                                                        int clientId) {
+        return createVector(serializeKey(key), keyHint, initialValue == null
+                                                     ? Collections.emptyList()
+                                                     : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Creates a Vector container with the default TTL and default execution timeout.
+     *
+     * @param key          target container key in byte array form.
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @param clientId     identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createVector(byte[] key, KeyHintData keyHint, List<Variant> initialValue,
+                                                        int clientId) {
+        return createVector(key, keyHint, initialValue == null
+                                          ? Collections.emptyList()
+                                          : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Creates a Vector container with the default TTL, default client id and default execution timeout.
+     *
+     * @param key          target container key in byte array form.
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @return a {@link CompletableFuture} containing created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createVector(byte[] key, KeyHintData keyHint, List<Variant> initialValue) {
+        return createVector(key, keyHint, initialValue == null
+                                          ? Collections.emptyList()
+                                          : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHintData> createVector(String key, List<Variant> initialValue, int clientId) {

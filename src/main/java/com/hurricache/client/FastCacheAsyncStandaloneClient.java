@@ -14,7 +14,6 @@ import com.hurricache.grpc.LockType;
 import com.hurricache.grpc.OrderedKey;
 import com.hurricache.grpc.OrderedValue;
 import com.hurricache.grpc.Value;
-import com.hurricache.utils.CompressionUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -154,12 +153,12 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         }
 
         Key protoKey = KeyValueUtils.createUnorderedKey(key, keyHint, clientId, getDefaultCompressionThreshold()).build();
-        long currentChunkSize = protoKey.getSerializedSize();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
         int splitIndex = 0;
 
         List<Variant> firstChunk = new ArrayList<>();
         for (Variant payload : initialValue) {
-            Value.Builder compressedValue = CompressionUtils.compressIfNeeded(payload.bytesValue(), null);
+            Value.Builder compressedValue = KeyValueUtils.buildValueFromVariantCompressed(payload, getDefaultCompressionThreshold());
             int elemSize = compressedValue.build().getSerializedSize();
 
             if (!firstChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {
@@ -207,7 +206,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         int splitIndex = 0;
 
         for (Variant payload : tail) {
-            Value.Builder compressedValue = CompressionUtils.compressIfNeeded(payload.bytesValue(), null);
+            Value.Builder compressedValue = KeyValueUtils.buildValueFromVariantCompressed(payload, getDefaultCompressionThreshold());
             int elemSize = compressedValue.build().getSerializedSize();
 
             if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {
@@ -237,7 +236,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         }
 
         Key protoKey = KeyValueUtils.createUnorderedKey(key, keyHint, clientId, getDefaultCompressionThreshold()).build();
-        long currentChunkSize = protoKey.getSerializedSize();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
         int splitIndex = 0;
 
         List<OrderedVariant> firstChunk = new ArrayList<>();
@@ -309,7 +308,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         }
 
         Key protoKey = KeyValueUtils.createUnorderedKey(key, keyHint, clientId, getDefaultCompressionThreshold()).build();
-        long currentChunkSize = protoKey.getSerializedSize();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
 
         List<Payload> remainingKeys = new ArrayList<>();
         List<Variant> remainingValues = new ArrayList<>();
@@ -388,7 +387,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         }
 
         Key protoKey = KeyValueUtils.createUnorderedKey(key, keyHint, clientId, getDefaultCompressionThreshold()).build();
-        long currentChunkSize = protoKey.getSerializedSize();
+        long currentChunkSize = protoKey.getSerializedSize() + 32;
 
         List<OrderedPayload> remainingKeys = new ArrayList<>();
         List<Variant> remainingValues = new ArrayList<>();
@@ -729,7 +728,7 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         List<Variant> currentChunk = new ArrayList<>();
 
         for (Variant payload : data) {
-            Value.Builder compressedValue = CompressionUtils.compressIfNeeded(payload.bytesValue(), null);
+            Value.Builder compressedValue = KeyValueUtils.buildValueFromVariantCompressed(payload, getDefaultCompressionThreshold());
             int elemSize = compressedValue.build().getSerializedSize();
 
             if (!currentChunk.isEmpty() && (currentChunkSize + elemSize > MAX_RPC_SIZE)) {

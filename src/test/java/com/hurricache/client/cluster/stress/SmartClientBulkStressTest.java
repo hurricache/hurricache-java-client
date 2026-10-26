@@ -9,12 +9,15 @@ import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.grpc.StatusRuntimeException;
@@ -34,8 +37,10 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
 
     // ====== CONFIGURABLE PARAMETERS ======
     private static final int DATA_SIZE = 400000;
-    private static final int KEY_LENGTH = 16;
+    private static final int KEY_LENGTH = 128;                     // Длина ключа
+    private static final int BYTE_ARRAY_SIZE = 256;               // Размер массива байт в байтах
     private static final int THREAD_COUNT = 4;
+    private static final int MAX_PARALLEL_REQUESTS_PER_THREAD = 32; // Контроль in-flight запросов
     private static final int WARMUP_ITERATIONS = 1000;
     private static final String TEST_RUN_ID = UUID.randomUUID().toString().substring(0, 8);
 
@@ -44,14 +49,29 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     // =========================================================================
 
     private String generateKey(int idx) {
-        return TEST_RUN_ID + "_" + idx;
+        String base = TEST_RUN_ID + "_" + idx + "_";
+        if (base.length() >= KEY_LENGTH) {
+            return base.substring(0, KEY_LENGTH);
+        }
+        StringBuilder sb = new StringBuilder(base);
+        while (sb.length() < KEY_LENGTH) {
+            sb.append('a');
+        }
+        return sb.toString();
+    }
+
+    private byte[] generateByteArray(int idx) {
+        byte[] data = new byte[BYTE_ARRAY_SIZE];
+        byte fillVal = (byte) (idx % 127);
+        Arrays.fill(data, fillVal);
+        return data;
     }
 
     private Variant createVariant(int type, int idx) {
         switch (type) {
             case 0: return vi(idx);
             case 1: return vd(idx * 1.5);
-            case 2: return v(("byte_array_value_" + idx).getBytes(StandardCharsets.UTF_8));
+            case 2: return v(generateByteArray(idx));
             default: throw new IllegalArgumentException("Unknown type: " + type);
         }
     }
@@ -59,7 +79,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     private void waitForReplication() throws InterruptedException {
         Thread.sleep(500);
     }
-    
+
     /**
      * Check if exception is expected in concurrent environment:
      * - ALREADY_EXISTS: key was created by another thread
@@ -72,24 +92,6 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         }
         return false;
     }
-    
-    /**
-     * Fire-and-forget action that ignores expected concurrent errors.
-     */
-    @FunctionalInterface
-    interface FireAndForgetAction {
-        void execute() throws Exception;
-    }
-    
-    private void fireAndForget(FireAndForgetAction action, AtomicLong expectedErrors) {
-        try {
-            action.execute();
-        } catch (Exception ex) {
-            if (!isExpectedError(ex)) {
-                expectedErrors.incrementAndGet();
-            }
-        }
-    }
 
     // =========================================================================
     // PARALLEL CREATE TESTS (WITHOUT HINT)
@@ -98,7 +100,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel create (long, without hint)")
     void bulkTestParallelCreateLongWithoutHint() throws Exception {
-        String prefix = "bulk_create_long_no_hint_";
+        String prefix = "bcl_";
         AtomicLong expectedErrors = new AtomicLong(0);
         int iterationsPerThread = DATA_SIZE / THREAD_COUNT;
 
@@ -112,16 +114,22 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
                         String key = prefix + generateKey(globalIdx);
-                        futures[globalIdx] = client.create(key, vi(globalIdx))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) expectedErrors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<KeyHintData> fut = client.create(key, vi(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                expectedErrors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -147,7 +155,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel create (double, without hint)")
     void bulkTestParallelCreateDoubleWithoutHint() throws Exception {
-        String prefix = "bulk_create_double_no_hint_";
+        String prefix = "bcd_";
         AtomicLong expectedErrors = new AtomicLong(0);
         int iterationsPerThread = DATA_SIZE / THREAD_COUNT;
 
@@ -161,16 +169,22 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
                         String key = prefix + generateKey(globalIdx);
-                        futures[globalIdx] = client.create(key, vd(globalIdx * 1.5))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) expectedErrors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<KeyHintData> fut = client.create(key, vd(globalIdx * 1.5));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                expectedErrors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -196,7 +210,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel create (bytes, without hint)")
     void bulkTestParallelCreateBytesWithoutHint() throws Exception {
-        String prefix = "bulk_create_bytes_no_hint_";
+        String prefix = "bcb_";
         AtomicLong expectedErrors = new AtomicLong(0);
         int iterationsPerThread = DATA_SIZE / THREAD_COUNT;
 
@@ -210,16 +224,22 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
                         String key = prefix + generateKey(globalIdx);
-                        futures[globalIdx] = client.create(key, v("byte_value_" + globalIdx))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) expectedErrors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<KeyHintData> fut = client.create(key, v(generateByteArray(globalIdx)));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                expectedErrors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -249,11 +269,10 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel read (long, with hint)")
     void bulkTestParallelReadLongWithHint() throws Exception {
-        String prefix = "bulk_read_long_hint_";
+        String prefix = "brl_";
         List<String> keys = new ArrayList<>(DATA_SIZE);
         List<KeyHintData> hints = new ArrayList<>(DATA_SIZE);
 
-        // Create keys first and capture hints
         for (int i = 0; i < DATA_SIZE; i++) {
             String key = prefix + generateKey(i);
             KeyHintData hint = client.create(key, vi(i)).get();
@@ -275,15 +294,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
-                        futures[globalIdx] = client.get(keys.get(globalIdx), hints.get(globalIdx))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) errors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.get(keys.get(globalIdx), hints.get(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                errors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -308,7 +333,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel read (double, with hint)")
     void bulkTestParallelReadDoubleWithHint() throws Exception {
-        String prefix = "bulk_read_double_hint_";
+        String prefix = "brd_";
         List<String> keys = new ArrayList<>(DATA_SIZE);
         List<KeyHintData> hints = new ArrayList<>(DATA_SIZE);
 
@@ -333,15 +358,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
-                        futures[globalIdx] = client.get(keys.get(globalIdx), hints.get(globalIdx))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) errors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.get(keys.get(globalIdx), hints.get(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                errors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -366,13 +397,13 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel read (bytes, with hint)")
     void bulkTestParallelReadBytesWithHint() throws Exception {
-        String prefix = "bulk_read_bytes_hint_";
+        String prefix = "brb_";
         List<String> keys = new ArrayList<>(DATA_SIZE);
         List<KeyHintData> hints = new ArrayList<>(DATA_SIZE);
 
         for (int i = 0; i < DATA_SIZE; i++) {
             String key = prefix + generateKey(i);
-            KeyHintData hint = client.create(key, v("byte_value_" + i)).get();
+            KeyHintData hint = client.create(key, v(generateByteArray(i))).get();
             keys.add(key);
             hints.add(hint);
         }
@@ -391,15 +422,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
-                        futures[globalIdx] = client.get(keys.get(globalIdx), hints.get(globalIdx))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) errors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.get(keys.get(globalIdx), hints.get(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                errors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -428,7 +465,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel update (long, with hint)")
     void bulkTestParallelUpdateLongWithHint() throws Exception {
-        String prefix = "bulk_update_long_hint_";
+        String prefix = "bul_";
         List<String> keys = new ArrayList<>(DATA_SIZE);
         List<KeyHintData> hints = new ArrayList<>(DATA_SIZE);
 
@@ -453,15 +490,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
-                        futures[globalIdx] = client.replace(keys.get(globalIdx), hints.get(globalIdx), vi(globalIdx * 2))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) errors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.replace(keys.get(globalIdx), hints.get(globalIdx), vi(globalIdx * 2));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                errors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -486,7 +529,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel update (double, with hint)")
     void bulkTestParallelUpdateDoubleWithHint() throws Exception {
-        String prefix = "bulk_update_double_hint_";
+        String prefix = "bud_";
         List<String> keys = new ArrayList<>(DATA_SIZE);
         List<KeyHintData> hints = new ArrayList<>(DATA_SIZE);
 
@@ -511,15 +554,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
-                        futures[globalIdx] = client.replace(keys.get(globalIdx), hints.get(globalIdx), vd(globalIdx * 2.5))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) errors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.replace(keys.get(globalIdx), hints.get(globalIdx), vd(globalIdx * 2.5));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                errors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -544,13 +593,13 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: parallel update (bytes, with hint)")
     void bulkTestParallelUpdateBytesWithHint() throws Exception {
-        String prefix = "bulk_update_bytes_hint_";
+        String prefix = "bub_";
         List<String> keys = new ArrayList<>(DATA_SIZE);
         List<KeyHintData> hints = new ArrayList<>(DATA_SIZE);
 
         for (int i = 0; i < DATA_SIZE; i++) {
             String key = prefix + generateKey(i);
-            KeyHintData hint = client.create(key, v("init_value_" + i)).get();
+            KeyHintData hint = client.create(key, v(generateByteArray(i))).get();
             keys.add(key);
             hints.add(hint);
         }
@@ -569,15 +618,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     startLatch.await();
                     for (int i = 0; i < iterationsPerThread; i++) {
                         int globalIdx = threadIdx * iterationsPerThread + i;
-                        futures[globalIdx] = client.replace(keys.get(globalIdx), hints.get(globalIdx), v("updated_value_" + globalIdx))
-                                .exceptionally(ex -> { 
-                                    if (!isExpectedError(ex)) errors.incrementAndGet(); 
-                                    return null; 
-                                });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.replace(keys.get(globalIdx), hints.get(globalIdx), v(generateByteArray(globalIdx + 1)));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                errors.incrementAndGet();
+                            }
+                        });
+                        futures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -606,7 +661,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: mixed workload (create + read + update, long)")
     void bulkTestMixedWorkloadLong() throws Exception {
-        String prefix = "bulk_mixed_long_";
+        String prefix = "bml_";
         ConcurrentLinkedQueue<String> keysQueue = new ConcurrentLinkedQueue<>();
 
         // Phase 1: Parallel create
@@ -624,14 +679,23 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     createStartLatch.await();
                     for (int i = 0; i < createCountPerThread; i++) {
                         int globalIdx = threadIdx * createCountPerThread + i;
                         String key = prefix + generateKey(globalIdx);
                         keysQueue.add(key);
-                        createFutures[globalIdx] = client.create(key, vi(globalIdx))
-                                .exceptionally(ex -> { createErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<KeyHintData> fut = client.create(key, vi(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                createErrors.incrementAndGet();
+                            }
+                        });
+                        createFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -660,12 +724,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     readStartLatch.await();
                     for (int i = 0; i < readPerThread; i++) {
                         int globalIdx = threadIdx * readPerThread + i;
-                        readFutures[globalIdx] = client.get(keys.get(globalIdx))
-                                .exceptionally(ex -> { readErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.get(keys.get(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                readErrors.incrementAndGet();
+                            }
+                        });
+                        readFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -692,12 +765,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     updateStartLatch.await();
                     for (int i = 0; i < updatePerThread; i++) {
                         int globalIdx = threadIdx * updatePerThread + i;
-                        updateFutures[globalIdx] = client.replace(keys.get(globalIdx), vi(keys.size() + globalIdx))
-                                .exceptionally(ex -> { updateErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.replace(keys.get(globalIdx), vi(keys.size() + globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                updateErrors.incrementAndGet();
+                            }
+                        });
+                        updateFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -724,7 +806,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: mixed workload (create + read + update, double)")
     void bulkTestMixedWorkloadDouble() throws Exception {
-        String prefix = "bulk_mixed_double_";
+        String prefix = "bmd_";
         ConcurrentLinkedQueue<String> keysQueue = new ConcurrentLinkedQueue<>();
 
         // Phase 1: Parallel create
@@ -742,14 +824,23 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     createStartLatch.await();
                     for (int i = 0; i < createCountPerThread; i++) {
                         int globalIdx = threadIdx * createCountPerThread + i;
                         String key = prefix + generateKey(globalIdx);
                         keysQueue.add(key);
-                        createFutures[globalIdx] = client.create(key, vd(globalIdx * 1.5))
-                                .exceptionally(ex -> { createErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<KeyHintData> fut = client.create(key, vd(globalIdx * 1.5));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                createErrors.incrementAndGet();
+                            }
+                        });
+                        createFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -778,12 +869,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     readStartLatch.await();
                     for (int i = 0; i < readPerThread; i++) {
                         int globalIdx = threadIdx * readPerThread + i;
-                        readFutures[globalIdx] = client.get(keys.get(globalIdx))
-                                .exceptionally(ex -> { readErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.get(keys.get(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                readErrors.incrementAndGet();
+                            }
+                        });
+                        readFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -810,12 +910,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     updateStartLatch.await();
                     for (int i = 0; i < updatePerThread; i++) {
                         int globalIdx = threadIdx * updatePerThread + i;
-                        updateFutures[globalIdx] = client.replace(keys.get(globalIdx), vd(keys.size() * 2.5 + globalIdx))
-                                .exceptionally(ex -> { updateErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.replace(keys.get(globalIdx), vd(keys.size() * 2.5 + globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                updateErrors.incrementAndGet();
+                            }
+                        });
+                        updateFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -842,7 +951,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     @Test
     @DisplayName("Bulk stress test: mixed workload (create + read + update, bytes)")
     void bulkTestMixedWorkloadBytes() throws Exception {
-        String prefix = "bulk_mixed_bytes_";
+        String prefix = "bmb_";
         ConcurrentLinkedQueue<String> keysQueue = new ConcurrentLinkedQueue<>();
 
         // Phase 1: Parallel create
@@ -860,14 +969,23 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     createStartLatch.await();
                     for (int i = 0; i < createCountPerThread; i++) {
                         int globalIdx = threadIdx * createCountPerThread + i;
                         String key = prefix + generateKey(globalIdx);
                         keysQueue.add(key);
-                        createFutures[globalIdx] = client.create(key, v("value_" + globalIdx))
-                                .exceptionally(ex -> { createErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<KeyHintData> fut = client.create(key, v(generateByteArray(globalIdx)));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                createErrors.incrementAndGet();
+                            }
+                        });
+                        createFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -896,12 +1014,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     readStartLatch.await();
                     for (int i = 0; i < readPerThread; i++) {
                         int globalIdx = threadIdx * readPerThread + i;
-                        readFutures[globalIdx] = client.get(keys.get(globalIdx))
-                                .exceptionally(ex -> { readErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.get(keys.get(globalIdx));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                readErrors.incrementAndGet();
+                            }
+                        });
+                        readFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -928,12 +1055,21 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         for (int t = 0; t < THREAD_COUNT; t++) {
             final int threadIdx = t;
             Thread bt = new Thread(() -> {
+                Semaphore semaphore = new Semaphore(MAX_PARALLEL_REQUESTS_PER_THREAD);
                 try {
                     updateStartLatch.await();
                     for (int i = 0; i < updatePerThread; i++) {
                         int globalIdx = threadIdx * updatePerThread + i;
-                        updateFutures[globalIdx] = client.replace(keys.get(globalIdx), v("updated_" + globalIdx))
-                                .exceptionally(ex -> { updateErrors.incrementAndGet(); return null; });
+
+                        semaphore.acquire();
+                        CompletableFuture<Variant> fut = client.replace(keys.get(globalIdx), v(generateByteArray(globalIdx + 2)));
+                        fut.whenComplete((res, ex) -> {
+                            semaphore.release();
+                            if (ex != null && !isExpectedError(ex)) {
+                                updateErrors.incrementAndGet();
+                            }
+                        });
+                        updateFutures[globalIdx] = fut;
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -966,5 +1102,10 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         double ops = elapsed > 0 ? iterations / elapsed : 0;
         System.out.printf("[%s] size=%d, %d iters, %.3fs, %.2f OPS, %d errors%n",
                           operation, dataSize, iterations, elapsed, ops, errors);
+    }
+
+    @Override
+    protected Duration getTestTtl() {
+        return Duration.ofMinutes(15);
     }
 }

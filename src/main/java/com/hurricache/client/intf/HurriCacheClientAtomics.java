@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
  *   <li>Full signature: {@code method(byte[]|String key, KeyHintData hint, value, Duration ttl, int clientId, Duration timeout)}</li>
  *   <li>Minimal signature: {@code method(String key, KeyHintData hint, value)} — uses defaults for ttl, clientId, timeout</li>
  *   <li>With clientId: {@code method(String|byte[] key, KeyHintData hint, value, int clientId)} — uses defaults for ttl, timeout</li>
+ *   <li>Without hint: {@code method(String|byte[] key, value)} and {@code method(String|byte[] key, value, int clientId)} — hint is {@code null}</li>
  * </ul>
  * 
  * Default values:
@@ -236,7 +237,7 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      */
     CompletableFuture<Number> sub(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout);
 
-    /** Default overloads for atomicSub(long) */
+    /** Default overloads for sub(long) */
     default CompletableFuture<Number> sub(String key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
         return sub(serializeKey(key), hint, delta, ttl, clientId, timeout);
     }
@@ -265,7 +266,7 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
         return sub(key, hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    /** Default overloads for atomicSub(double) */
+    /** Default overloads for sub(double) */
     default CompletableFuture<Number> sub(String key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
         return sub(serializeKey(key), hint, delta, ttl, clientId, timeout);
     }
@@ -327,6 +328,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     default CompletableFuture<Long> and(String key, long mask) {
         return and(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<Long> and(String key, long mask, int clientId) {
+        return and(serializeKey(key), null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> and(byte[] key, long mask, int clientId) {
+        return and(key, null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
     default CompletableFuture<Long> and(String key, KeyHintData hint, long mask, int clientId) {
         return and(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
@@ -367,6 +374,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     default CompletableFuture<Long> or(String key, long mask) {
         return or(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<Long> or(String key, long mask, int clientId) {
+        return or(serializeKey(key), null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> or(byte[] key, long mask, int clientId) {
+        return or(key, null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
     default CompletableFuture<Long> or(String key, KeyHintData hint, long mask, int clientId) {
         return or(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
@@ -406,6 +419,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     }
     default CompletableFuture<Long> xor(String key, long mask) {
         return xor(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> xor(String key, long mask, int clientId) {
+        return xor(serializeKey(key), null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> xor(byte[] key, long mask, int clientId) {
+        return xor(key, null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
     default CompletableFuture<Long> xor(String key, KeyHintData hint, long mask, int clientId) {
         return xor(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
@@ -462,6 +481,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, long expectedValue, long newValue) {
         return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, long expectedValue, long newValue, int clientId) {
+        return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, long expectedValue, long newValue, int clientId) {
+        return compareAndSet(key, null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint, long expectedValue, long newValue, int clientId) {
         return compareAndSet(serializeKey(key), hint, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
@@ -484,6 +509,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     }
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, double expectedValue, double newValue) {
         return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, double expectedValue, double newValue, int clientId) {
+        return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, double expectedValue, double newValue, int clientId) {
+        return compareAndSet(key, null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint, double expectedValue, double newValue, int clientId) {
         return compareAndSet(serializeKey(key), hint, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());

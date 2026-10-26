@@ -1,10 +1,12 @@
 package com.hurricache;
 
 import com.hurricache.client.FastCacheAsyncSmartClient;
+import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
+import com.hurricache.grpc.AtomicCasRes;
 import com.hurricache.grpc.LockStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -72,7 +74,7 @@ public abstract class TestBaseCluster {
 
     @BeforeEach
     void setUp() throws IOException {
-        client = new FastCacheAsyncSmartClient(List.of("192.168.0.123:51000","192.168.0.123:61000","192.168.0.123:21000"), 0, Duration.ofSeconds(3600)) {
+        client = new FastCacheAsyncSmartClient(List.of("192.168.0.123:51000","192.168.0.123:61000","192.168.0.123:21000"), 0, Duration.ofSeconds(10)) {
             @Override
             public Duration getDefaultTtl() {
                 return getTestTtl();
@@ -82,6 +84,7 @@ public abstract class TestBaseCluster {
             public int getDefaultClientId() {
                 return 0;
             }
+
 
         };
 

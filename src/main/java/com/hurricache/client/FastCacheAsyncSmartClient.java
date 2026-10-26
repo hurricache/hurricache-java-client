@@ -31,6 +31,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +39,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +81,13 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                                                             new ConcurrentHashMap<>()));
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
-    private final CountDownLatch readyLatch = new CountDownLatch(1);
+    private final ScheduledExecutorService delayExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "fastcache-smart-delay");
+        t.setDaemon(true);
+        return t;
+    });
+    private final CompletableFuture<Void> readyFuture = new CompletableFuture<>();
+    private final ConcurrentHashMap<String, HurriCacheClientInterface> rerouteClients = new ConcurrentHashMap<>();
     private final AtomicBoolean readyFlag = new AtomicBoolean(false);
     private final AtomicBoolean isUpdating = new AtomicBoolean(false);
     private final AtomicInteger randomShard = new AtomicInteger(0);
@@ -218,7 +225,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 routing_info.set(new RoutingInfo(maxShards, newRoutingTable, newRoutingTableTarget));
 
                 if (readyFlag.compareAndSet(false, true)) {
-                    readyLatch.countDown();
+                    readyFuture.complete(null);
                 }
             } finally {
                 isUpdating.set(false);
@@ -238,7 +245,8 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                                       .build(),
                                               defaultClientId,
                                               defaultTimeout,
-                                              getDefaultCompressionThreshold()) {
+                                              getDefaultCompressionThreshold(),
+                                              true) {
             @Override
             public Duration getDefaultTtl() {
                 return FastCacheAsyncSmartClient.this.getDefaultTtl();
@@ -267,8 +275,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     @Override
     public String getTarget() {
-        ManagedChannel channel = activeCoordinatorChannel.get();
-        return channel != null ? channel.toString() : "UNKNOWN";
+        return coordinatorAddresses.get(activeCoordinatorIndex.get());
     }
 
     @Override
@@ -281,6 +288,15 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return defaultTimeout;
     }
 
+    /**
+     * Executes a write operation with fallback according to the effective {@link Mode}.
+     * <p>
+     * Fallback semantics are <b>at-least-once</b>: if the primary endpoint fails with
+     * {@code UNAVAILABLE} or {@code DEADLINE_EXCEEDED}, the operation is retried on the
+     * backup endpoint. Non-idempotent writes (pop, pushTail, add, ...) may therefore be
+     * applied twice when the primary actually accepted the write before the failure was
+     * observed. Callers requiring exactly-once semantics must deduplicate on their side.
+     */
     private <T> CompletableFuture<T> executeWrite(KeyHintData hint,
                                                   Function<HurriCacheClientInterface, CompletableFuture<T>> action) {
         Mode methodDefaultMode = currentModeOverride.get();
@@ -297,12 +313,18 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             Mode baseMode = (methodDefaultMode != null) ? methodDefaultMode : configuredMode;
             RoutingInfo routingInfo = routing_info.get();
 
+            int maxShards = routingInfo.max_shards;
+            if (maxShards <= 0) {
+                return CompletableFuture.failedFuture(
+                        new IllegalStateException("Routing info is not ready: max_shards=" + maxShards));
+            }
+
             int shard;
             if (hint == null || hint.getWeek_hash() == null) {
-                shard = (randomShard.incrementAndGet() & Integer.MAX_VALUE) % routingInfo.max_shards;
+                shard = (randomShard.incrementAndGet() & Integer.MAX_VALUE) % maxShards;
             } else {
                 long unsignedHash = Integer.toUnsignedLong(hint.getWeek_hash());
-                shard = (int) (unsignedHash % routingInfo.max_shards);
+                shard = (int) (unsignedHash % maxShards);
             }
 
             HurriCacheClientInterface master = getRoute(routingInfo, shard, MASTER);
@@ -375,11 +397,11 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                                           ? routes.backupTarget() : null;
 
                     HurriCacheClientInterface newMaster = masterTarget != null
-                                                          ? routingInfo.routingTableTarget().computeIfAbsent(masterTarget, this::newFastCacheClient)
+                                                          ? resolveRerouteClient(routingInfo, masterTarget)
                                                           : null;
 
                     HurriCacheClientInterface newBackup = backupTarget != null
-                                                          ? routingInfo.routingTableTarget().computeIfAbsent(backupTarget, this::newFastCacheClient)
+                                                          ? resolveRerouteClient(routingInfo, backupTarget)
                                                           : fallbackEndpoint;
 
                     log.atDebug().log("[REROUTE] Dynamic redirect from {} -> Master: {}, Backup: {}",
@@ -402,9 +424,9 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             }
 
             // =========================================================================
-            // 2. ОБРАБОТКА НЕДОСТУПНОСТИ НОДЫ (UNAVAILABLE)
+            // 2. ОБРАБОТКА НЕДОСТУПНОСТИ/ТАЙМАУТА НОДЫ (UNAVAILABLE, DEADLINE_EXCEEDED)
             // =========================================================================
-            if (isUnavailable(ex)) {
+            if (isUnavailable(ex) || isTimeout(ex)) {
                 String deadTarget = currentEndpoint != null ? currentEndpoint.getTarget() : "UNKNOWN";
                 log.atWarn().log("[FAILOVER] Target node is dead: {}. Triggering topology update...", deadTarget);
 
@@ -618,13 +640,21 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     @Override
     public void shutdown() {
+        currentModeOverride.remove();
+        readyFuture.completeExceptionally(new IllegalStateException("FastCacheAsyncSmartClient is shut down"));
+
         scheduledExecutorService.shutdown();
+        delayExecutor.shutdown();
         try {
             if (!scheduledExecutorService.awaitTermination(3, TimeUnit.SECONDS)) {
                 scheduledExecutorService.shutdownNow();
             }
+            if (!delayExecutor.awaitTermination(3, TimeUnit.SECONDS)) {
+                delayExecutor.shutdownNow();
+            }
         } catch (InterruptedException e) {
             scheduledExecutorService.shutdownNow();
+            delayExecutor.shutdownNow();
             Thread.currentThread().interrupt();
         }
 
@@ -633,7 +663,11 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             coordinatorChannel.shutdown();
         }
 
-        routing_info.get().routingTable.values().forEach(HurriCacheClientInterface::shutdown);
+        RoutingInfo routingInfo = routing_info.get();
+        Set<HurriCacheClientInterface> allClients = new HashSet<>(routingInfo.routingTableTarget.values());
+        allClients.addAll(routingInfo.routingTable.values());
+        allClients.addAll(rerouteClients.values());
+        allClients.forEach(HurriCacheClientInterface::shutdown);
     }
 
     private HurriCacheClientInterface getRoute(RoutingInfo info, int shard, NodeRole role) {
@@ -642,6 +676,11 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
 
     private HurriCacheClientInterface getRoute(RoutingInfo info, String target) {
         return info.routingTableTarget.get(target);
+    }
+
+    private HurriCacheClientInterface resolveRerouteClient(RoutingInfo routingInfo, String target) {
+        HurriCacheClientInterface existing = routingInfo.routingTableTarget().get(target);
+        return existing != null ? existing : rerouteClients.computeIfAbsent(target, this::newFastCacheClient);
     }
 
     private boolean isUnavailable(Throwable ex) {
@@ -757,8 +796,31 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return executeWrite(hint, c -> c.compareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout));
     }
 
+    /**
+     * Overrides the routing {@link Mode} for the <b>current thread</b> (sticky semantics:
+     * the override applies to this and all subsequent calls from the same thread until cleared).
+     * Passing {@code null} is equivalent to calling {@link #clearMode()}.
+     * <p>
+     * The override is stored in a {@link ThreadLocal}; when the thread belongs to a pool,
+     * the value survives across unrelated tasks. Always call {@link #clearMode()} when done,
+     * preferably in a {@code finally} block.
+     */
     public FastCacheAsyncSmartClient setMode(Mode mode) {
-        this.currentModeOverride.set(mode);
+        if (mode == null) {
+            this.currentModeOverride.remove();
+        } else {
+            this.currentModeOverride.set(mode);
+        }
+        return this;
+    }
+
+    /**
+     * Clears the per-thread routing mode override set by {@link #setMode(Mode)}.
+     * Must be called after a series of mode-overridden calls to avoid leaking the mode
+     * (and the ThreadLocal entry) to unrelated work executed on the same pooled thread.
+     */
+    public FastCacheAsyncSmartClient clearMode() {
+        this.currentModeOverride.remove();
         return this;
     }
 
@@ -842,16 +904,21 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         if (readyFlag.get()) {
             return CompletableFuture.completedFuture(null);
         }
-        return CompletableFuture.runAsync(() -> {
-            try {
-                if (!readyLatch.await(readyTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                    throw new CompletionException(new TimeoutException("FastCacheClient boot timeout reached."));
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new CompletionException(e);
+        CompletableFuture<Void> wait = new CompletableFuture<>();
+        readyFuture.whenComplete((v, ex) -> {
+            if (ex != null) {
+                wait.completeExceptionally(ex);
+            } else {
+                wait.complete(null);
             }
         });
+        try {
+            delayExecutor.schedule(() -> wait.completeExceptionally(new TimeoutException("FastCacheClient boot timeout reached.")),
+                                   readyTimeout.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException e) {
+            wait.completeExceptionally(e);
+        }
+        return wait;
     }
 
     @Override
@@ -859,12 +926,14 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         return defaultCompressionThreshold;
     }
 
-    private static void repDelay() {
+    private CompletableFuture<Void> repDelay() {
+        CompletableFuture<Void> delay = new CompletableFuture<>();
         try {
-            Thread.sleep(500);
-        } catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
+            delayExecutor.schedule(() -> delay.complete(null), 500, TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException e) {
+            delay.completeExceptionally(e);
         }
+        return delay;
     }
 
     // =========================================================================
@@ -1018,7 +1087,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
         }
 
         return createFuture.thenCompose(resHint ->
-                                                CompletableFuture.runAsync(FastCacheAsyncSmartClient::repDelay)
+                                                repDelay()
                                                         .thenCompose(ignored -> sendRemainingChunksInPipeline(resHint,
                                                                                                               remainingKeys,
                                                                                                               remainingValues,
