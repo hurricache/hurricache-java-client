@@ -48,7 +48,7 @@ public class SmartClientStreamConsistencyTest extends TestBaseCluster {
 
         List<Variant> masterStream = client.setMode(Mode.MASTER).getList(key, hint).get();
         assertEquals(data, masterStream);
-
+        Thread.sleep(500);
         List<Variant> backupStream = client.setMode(Mode.BACKUP).getList(key, hint).get();
         assertEquals(masterStream, backupStream);
     }
@@ -64,7 +64,7 @@ public class SmartClientStreamConsistencyTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).createVector(key, List.of()).get();
         assertNotNull(hint);
-
+        Thread.sleep(500);
         List<Variant> data = new ArrayList<>();
         for (int i = 0; i < 130; i++) {
             data.add(vi(i));
