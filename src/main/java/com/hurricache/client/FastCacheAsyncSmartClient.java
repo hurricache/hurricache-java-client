@@ -203,7 +203,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 ConcurrentHashMap<Pair<NodeRole, Integer>, HurriCacheClientInterface> newRoutingTable = new ConcurrentHashMap<>();
 
                 Set<String> newTargets = peerRoutingList.stream()
-                        .map(PeerRouting::getTarget)
+                        .map(PeerRouting::getTarget).map(item-> item.getIp() + ":" + item.getPort())
                         .collect(Collectors.toSet());
                 Set<String> oldTargets = currentInfo.routingTableTarget.keySet();
 
@@ -218,9 +218,17 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                     }
                 });
 
-                peerRoutingList.forEach(item -> item.getPartitionIdsList()
-                        .forEach(id -> newRoutingTable.put(Pair.of(item.getRole(), id),
-                                                           newRoutingTableTarget.get(item.getTarget()))));
+                peerRoutingList.forEach(item -> {
+                    String targetKey = item.getTarget().getIp() + ":" + item.getTarget().getPort();
+                    HurriCacheClientInterface client = newRoutingTableTarget.get(targetKey);
+                    if (client == null) {
+                        log.atWarn().log("No client for routing target {}, partitions {} skipped", targetKey,
+                                         item.getPartitionIdsList());
+                        return;
+                    }
+                    item.getPartitionIdsList()
+                        .forEach(id -> newRoutingTable.put(Pair.of(item.getRole(), id), client));
+                });
 
                 routing_info.set(new RoutingInfo(maxShards, newRoutingTable, newRoutingTableTarget));
 
@@ -231,6 +239,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
                 isUpdating.set(false);
             }
         }).exceptionally(ex -> {
+            ex.printStackTrace();
             log.atWarn().log("[COORDINATOR FAILOVER] Failed to fetch topology from coordinator. Switching to next node...", ex);
             long delayMs = 100L * (attemptCount + 1);
             scheduledExecutorService.schedule(() -> requestRoutingInfoFromCoordinator(attemptCount + 1), delayMs, TimeUnit.MILLISECONDS);

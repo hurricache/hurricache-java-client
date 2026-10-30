@@ -169,12 +169,17 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // TTL MANAGEMENT
     // =========================================================================
 
+    /**
+     * ttl — relative milliseconds from now; a negative value means "persist"
+     * (sent on the wire as UINT64_MAX = remove TTL, key never expires).
+     * Positive values are converted to an absolute expiration timestamp.
+     */
     @Override
     public CompletableFuture<Boolean> setTtl(byte[] key, KeyHintData hint, long ttl, int clientId, Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         TtlRequest request = TtlRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setTtl(System.currentTimeMillis() + ttl)
+                .setTtl(ttl < 0 ? -1L : System.currentTimeMillis() + ttl)
                 .build();
         getStub(timeout).setTtl(request, new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;

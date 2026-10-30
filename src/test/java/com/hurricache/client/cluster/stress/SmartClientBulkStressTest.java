@@ -40,7 +40,7 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
     private static final int KEY_LENGTH = 128;                     // Длина ключа
     private static final int BYTE_ARRAY_SIZE = 256;               // Размер массива байт в байтах
     private static final int THREAD_COUNT = 4;
-    private static final int MAX_PARALLEL_REQUESTS_PER_THREAD = 32; // Контроль in-flight запросов
+    private static final int MAX_PARALLEL_REQUESTS_PER_THREAD = 256; // Контроль in-flight запросов
     private static final int WARMUP_ITERATIONS = 1000;
     private static final String TEST_RUN_ID = UUID.randomUUID().toString().substring(0, 8);
 
