@@ -136,20 +136,22 @@ public class AtomicOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("atomicAdd with double value - adding int is INVALID_ARGUMENT")
+    @DisplayName("atomicAdd with double value - adding int is allowed")
     void testAtomicAddDouble() throws ExecutionException, InterruptedException {
         String key = "atomic_add_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(10.5)).get();
 
-        // atomicAdd double with int - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.add(key, 1));
+        // atomicAdd double with int - allowed, returns OLD value
+        Number result = client.add(key, 1).get();
+        assertNotNull(result);
+        assertEquals(10.5, result.doubleValue(), 0.001);
 
-        // Verify value remains unchanged
+        // Verify new value via GET
         Variant current = client.get(key).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
-        assertEquals(10.5, current.doubleValue(), 0.001);
+        assertEquals(11.5, current.doubleValue(), 0.001);
     }
 
     @Test
@@ -193,20 +195,22 @@ public class AtomicOperationsTest extends TestBase {
     }
 
     @Test
-    @DisplayName("atomicSub with double value - subtracting int is INVALID_ARGUMENT")
+    @DisplayName("atomicSub with double value - subtracting int is allowed")
     void testAtomicSubDouble() throws ExecutionException, InterruptedException {
         String key = "atomic_sub_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(50.0)).get();
 
-        // atomicSub double with int - should return INVALID_ARGUMENT
-        assertInvalidArgument(client.sub(key, 1));
+        // atomicSub double with int - allowed, returns OLD value
+        Number result = client.sub(key, 1).get();
+        assertNotNull(result);
+        assertEquals(50.0, result.doubleValue(), 0.001);
 
-        // Verify value remains unchanged
+        // Verify new value via GET
         Variant current = client.get(key).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
-        assertEquals(50.0, current.doubleValue(), 0.001);
+        assertEquals(49.0, current.doubleValue(), 0.001);
     }
 
     @Test

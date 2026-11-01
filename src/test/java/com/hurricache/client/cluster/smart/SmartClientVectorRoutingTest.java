@@ -527,4 +527,161 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> stream = client.setMode(Mode.BACKUP).getVector(key, hint).get();
         assertEquals(3, stream.size());
     }
+
+    // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE (VECTOR)
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - partial range, validate on MASTER and BACKUP")
+    void testGetAndDeleteVectorElementsInRangePartialRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_partial_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        Thread.sleep(500);
+
+        // Delete range [1, 3] on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 1, 3, false).get();
+        assertEquals(3, deleted.size());
+        assertEquals("2", new String(deleted.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("3", new String(deleted.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(deleted.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify remaining on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("5", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - full range (0,0)")
+    void testGetAndDeleteVectorElementsInRangeFullRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_full_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("a"), v("b"), v("c"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        Thread.sleep(500);
+
+        // Delete full range with 0,0 on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 0, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify container is empty on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(0, remaining.size());
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(0, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - start only (end=0)")
+    void testGetAndDeleteVectorElementsInRangeStartOnly() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_start_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        Thread.sleep(500);
+
+        // Delete from position 2 to end on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 2, 0, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only position 0 remains on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - end only (start=0)")
+    void testGetAndDeleteVectorElementsInRangeEndOnly() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_end_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        Thread.sleep(500);
+
+        // Delete from start to position 1 on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 0, 1, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify positions 2, 3 remain on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("3", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - empty range (no match)")
+    void testGetAndDeleteVectorElementsInRangeEmptyRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_empty_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        Thread.sleep(500);
+
+        // Delete range [10, 20] - doesn't exist on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 10, 20, false).get();
+        assertEquals(0, deleted.size());
+
+        // Verify original elements unchanged on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - with no hint")
+    void testGetAndDeleteVectorElementsInRangeNoHint() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_no_hint_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("a"), v("b"), v("c"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        Thread.sleep(500);
+
+        // Delete without hint - client resolves routing on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, null, 0, 1, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only position 2 remains on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key).get();
+        assertEquals(1, remaining.size());
+        assertEquals("c", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key).get();
+        assertEquals(1, remaining.size());
+    }
 }

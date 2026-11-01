@@ -406,4 +406,173 @@ public interface HurriCacheClientSortedSet extends HurriCacheClientInterfaceComm
     default CompletableFuture<List<OrderedVariant>> getOrderedSet(byte[] key, int clientId) {
         return getOrderedSet(key, null, clientId, getDefaultTimeout());
     }
+
+    // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE (ORDERED SET)
+    // =========================================================================
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries.
+     * Returns deleted elements and removes them from the container.
+     *
+     * @param key         target container key in byte array form.
+     * @param hint        optional key routing hint.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @param clientId    identifier of the issuing client.
+     * @param timeout     execution timeout duration.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(byte[] key,
+                                                                                 KeyHintData hint,
+                                                                                 long startWeight,
+                                                                                 long endWeight,
+                                                                                 boolean reverse,
+                                                                                 int clientId,
+                                                                                 Duration timeout);
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries
+     * using a string key.
+     *
+     * @param key         target container key as a string (encoded as UTF-8).
+     * @param hint        optional key routing hint.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @param clientId    identifier of the issuing client.
+     * @param timeout     execution timeout duration.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    default CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(String key,
+                                                                                        KeyHintData hint,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse,
+                                                                                        int clientId,
+                                                                                        Duration timeout) {
+        return getAndDeleteElementInRangeOrderedSet(serializeKey(key), hint, startWeight, endWeight,
+                                                    reverse, clientId, timeout);
+    }
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries
+     * using a string key and the default timeout.
+     *
+     * @param key         target container key as a string (encoded as UTF-8).
+     * @param hint        optional key routing hint.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @param clientId    identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    default CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(String key,
+                                                                                        KeyHintData hint,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse,
+                                                                                        int clientId) {
+        return getAndDeleteElementInRangeOrderedSet(serializeKey(key), hint, startWeight, endWeight,
+                                                    reverse, clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries
+     * using a string key and default client settings.
+     *
+     * @param key         target container key as a string (encoded as UTF-8).
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    default CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(String key,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse) {
+        return getAndDeleteElementInRangeOrderedSet(serializeKey(key), null, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries
+     * using default client settings.
+     *
+     * @param key         target container key in byte array form.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    default CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(byte[] key,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse) {
+        return getAndDeleteElementInRangeOrderedSet(key, null, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries
+     * using default client settings.
+     *
+     * @param key         target container key in byte array form.
+     * @param hint        optional key routing hint.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    default CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(byte[] key,
+                                                                                        KeyHintData hint,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse) {
+        return getAndDeleteElementInRangeOrderedSet(key, hint, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries
+     * using a string key and default client settings.
+     *
+     * @param key         target container key as a string (encoded as UTF-8).
+     * @param hint        optional key routing hint.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    default CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(String key,
+                                                                                        KeyHintData hint,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse) {
+        return getAndDeleteElementInRangeOrderedSet(serializeKey(key), hint, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Streams and deletes a sub-range of elements from an {@code OrderedSet} by weight boundaries
+     * using the default timeout.
+     *
+     * @param key         target container key in byte array form.
+     * @param hint        optional key routing hint.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @param clientId    identifier of the issuing client.
+     * @return a {@link CompletableFuture} containing list of deleted ordered payload elements in range.
+     */
+    default CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(byte[] key,
+                                                                                        KeyHintData hint,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse,
+                                                                                        int clientId) {
+        return getAndDeleteElementInRangeOrderedSet(key, hint, startWeight, endWeight, reverse,
+                                                    clientId, getDefaultTimeout());
+    }
 }

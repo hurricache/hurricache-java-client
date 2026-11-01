@@ -574,6 +574,26 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         return delegate.getElementInRangeOrderedSet(key, hint, startWeight, endWeight, reverse, clientId, timeout);
     }
 
+    @Override
+    public CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(byte[] key, KeyHintData hint, long startWeight, long endWeight, boolean reverse, int clientId, Duration timeout) {
+        return delegate.getAndDeleteElementInRangeOrderedSet(key, hint, startWeight, endWeight, reverse, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(byte[] key, KeyHintData hint, long startWeight, long endWeight, boolean reverse, int clientId, Duration timeout) {
+        return delegate.getAndDeleteElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(byte[] key, KeyHintData hint, long start, long end, boolean reverse, int clientId, Duration timeout) {
+        return delegate.getAndDeleteListElementsInRange(key, hint, start, end, reverse, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<List<Variant>> getAndDeleteVectorElementsInRange(byte[] key, KeyHintData hint, long start, long end, boolean reverse, int clientId, Duration timeout) {
+        return delegate.getAndDeleteVectorElementsInRange(key, hint, start, end, reverse, clientId, timeout);
+    }
+
     // =========================================================================
     // INSERTION OPERATIONS (CHUNKED)
     // =========================================================================
@@ -928,6 +948,100 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     @Override
     public CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, KeyHintData hint, double expectedValue, double newValue, Duration ttl, int clientId, Duration timeout) {
         return delegate.compareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout);
+    }
+
+    // =========================================================================
+    // CONTAINER ATOMICS
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long value, Duration ttl, int clientId, Duration timeout) {
+        return delegate.exchangeInContainer(key, hint, containerKey, value, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double value, Duration ttl, int clientId, Duration timeout) {
+        return delegate.exchangeInContainer(key, hint, containerKey, value, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos, long value, Duration ttl, int clientId, Duration timeout) {
+        return delegate.exchangeInContainer(key, hint, pos, value, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos, double value, Duration ttl, int clientId, Duration timeout) {
+        return delegate.exchangeInContainer(key, hint, pos, value, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.addInContainer(key, hint, containerKey, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.addInContainer(key, hint, containerKey, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos, long delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.addInContainer(key, hint, pos, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos, double delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.addInContainer(key, hint, pos, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.subInContainer(key, hint, containerKey, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.subInContainer(key, hint, containerKey, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos, long delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.subInContainer(key, hint, pos, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos, double delta, Duration ttl, int clientId, Duration timeout) {
+        return delegate.subInContainer(key, hint, pos, delta, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long mask, Duration ttl, int clientId, Duration timeout) {
+        return delegate.andInContainer(key, hint, containerKey, mask, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, long pos, long mask, Duration ttl, int clientId, Duration timeout) {
+        return delegate.andInContainer(key, hint, pos, mask, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long mask, Duration ttl, int clientId, Duration timeout) {
+        return delegate.orInContainer(key, hint, containerKey, mask, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, long pos, long mask, Duration ttl, int clientId, Duration timeout) {
+        return delegate.orInContainer(key, hint, pos, mask, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long mask, Duration ttl, int clientId, Duration timeout) {
+        return delegate.xorInContainer(key, hint, containerKey, mask, ttl, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, long pos, long mask, Duration ttl, int clientId, Duration timeout) {
+        return delegate.xorInContainer(key, hint, pos, mask, ttl, clientId, timeout);
     }
 
     // =========================================================================

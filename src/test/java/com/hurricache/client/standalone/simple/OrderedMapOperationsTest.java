@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -416,5 +417,141 @@ public class OrderedMapOperationsTest extends TestBase {
 
         Map<OrderedPayload, Variant> val = client.getOrderedMap(key, null, INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
+    }
+
+    // =========================================================================
+    // 4. GET AND DELETE ELEMENTS IN RANGE (ORDERED MAP)
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedMap - partial range")
+    void testGetAndDeleteElementInRangeOrderedMapPartial() throws ExecutionException, InterruptedException {
+        String key = "ordered_map_getdel_range_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new LinkedHashMap<>();
+        data.put(OrderedPayload.of("k1".getBytes(), 1L), v("v1"));
+        data.put(OrderedPayload.of("k2".getBytes(), 2L), vi(20));
+        data.put(OrderedPayload.of("k3".getBytes(), 3L), vd(3.0));
+        data.put(OrderedPayload.of("k4".getBytes(), 4L), v("v4"));
+        data.put(OrderedPayload.of("k5".getBytes(), 5L), vi(50));
+
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+
+        // Delete range [2, 4]
+        Map<OrderedPayload, Variant> deleted = client.getAndDeleteElementInRangeOrderedMap(key, hint, 2, 4, false).get();
+        assertEquals(3, deleted.size());
+        assertTrue(deleted.containsKey(OrderedPayload.of("k2".getBytes(), 2L)));
+        assertTrue(deleted.containsKey(OrderedPayload.of("k3".getBytes(), 3L)));
+        assertTrue(deleted.containsKey(OrderedPayload.of("k4".getBytes(), 4L)));
+
+        // Verify remaining elements
+        Map<OrderedPayload, Variant> remaining = client.getOrderedMap(key).get();
+        assertEquals(2, remaining.size());
+        assertTrue(remaining.containsKey(OrderedPayload.of("k1".getBytes(), 1L)));
+        assertTrue(remaining.containsKey(OrderedPayload.of("k5".getBytes(), 5L)));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedMap - full range (0,0)")
+    void testGetAndDeleteElementInRangeOrderedMapFullRange() throws ExecutionException, InterruptedException {
+        String key = "ordered_map_getdel_full_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new LinkedHashMap<>();
+        data.put(OrderedPayload.of("a".getBytes(), 1L), v("va"));
+        data.put(OrderedPayload.of("b".getBytes(), 2L), vi(20));
+        data.put(OrderedPayload.of("c".getBytes(), 3L), v("vc"));
+
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+
+        // Delete full range with 0,0
+        Map<OrderedPayload, Variant> deleted = client.getAndDeleteElementInRangeOrderedMap(key, hint, 0, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify container is empty
+        Map<OrderedPayload, Variant> remaining = client.getOrderedMap(key).get();
+        assertEquals(0, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedMap - start only (end=0)")
+    void testGetAndDeleteElementInRangeOrderedMapStartOnly() throws ExecutionException, InterruptedException {
+        String key = "ordered_map_getdel_start_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new LinkedHashMap<>();
+        data.put(OrderedPayload.of("1".getBytes(), 1L), v("v1"));
+        data.put(OrderedPayload.of("2".getBytes(), 2L), vi(20));
+        data.put(OrderedPayload.of("3".getBytes(), 3L), v("v3"));
+        data.put(OrderedPayload.of("4".getBytes(), 4L), vi(40));
+
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+
+        // Delete from weight 2 to max
+        Map<OrderedPayload, Variant> deleted = client.getAndDeleteElementInRangeOrderedMap(key, hint, 2, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify only weight 1 remains
+        Map<OrderedPayload, Variant> remaining = client.getOrderedMap(key).get();
+        assertEquals(1, remaining.size());
+        assertTrue(remaining.containsKey(OrderedPayload.of("1".getBytes(), 1L)));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedMap - end only (start=0)")
+    void testGetAndDeleteElementInRangeOrderedMapEndOnly() throws ExecutionException, InterruptedException {
+        String key = "ordered_map_getdel_end_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new LinkedHashMap<>();
+        data.put(OrderedPayload.of("1".getBytes(), 1L), v("v1"));
+        data.put(OrderedPayload.of("2".getBytes(), 2L), vi(20));
+        data.put(OrderedPayload.of("3".getBytes(), 3L), v("v3"));
+        data.put(OrderedPayload.of("4".getBytes(), 4L), vi(40));
+
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+
+        // Delete from min to weight 2
+        Map<OrderedPayload, Variant> deleted = client.getAndDeleteElementInRangeOrderedMap(key, hint, 0, 2, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify weights 3, 4 remain
+        Map<OrderedPayload, Variant> remaining = client.getOrderedMap(key).get();
+        assertEquals(2, remaining.size());
+        assertTrue(remaining.containsKey(OrderedPayload.of("3".getBytes(), 3L)));
+        assertTrue(remaining.containsKey(OrderedPayload.of("4".getBytes(), 4L)));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedMap - empty range (no match)")
+    void testGetAndDeleteElementInRangeOrderedMapEmptyRange() throws ExecutionException, InterruptedException {
+        String key = "ordered_map_getdel_empty_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new LinkedHashMap<>();
+        data.put(OrderedPayload.of("1".getBytes(), 1L), v("v1"));
+        data.put(OrderedPayload.of("2".getBytes(), 2L), vi(20));
+
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+
+        // Delete range [100, 200] - doesn't exist
+        Map<OrderedPayload, Variant> deleted = client.getAndDeleteElementInRangeOrderedMap(key, hint, 100, 200, false).get();
+        assertEquals(0, deleted.size());
+
+        // Verify original elements unchanged
+        Map<OrderedPayload, Variant> remaining = client.getOrderedMap(key).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedMap - with no hint")
+    void testGetAndDeleteElementInRangeOrderedMapNoHint() throws ExecutionException, InterruptedException {
+        String key = "ordered_map_getdel_no_hint_" + UUID.randomUUID();
+        Map<OrderedPayload, Variant> data = new LinkedHashMap<>();
+        data.put(OrderedPayload.of("a".getBytes(), 1L), v("va"));
+        data.put(OrderedPayload.of("b".getBytes(), 2L), vi(20));
+        data.put(OrderedPayload.of("c".getBytes(), 3L), v("vc"));
+
+        KeyHintData hint = client.createOrderedMap(key, data).get();
+
+        // Delete without hint - client resolves routing
+        Map<OrderedPayload, Variant> deleted = client.getAndDeleteElementInRangeOrderedMap(key, null, 1, 2, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only weight 3 remains
+        Map<OrderedPayload, Variant> remaining = client.getOrderedMap(key).get();
+        assertEquals(1, remaining.size());
+        assertTrue(remaining.containsKey(OrderedPayload.of("c".getBytes(), 3L)));
     }
 }

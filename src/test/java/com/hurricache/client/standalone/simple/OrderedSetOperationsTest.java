@@ -267,6 +267,174 @@ public class OrderedSetOperationsTest extends TestBase {
     }
 
     // =========================================================================
+    // 5b. GET AND DELETE ELEMENTS IN RANGE (ORDERED SET)
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - partial range")
+    void testGetAndDeleteElementInRangeOrderedSetPartial() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_getdel_range_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L),
+                OrderedVariant.ofBytes("5".getBytes(), 5L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+
+        // Delete range [2, 4]
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 2L, 4L, false).get();
+        assertEquals(3, deleted.size());
+        assertEquals("2", new String(deleted.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("3", new String(deleted.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(deleted.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify remaining elements
+        List<OrderedVariant> remaining = client.getOrderedSet(key).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("5", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - full range (0,0)")
+    void testGetAndDeleteElementInRangeOrderedSetFullRange() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_getdel_full_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("a".getBytes(), 1L),
+                OrderedVariant.ofBytes("b".getBytes(), 2L),
+                OrderedVariant.ofBytes("c".getBytes(), 3L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+
+        // Delete full range with 0,0
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify container is empty
+        List<OrderedVariant> remaining = client.getOrderedSet(key).get();
+        assertEquals(0, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - start only (end=0)")
+    void testGetAndDeleteElementInRangeOrderedSetStartOnly() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_getdel_start_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+
+        // Delete from weight 2 to max
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 2, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify only weight 1 remains
+        List<OrderedVariant> remaining = client.getOrderedSet(key).get();
+        assertEquals(1, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - end only (start=0)")
+    void testGetAndDeleteElementInRangeOrderedSetEndOnly() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_getdel_end_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+
+        // Delete from min to weight 2
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 2, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify weights 3, 4 remain
+        List<OrderedVariant> remaining = client.getOrderedSet(key).get();
+        assertEquals(2, remaining.size());
+        assertEquals("3", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - reverse order")
+    void testGetAndDeleteElementInRangeOrderedSetReverse() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_getdel_reverse_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+
+        // Delete range [3, 1] in reverse
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 3, 1, true).get();
+        assertEquals(3, deleted.size());
+        // Reverse order: 3, 2, 1
+        assertEquals("3", new String(deleted.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("1", new String(deleted.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify only weight 4 remains
+        List<OrderedVariant> remaining = client.getOrderedSet(key).get();
+        assertEquals(1, remaining.size());
+        assertEquals("4", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - empty range (no match)")
+    void testGetAndDeleteElementInRangeOrderedSetEmptyRange() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_getdel_empty_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+
+        // Delete range [100, 200] - doesn't exist
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 100, 200, false).get();
+        assertEquals(0, deleted.size());
+
+        // Verify original elements unchanged
+        List<OrderedVariant> remaining = client.getOrderedSet(key).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - with no hint")
+    void testGetAndDeleteElementInRangeOrderedSetNoHint() throws ExecutionException, InterruptedException {
+        String key = "ordered_set_getdel_no_hint_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("a".getBytes(), 1L),
+                OrderedVariant.ofBytes("b".getBytes(), 2L),
+                OrderedVariant.ofBytes("c".getBytes(), 3L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+
+        // Delete without hint - client resolves routing
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, null, 1, 2, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only weight 3 remains
+        List<OrderedVariant> remaining = client.getOrderedSet(key).get();
+        assertEquals(1, remaining.size());
+        assertEquals("c", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    // =========================================================================
     // 6. WEIGHT-BASED OPERATIONS
     // =========================================================================
 

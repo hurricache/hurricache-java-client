@@ -142,4 +142,92 @@ public interface HurriCacheClientList extends HurriCacheClientInterfaceCommon,Hu
     default CompletableFuture<List<Variant>> getList(byte[] key, KeyHintData hint, int clientId) {
         return getList(key, hint, clientId, getDefaultTimeout());
     }
+
+    // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE (LIST)
+    // =========================================================================
+
+    /**
+     * Streams and deletes a sub-range of elements from a List by position boundaries.
+     * Returns deleted elements and removes them from the container.
+     *
+     * @param key    target container key in byte array form.
+     * @param hint   optional key routing hint.
+     * @param start  start position (0 = from beginning).
+     * @param end    end position (0 = to end).
+     * @param reverse reverse order if true.
+     * @param clientId identifier of the issuing client.
+     * @param timeout  execution timeout duration.
+     * @return a {@link CompletableFuture} containing list of deleted elements in range.
+     */
+    CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(byte[] key,
+                                                                     KeyHintData hint,
+                                                                     long start,
+                                                                     long end,
+                                                                     boolean reverse,
+                                                                     int clientId,
+                                                                     Duration timeout);
+
+    default CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(String key,
+                                                                             KeyHintData hint,
+                                                                             long start,
+                                                                             long end,
+                                                                             boolean reverse,
+                                                                             int clientId,
+                                                                             Duration timeout) {
+        return getAndDeleteListElementsInRange(serializeKey(key), hint, start, end, reverse, clientId, timeout);
+    }
+
+    default CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(String key,
+                                                                             KeyHintData hint,
+                                                                             long start,
+                                                                             long end,
+                                                                             boolean reverse,
+                                                                             int clientId) {
+        return getAndDeleteListElementsInRange(serializeKey(key), hint, start, end, reverse, clientId,
+                                               getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(String key,
+                                                                             long start,
+                                                                             long end,
+                                                                             boolean reverse) {
+        return getAndDeleteListElementsInRange(serializeKey(key), null, start, end, reverse,
+                                               getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(byte[] key,
+                                                                             long start,
+                                                                             long end,
+                                                                             boolean reverse) {
+        return getAndDeleteListElementsInRange(key, null, start, end, reverse,
+                                               getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(byte[] key,
+                                                                             KeyHintData hint,
+                                                                             long start,
+                                                                             long end,
+                                                                             boolean reverse) {
+        return getAndDeleteListElementsInRange(key, hint, start, end, reverse,
+                                               getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(String key,
+                                                                             KeyHintData hint,
+                                                                             long start,
+                                                                             long end,
+                                                                             boolean reverse) {
+        return getAndDeleteListElementsInRange(serializeKey(key), hint, start, end, reverse,
+                                               getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(byte[] key,
+                                                                             KeyHintData hint,
+                                                                             long start,
+                                                                             long end,
+                                                                             boolean reverse,
+                                                                             int clientId) {
+        return getAndDeleteListElementsInRange(key, hint, start, end, reverse, clientId, getDefaultTimeout());
+    }
 }

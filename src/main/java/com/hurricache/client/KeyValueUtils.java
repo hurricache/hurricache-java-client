@@ -5,6 +5,7 @@ import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.BinaryPayload;
+import com.hurricache.grpc.ContainerKey;
 import com.hurricache.grpc.CreateRequest;
 import com.hurricache.grpc.GetRequest;
 import com.hurricache.grpc.Key;
@@ -76,6 +77,70 @@ public class KeyValueUtils {
                 .setValueType(ValueType.DOUBLE);
         if (ttl != null && !ttl.isZero()) vb.setTtl(System.currentTimeMillis() + ttl.toMillis());
         return CreateRequest.newBuilder().setKey(buildKey(key, hint, clientId,compressionThreshold)).setValue(vb).build();
+    }
+
+    // Контейнерные атомики: элемент адресуется ключом (MAP/ORDERED_MAP) или позицией (VECTOR/LIST)
+
+    public static CreateRequest buildAtomicCreateRequest(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                         long value, Duration ttl, int clientId,
+                                                         int compressionThreshold) {
+        Value.Builder vb = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(value))
+                .setValueType(ValueType.INT);
+        if (ttl != null && !ttl.isZero()) vb.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        ContainerKey ck = ContainerKey.newBuilder()
+                .setContainerKey(buildKey(containerKey, null, clientId, compressionThreshold))
+                .build();
+        return CreateRequest.newBuilder()
+                .setKey(buildKey(key, hint, clientId, compressionThreshold))
+                .setContainerKey(ck)
+                .setValue(vb)
+                .build();
+    }
+
+    public static CreateRequest buildAtomicCreateRequest(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                         double value, Duration ttl, int clientId,
+                                                         int compressionThreshold) {
+        Value.Builder vb = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(value))
+                .setValueType(ValueType.DOUBLE);
+        if (ttl != null && !ttl.isZero()) vb.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        ContainerKey ck = ContainerKey.newBuilder()
+                .setContainerKey(buildKey(containerKey, null, clientId, compressionThreshold))
+                .build();
+        return CreateRequest.newBuilder()
+                .setKey(buildKey(key, hint, clientId, compressionThreshold))
+                .setContainerKey(ck)
+                .setValue(vb)
+                .build();
+    }
+
+    public static CreateRequest buildAtomicCreateRequest(byte[] key, KeyHintData hint, long pos,
+                                                         long value, Duration ttl, int clientId,
+                                                         int compressionThreshold) {
+        Value.Builder vb = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(value))
+                .setValueType(ValueType.INT);
+        if (ttl != null && !ttl.isZero()) vb.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        return CreateRequest.newBuilder()
+                .setKey(buildKey(key, hint, clientId, compressionThreshold))
+                .setContainerKey(ContainerKey.newBuilder().setPos(pos))
+                .setValue(vb)
+                .build();
+    }
+
+    public static CreateRequest buildAtomicCreateRequest(byte[] key, KeyHintData hint, long pos,
+                                                         double value, Duration ttl, int clientId,
+                                                         int compressionThreshold) {
+        Value.Builder vb = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(value))
+                .setValueType(ValueType.DOUBLE);
+        if (ttl != null && !ttl.isZero()) vb.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        return CreateRequest.newBuilder()
+                .setKey(buildKey(key, hint, clientId, compressionThreshold))
+                .setContainerKey(ContainerKey.newBuilder().setPos(pos))
+                .setValue(vb)
+                .build();
     }
 
     public static   Value buildValueFromVariant(Variant variant, Duration ttl) {

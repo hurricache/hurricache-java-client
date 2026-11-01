@@ -144,27 +144,24 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
     }
 
     @Test
-    @DisplayName("atomicAdd with double value - adding int is INVALID_ARGUMENT on MASTER")
-    void testAtomicAddDoubleWithIntInvalidOnMaster() throws ExecutionException, InterruptedException {
+    @DisplayName("atomicAdd with double value - adding int is allowed on MASTER")
+    void testAtomicAddDoubleWithIntOnMaster() throws ExecutionException, InterruptedException {
         String key = "atomic_add_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(10.5)).get();
         Thread.sleep(500);
 
-        // atomicAdd double with int on MASTER - should return INVALID_ARGUMENT
+        // atomicAdd double with int on MASTER - should succeed and convert to double
         client.setMode(Mode.MASTER);
-        try {
-            client.add(key, hint, 1).get();
-            fail("Expected exception for type mismatch");
-        } catch (ExecutionException e) {
-            // Expected - type mismatch
-        }
+        Number result = client.add(key, hint, 1).get();
+        assertNotNull(result);
+        Thread.sleep(500);
 
-        // Verify value remains unchanged on BACKUP
+        // Verify value on BACKUP
         Variant current = client.setMode(Mode.BACKUP).get(key, hint).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
-        assertEquals(10.5, current.doubleValue(), 0.001);
+        assertEquals(11.5, current.doubleValue(), 0.001);
     }
 
     @Test
@@ -751,27 +748,24 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
     // =========================================================================
 
     @Test
-    @DisplayName("atomicSub with double value - subtracting int is INVALID_ARGUMENT on MASTER")
-    void testAtomicSubDoubleWithIntInvalidOnMaster() throws ExecutionException, InterruptedException {
+    @DisplayName("atomicSub with double value - subtracting int is allowed on MASTER")
+    void testAtomicSubDoubleWithIntOnMaster() throws ExecutionException, InterruptedException {
         String key = "atomic_sub_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(50.0)).get();
         Thread.sleep(500);
 
-        // atomicSub double with int on MASTER - should return INVALID_ARGUMENT
+        // atomicSub double with int on MASTER - should succeed and convert to double
         client.setMode(Mode.MASTER);
-        try {
-            client.sub(key, hint, 1).get();
-            fail("Expected exception for type mismatch");
-        } catch (ExecutionException e) {
-            // Expected - type mismatch
-        }
+        Number result = client.sub(key, hint, 1).get();
+        assertNotNull(result);
+        Thread.sleep(500);
 
-        // Verify value remains unchanged on BACKUP
+        // Verify value on BACKUP
         Variant current = client.setMode(Mode.BACKUP).get(key, hint).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
-        assertEquals(50.0, current.doubleValue(), 0.001);
+        assertEquals(49.0, current.doubleValue(), 0.001);
     }
 
     @Test

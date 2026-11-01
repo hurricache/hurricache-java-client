@@ -687,6 +687,90 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(byte[] key,
+                                                                                        KeyHintData hint,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse,
+                                                                                        int clientId,
+                                                                                        Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.ORDERED_SET)
+                .setReverse(reverse);
+        if (startWeight > 0) builder.setPos(startWeight);
+        if (endWeight > 0) builder.setEnd(endWeight);
+
+        CompletableFuture<List<OrderedVariant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchOrderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
+    public CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(byte[] key,
+                                                                                                KeyHintData hint,
+                                                                                                long startWeight,
+                                                                                                long endWeight,
+                                                                                                boolean reverse,
+                                                                                                int clientId,
+                                                                                                Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.ORDERED_MAP)
+                .setReverse(reverse);
+        if (startWeight > 0) builder.setPos(startWeight);
+        if (endWeight > 0) builder.setEnd(endWeight);
+
+        CompletableFuture<Map<OrderedPayload, Variant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchOrderedMapVariantObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
+    public CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(byte[] key,
+                                                                            KeyHintData hint,
+                                                                            long start,
+                                                                            long end,
+                                                                            boolean reverse,
+                                                                            int clientId,
+                                                                            Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.LIST)
+                .setReverse(reverse);
+        if (start > 0) builder.setPos(start);
+        if (end > 0) builder.setEnd(end);
+
+        CompletableFuture<List<Variant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchUnorderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
+    public CompletableFuture<List<Variant>> getAndDeleteVectorElementsInRange(byte[] key,
+                                                                              KeyHintData hint,
+                                                                              long start,
+                                                                              long end,
+                                                                              boolean reverse,
+                                                                              int clientId,
+                                                                              Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.VECTOR)
+                .setReverse(reverse);
+        if (start > 0) builder.setPos(start);
+        if (end > 0) builder.setEnd(end);
+
+        CompletableFuture<List<Variant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchUnorderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    // =========================================================================
     // INSERTION OPERATIONS
     // =========================================================================
 
@@ -1263,6 +1347,208 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 .setToSet(toSetBuilder)
                 .build();
         getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    // =========================================================================
+    // CONTAINER ATOMICS
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                         long value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, containerKey, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                         double value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, containerKey, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos,
+                                                         long value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, pos, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos,
+                                                         double value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, pos, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicAnd(
+                buildAtomicCreateRequest(key, hint, containerKey, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, long pos,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicAnd(
+                buildAtomicCreateRequest(key, hint, pos, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                 long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicOr(
+                buildAtomicCreateRequest(key, hint, containerKey, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, long pos,
+                                                 long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicOr(
+                buildAtomicCreateRequest(key, hint, pos, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicXor(
+                buildAtomicCreateRequest(key, hint, containerKey, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, long pos,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicXor(
+                buildAtomicCreateRequest(key, hint, pos, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
         return future;
     }
 

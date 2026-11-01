@@ -115,9 +115,16 @@ message TtlResponse {
   optional uint64 ttl = 1;                   // Remaining Time-To-Live
 }
 
+message ContainerKey{
+  oneof key{
+    Key container_key = 1;
+    uint64 pos = 2;
+  }
+}
+
 message CreateRequest {
   Key key = 1;
-  optional Key container_key = 2;
+  optional ContainerKey container_key = 2;
   Value value = 3;
 }
 
@@ -182,8 +189,8 @@ message KeyPositionRequest {
   Key key = 1;
   optional ContainerType type = 2;           // Container type
 
-  optional uint64 pos = 3;                   // for ordered containers if pos not specified it means that start from min order
-  optional uint64 end = 4;                   // for ordered containers if end not specified it means that end by end of order
+  optional uint64 pos = 3;                   // for ordered containers if pos not specified it means that start from min order for unordered meand that pos=0
+  optional uint64 end = 4;                   // for ordered containers if end not specified it means that end by end of order for unordered meand that end=size of container
   bool reverse = 6;                          // Reverse traversal flag
 }
 

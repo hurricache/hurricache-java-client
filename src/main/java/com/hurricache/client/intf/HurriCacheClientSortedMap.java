@@ -330,4 +330,94 @@ public interface HurriCacheClientSortedMap extends HurriCacheClientInterfaceComm
         return getElementInRangeOrderedMap(key, null, startWeight, endWeight, reverse,
                                            getDefaultClientId(), getDefaultTimeout());
     }
+
+    // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE (ORDERED MAP)
+    // =========================================================================
+
+    /**
+     * Streams and deletes a sub-range of entries from an {@code OrderedMap} by weight boundaries.
+     * Returns deleted entries and removes them from the container.
+     *
+     * @param key         target container key in byte array form.
+     * @param hint        optional key routing hint.
+     * @param startWeight lower bound weight limit (0 = from minimum weight).
+     * @param endWeight   upper bound weight limit (0 = to maximum weight).
+     * @param reverse     descending order if true.
+     * @param clientId    identifier of the issuing client.
+     * @param timeout     execution timeout duration.
+     * @return a {@link CompletableFuture} containing map of deleted ordered map entries in range.
+     */
+    CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(byte[] key,
+                                                                                         KeyHintData hint,
+                                                                                         long startWeight,
+                                                                                         long endWeight,
+                                                                                         boolean reverse,
+                                                                                         int clientId,
+                                                                                         Duration timeout);
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(String key,
+                                                                                               KeyHintData hint,
+                                                                                               long startWeight,
+                                                                                               long endWeight,
+                                                                                               boolean reverse,
+                                                                                               int clientId,
+                                                                                               Duration timeout) {
+        return getAndDeleteElementInRangeOrderedMap(serializeKey(key), hint, startWeight, endWeight,
+                                                    reverse, clientId, timeout);
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(String key,
+                                                                                               KeyHintData hint,
+                                                                                               long startWeight,
+                                                                                               long endWeight,
+                                                                                               boolean reverse,
+                                                                                               int clientId) {
+        return getAndDeleteElementInRangeOrderedMap(serializeKey(key), hint, startWeight, endWeight,
+                                                    reverse, clientId, getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(String key,
+                                                                                               long startWeight,
+                                                                                               long endWeight,
+                                                                                               boolean reverse) {
+        return getAndDeleteElementInRangeOrderedMap(serializeKey(key), null, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(byte[] key,
+                                                                                               long startWeight,
+                                                                                               long endWeight,
+                                                                                               boolean reverse) {
+        return getAndDeleteElementInRangeOrderedMap(key, null, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(byte[] key,
+                                                                                               KeyHintData hint,
+                                                                                               long startWeight,
+                                                                                               long endWeight,
+                                                                                               boolean reverse) {
+        return getAndDeleteElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(String key,
+                                                                                               KeyHintData hint,
+                                                                                               long startWeight,
+                                                                                               long endWeight,
+                                                                                               boolean reverse) {
+        return getAndDeleteElementInRangeOrderedMap(serializeKey(key), hint, startWeight, endWeight, reverse,
+                                                    getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(byte[] key,
+                                                                                               KeyHintData hint,
+                                                                                               long startWeight,
+                                                                                               long endWeight,
+                                                                                               boolean reverse,
+                                                                                               int clientId) {
+        return getAndDeleteElementInRangeOrderedMap(key, hint, startWeight, endWeight, reverse,
+                                                    clientId, getDefaultTimeout());
+    }
 }
