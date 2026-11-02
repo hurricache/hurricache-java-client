@@ -172,18 +172,15 @@ public class StandaloneRedisScalarCompatibilityTest extends RedisCompatibilityTe
         // INCR via Redis
         jedis.incr(key);
 
-        // Read via gRPC - need to parse as number
+        // Read via gRPC — INCR хранит типизированный INT
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        // HurriCache stores this as string, so verify it represents "101"
-        String parsedValue = new String(result.bytesValue(), StandardCharsets.UTF_8);
-        assertEquals("101", parsedValue);
+        assertEquals(101, result.longValue());
 
         // DECR via Redis
         jedis.decr(key);
 
         result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        parsedValue = new String(result.bytesValue(), StandardCharsets.UTF_8);
-        assertEquals("100", parsedValue);
+        assertEquals(100, result.longValue());
     }
 
     @Test
@@ -194,16 +191,16 @@ public class StandaloneRedisScalarCompatibilityTest extends RedisCompatibilityTe
         jedis.set(key, "50");
         jedis.incrBy(key, 25L);
 
+        // INCRBY хранит типизированный INT
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        String parsedValue = new String(result.bytesValue(), StandardCharsets.UTF_8);
-        assertEquals("75", parsedValue);
+        assertEquals(75, result.longValue());
 
         // DECRBY
         jedis.decrBy(key, 10L);
 
         result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        parsedValue = new String(result.bytesValue(), StandardCharsets.UTF_8);
-        assertEquals("65", parsedValue);
+        assertEquals(65, result.longValue());
+
     }
 
     @Test
@@ -222,10 +219,10 @@ public class StandaloneRedisScalarCompatibilityTest extends RedisCompatibilityTe
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, "expiring_value");
 
-        // Check TTL via gRPC
+        // Check TTL via gRPC — gRPC отдаёт TTL в миллисекундах
         Long grpcTtl = client.getTtl(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertNotNull(grpcTtl);
-        assertTrue(grpcTtl > 0 && grpcTtl <= 300);
+        assertTrue(grpcTtl > 0 && grpcTtl <= 300_000);
     }
 
     @Test

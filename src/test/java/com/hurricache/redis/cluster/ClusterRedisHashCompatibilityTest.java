@@ -68,7 +68,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         jedis.hset(key, "field1", "value1");
         jedis.hset(key, "field2", "value2");
         jedis.hset(key, "field3", "value3");
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC using getMap
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcMap.size());
@@ -88,7 +88,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         grpcData.put(p("gfield2"), toVariant("gvalue2"));
         grpcData.put(p("gfield3"), toVariant("gvalue3"));
         client.createMap(key, null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
-
+        Thread.sleep(500); // replication delay
         // Read via Redis using HGETALL
         Map<String, String> redisMap = jedis.hgetAll(key);
         assertEquals(3, redisMap.size());
@@ -108,7 +108,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         hashFields.put("k2", "v2");
         hashFields.put("k3", "v3");
         jedis.hmset(key, hashFields);
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcMap.size());
@@ -129,7 +129,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         // HDEL via Redis
         jedis.hdel(key, "field2");
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcMap.size());
@@ -145,7 +145,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         // HSET via Redis
         jedis.hset(key, "testfield", "testvalue");
-
+        awaitReplication(); // Wait for replication
         // HEXISTS via Redis
         assertTrue(jedis.hexists(key, "testfield"));
         assertFalse(jedis.hexists(key, "nonexistent"));
@@ -167,7 +167,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         jedis.hset(key, "f1", "v1");
         jedis.hset(key, "f2", "v2");
         jedis.hset(key, "f3", "v3");
-
+        awaitReplication(); // Wait for replication
         // HLEN via Redis
         long redisLen = jedis.hlen(key);
         assertEquals(3L, redisLen);
@@ -188,12 +188,13 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         hashData.put("age", "30");
         hashData.put("city", "NYC");
         jedis.hmset(key, hashData);
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcMap.size());
         assertEquals("John", new String(grpcMap.get(p("name")).bytesValue()));
-        assertEquals("30", new String(grpcMap.get(p("age")).bytesValue()));
+        // "30" распарсилось RESP-парсером в типизированный INT
+        assertEquals(30, grpcMap.get(p("age")).longValue());
         assertEquals("NYC", new String(grpcMap.get(p("city")).bytesValue()));
     }
 
@@ -210,7 +211,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         // HKEYS via Redis
         Set<String> redisKeys = jedis.hkeys(key);
         assertEquals(3, redisKeys.size());
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC and verify keys
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcMap.size());
@@ -232,7 +233,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         // HVALS via Redis
         List<String> redisVals = jedis.hvals(key);
         assertEquals(3, redisVals.size());
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC and verify values
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         List<String> grpcVals = new ArrayList<>();
@@ -252,7 +253,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         byte[] valueBytes = new byte[]{0x10, 0x20, 0x30};
 
         jedis.hset(key.getBytes(), fieldBytes, valueBytes);
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(1, grpcMap.size());
@@ -271,7 +272,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         // Update via Redis
         jedis.hset(key, "field", "updated");
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals("updated", new String(grpcMap.get(p("field")).bytesValue()));
@@ -284,14 +285,14 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         // Create via Redis
         jedis.hset(key, "f1", "v1");
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC to verify
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertNotNull(grpcMap);
 
         // Delete via gRPC
         client.remove(key.getBytes(), null, 0, getGrpcTimeout()).get();
-
+        awaitReplication(); // Wait for replication
         // Verify in Redis
         assertNull(jedis.hget(key, "f1"));
     }
@@ -321,7 +322,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
             largeHash.put("field" + i, "value" + i);
         }
         jedis.hmset(key, largeHash);
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(1000, grpcMap.size());
@@ -336,7 +337,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         jedis.hset(key, "greeting", "\u041F\u0440\u0438\u0432\u0435\u0442");
         jedis.hset(key, "chinese", "\u4F60\u597D");
         jedis.hset(key, "emoji", "\uD83C\uDF0D");
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcMap.size());
@@ -357,7 +358,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         String largeValue = sb.toString();
 
         jedis.hset(key, "largefield", largeValue);
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(largeValue, new String(grpcMap.get(p("largefield")).bytesValue()));
@@ -370,7 +371,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         // Create via Redis
         jedis.hset(key, "existing", "value");
-
+        awaitReplication(); // Wait for replication
         // Add more fields via gRPC putAll
         List<Payload> newKeys = new ArrayList<>();
         List<Variant> newValues = new ArrayList<>();
@@ -379,7 +380,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         newKeys.add(p("added2"));
         newValues.add(toVariant("avalue2"));
         client.putAll(key.getBytes(), null, newKeys, newValues, 0, getGrpcTimeout()).get();
-
+        awaitReplication(); // Wait for replication
         // Verify via Redis
         Map<String, String> redisMap = jedis.hgetAll(key);
         assertEquals(3, redisMap.size());
@@ -411,7 +412,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         // Create with empty field name
         jedis.hset(key, "", "empty_field_value");
         jedis.hset(key, "normal", "normal_value");
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcMap.size());
@@ -429,7 +430,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
             String key = baseKey + ":" + i;
             jedis.hset(key, "field", "value" + i);
         }
-
+        Thread.sleep(1500); // replication delay
         // Read all via gRPC
         for (int i = 0; i < 10; i++) {
             String key = baseKey + ":" + i;
@@ -447,7 +448,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         // HINCRBY по несуществующему полю создаёт его со значением дельты (Redis-семантика)
         long v1 = jedis.hincrBy(key, "counter", 5);
         assertEquals(5L, v1);
-
+        awaitReplication(); // Wait for replication
         // gRPC видит типизированное INT-поле
         Variant grpcVal = client.getInContainer(key.getBytes(), null, "counter".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
         assertEquals(5, grpcVal.longValue());
@@ -456,7 +457,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         long v2 = jedis.hincrBy(key, "counter", 7);
         assertEquals(12L, v2);
         assertEquals("12", jedis.hget(key, "counter"));
-
+        awaitReplication(); // Wait for replication
         grpcVal = client.getInContainer(key.getBytes(), null, "counter".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
         assertEquals(12, grpcVal.longValue());
     }
@@ -471,7 +472,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         long v = jedis.hincrBy(key, "counter", 5);
         assertEquals(15L, v);
-
+        Thread.sleep(500); // replication delay
         // После инкремента поле типизированное — читается как число через gRPC
         Variant grpcVal = client.getInContainer(key.getBytes(), null, "counter".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
         assertEquals(15, grpcVal.longValue());
@@ -484,7 +485,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         double v1 = jedis.hincrByFloat(key, "score", 1.5);
         assertEquals(1.5, v1, 0.0001);
-
+        awaitReplication(); // Wait for replication
         Variant grpcVal = client.getInContainer(key.getBytes(), null, "score".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
         assertEquals(1.5, grpcVal.doubleValue(), 0.0001);
 
@@ -501,7 +502,7 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         double v = jedis.hincrByFloat(key, "score", 0.5);
         assertEquals(10.5, v, 0.0001);
-
+        awaitReplication(); // Wait for replication
         Variant grpcVal = client.getInContainer(key.getBytes(), null, "score".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
         assertEquals(10.5, grpcVal.doubleValue(), 0.0001);
     }

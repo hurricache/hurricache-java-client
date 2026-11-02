@@ -71,7 +71,7 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
             toVariant("g1"), toVariant("g2"), toVariant("g3")
         );
         String grpcKey = key + ":grpc";
-        client.createList(grpcKey.getBytes(), null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
+        client.createVector(grpcKey.getBytes(), null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
 
         // Read via Redis
         List<String> redisFromGrpc = jedis.lrange(grpcKey, 0, -1);
@@ -134,8 +134,8 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
 
         // Get full list via gRPC and verify subset
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        assertEquals("1", new String(grpcList.get(1).bytesValue()));
-        assertEquals("3", new String(grpcList.get(3).bytesValue()));
+        assertEquals(1, grpcList.get(1).longValue());
+        assertEquals(3, grpcList.get(3).longValue());
     }
 
     @Test
@@ -182,13 +182,14 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
 
         jedis.rpush(key, "a", "b", "a", "c", "a");
 
-        // LREM - remove all "a"
+        // LREM - remove all "a" → остаются "b" и "c"
         jedis.lrem(key, 0, "a");
 
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        assertEquals(1, grpcList.size());
+        assertEquals(2, grpcList.size());
         assertEquals("b", new String(grpcList.get(0).bytesValue()));
+        assertEquals("c", new String(grpcList.get(1).bytesValue()));
     }
 
     @Test
@@ -222,8 +223,8 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcList.size());
-        assertEquals("1", new String(grpcList.get(0).bytesValue()));
-        assertEquals("3", new String(grpcList.get(2).bytesValue()));
+        assertEquals(1, grpcList.get(0).longValue());
+        assertEquals(3, grpcList.get(2).longValue());
     }
 
     @Test
@@ -233,7 +234,7 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
 
         // Create list via gRPC
         List<Variant> grpcData = Arrays.asList(toVariant("x1"), toVariant("x2"), toVariant("x3"));
-        client.createList(key.getBytes(), null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
+        client.createVector(key.getBytes(), null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
 
         // Pop from head via Redis
         String redisPopped = jedis.lpop(key);
@@ -261,8 +262,8 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
         // Verify order via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(5, grpcList.size());
-        assertEquals("-1", new String(grpcList.get(0).bytesValue()));
-        assertEquals("3", new String(grpcList.get(4).bytesValue()));
+        assertEquals(3, grpcList.get(0).longValue());
+        assertEquals(-1, grpcList.get(4).longValue());
     }
 
     @Test
@@ -301,7 +302,7 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
 
         // Create empty list via gRPC
         List<Variant> emptyList = new ArrayList<>();
-        client.createList(key.getBytes(), null, emptyList, getContainerTtl(), 0, getGrpcTimeout()).get();
+        client.createVector(key.getBytes(), null, emptyList, getContainerTtl(), 0, getGrpcTimeout()).get();
 
         // Check in Redis
         long len = jedis.llen(key);

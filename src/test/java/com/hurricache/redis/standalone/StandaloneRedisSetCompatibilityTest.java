@@ -16,6 +16,7 @@ package com.hurricache.redis.standalone;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.intf.HurriCacheClientInterface;
+import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.redis.RedisCompatibilityTestBase;
 import org.junit.jupiter.api.DisplayName;
@@ -304,13 +305,22 @@ public class StandaloneRedisSetCompatibilityTest extends RedisCompatibilityTestB
         List<Variant> grpcSet = client.getSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcSet.size());
 
-        Set<byte[]> grpcSetValues = new HashSet<>();
+        // byte[] не имеет value-equality — сравниваем содержимое через обёртку
+        Set<java.util.List<Byte>> grpcSetValues = new HashSet<>();
         for (Variant v : grpcSet) {
-            grpcSetValues.add(v.bytesValue());
+            byte[] bytes = v.bytesValue();
+            java.util.List<Byte> wrapped = new java.util.ArrayList<>(bytes.length);
+            for (byte b : bytes) wrapped.add(b);
+            grpcSetValues.add(wrapped);
         }
-        assertTrue(grpcSetValues.contains(data1));
-        assertTrue(grpcSetValues.contains(data2));
-        assertTrue(grpcSetValues.contains(data3));
+        java.util.function.Function<byte[], java.util.List<Byte>> wrap = arr -> {
+            java.util.List<Byte> l = new java.util.ArrayList<>(arr.length);
+            for (byte b : arr) l.add(b);
+            return l;
+        };
+        assertTrue(grpcSetValues.contains(wrap.apply(data1)));
+        assertTrue(grpcSetValues.contains(wrap.apply(data2)));
+        assertTrue(grpcSetValues.contains(wrap.apply(data3)));
     }
 
     @Test
@@ -398,7 +408,7 @@ public class StandaloneRedisSetCompatibilityTest extends RedisCompatibilityTestB
         // Note: HurriCache removeAt removes by position, not by value like Redis SREM
         // This test verifies the set size decreases
         int beforeSize = grpcSet.size();
-        client.removeAt(key, 1).get();
+        client.removeFromContainerByKey(key, null, Payload.of("a".getBytes(StandardCharsets.UTF_8)), 1).get();
 
         int afterSize = client.getSize(key).get();
         assertEquals(beforeSize - 1, afterSize);

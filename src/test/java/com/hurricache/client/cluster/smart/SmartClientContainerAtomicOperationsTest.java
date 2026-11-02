@@ -189,7 +189,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("val"), vi(10));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         Number oldVal = client.subInContainer(key, p("val").getValue(), 30).get();
         assertEquals(10, oldVal.longValue());
 
@@ -313,7 +313,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "xor_vector_pos_" + UUID.randomUUID();
         List<Variant> initialData = List.of(vi(15), vi(30), vi(45));
         client.createVector(key, initialData).get();
-
+        Thread.sleep(500);
         Long oldVal = client.xorInContainer(key, 0, 7L).get();
         assertEquals(15L, oldVal.longValue());
 
@@ -353,7 +353,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("val"), vi(100));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         Number r1 = client.addInContainer(key, p("val").getValue(), 50).get();
         assertEquals(100, r1.longValue());
 

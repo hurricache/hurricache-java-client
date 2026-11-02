@@ -288,7 +288,7 @@ public class StandaloneRedisServerCommandsCompatibilityTest extends RedisCompati
         List<com.hurricache.client.intf.Variant> listData = Arrays.asList(
             toVariant("grpc_list_item")
         );
-        client.createList(listKey, null, listData, getContainerTtl(), 0, getGrpcTimeout()).get();
+        client.createVector(listKey, null, listData, getContainerTtl(), 0, getGrpcTimeout()).get();
 
         // Verify type in Redis
         assertEquals("list", jedis.type(listKey));

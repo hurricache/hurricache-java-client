@@ -68,7 +68,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         List<String> redisList = jedis.lrange(key, 0, -1);
         assertEquals(5, redisList.size());
         assertEquals("head1", redisList.get(0));
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(5, grpcList.size());
@@ -85,8 +85,8 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         List<Variant> grpcData = Arrays.asList(
             toVariant("g1"), toVariant("g2"), toVariant("g3")
         );
-        client.createList(key, null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
-
+        client.createVector(key, null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
+        Thread.sleep(500); // replication delay
         // Read via Redis
         List<String> redisFromGrpc = jedis.lrange(key, 0, -1);
         assertEquals(3, redisFromGrpc.size());
@@ -101,7 +101,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // Create list via Redis
         jedis.rpush(key, "item1", "item2", "item3");
-
+        Thread.sleep(500); // replication delay
         // LPOP via Redis
         String popped = jedis.lpop(key);
         assertEquals("item1", popped);
@@ -126,7 +126,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_llen");
 
         jedis.rpush(key, "a", "b", "c", "d");
-
+        Thread.sleep(500); // replication delay
         long redisLen = jedis.llen(key);
         assertEquals(4L, redisLen);
 
@@ -140,7 +140,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_lrange");
 
         jedis.rpush(key, "0", "1", "2", "3", "4");
-
+        Thread.sleep(500); // replication delay
         // LRANGE with range [1, 3]
         List<String> redisRange = jedis.lrange(key, 1, 3);
         assertEquals(3, redisRange.size());
@@ -148,8 +148,8 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // Get full list via gRPC and verify subset
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        assertEquals("1", new String(grpcList.get(1).bytesValue()));
-        assertEquals("3", new String(grpcList.get(3).bytesValue()));
+        assertEquals(1, grpcList.get(1).longValue());
+        assertEquals(3, grpcList.get(3).longValue());
     }
 
     @Test
@@ -181,7 +181,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // LSET
         jedis.lset(key, 1, "updated2");
-
+        awaitReplication(); // Wait for replication
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals("original1", new String(grpcList.get(0).bytesValue()));
@@ -195,14 +195,15 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_lrem");
 
         jedis.rpush(key, "a", "b", "a", "c", "a");
-
-        // LREM - remove all "a"
+        Thread.sleep(500); // replication delay
+        // LREM - remove all "a" → остаются "b" и "c"
         jedis.lrem(key, 0, "a");
-
+        Thread.sleep(500); // replication delay
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        assertEquals(1, grpcList.size());
+        assertEquals(2, grpcList.size());
         assertEquals("b", new String(grpcList.get(0).bytesValue()));
+        assertEquals("c", new String(grpcList.get(1).bytesValue()));
     }
 
     @Test
@@ -214,7 +215,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // LINSERT BEFORE
         jedis.linsert(key.getBytes(), redis.clients.jedis.args.ListPosition.BEFORE, "c".getBytes(), "b".getBytes());
-
+        awaitReplication(); // jedis-чтение может попасть на бэкап
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcList.size());
@@ -229,15 +230,15 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_ltrim");
 
         jedis.rpush(key, "0", "1", "2", "3", "4");
-
+        Thread.sleep(500); // replication delay
         // LTRIM - keep only [1, 3]
         jedis.ltrim(key, 1, 3);
-
+        Thread.sleep(500); // replication delay
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcList.size());
-        assertEquals("1", new String(grpcList.get(0).bytesValue()));
-        assertEquals("3", new String(grpcList.get(2).bytesValue()));
+        assertEquals(1, grpcList.get(0).longValue());
+        assertEquals(3, grpcList.get(2).longValue());
     }
 
     @Test
@@ -247,8 +248,8 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // Create list via gRPC
         List<Variant> grpcData = Arrays.asList(toVariant("x1"), toVariant("x2"), toVariant("x3"));
-        client.createList(key.getBytes(), null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
-
+        client.createVector(key.getBytes(), null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
+        Thread.sleep(500); // replication delay
         // Pop from head via Redis
         String redisPopped = jedis.lpop(key);
         assertEquals("x1", redisPopped);
@@ -271,12 +272,12 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         // Multiple RPUSH
         jedis.rpush(key, "0");
         jedis.rpush(key, "-1");
-
+        Thread.sleep(500); // replication delay
         // Verify order via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(5, grpcList.size());
-        assertEquals("-1", new String(grpcList.get(0).bytesValue()));
-        assertEquals("3", new String(grpcList.get(4).bytesValue()));
+        assertEquals(-1, grpcList.get(0).longValue());
+        assertEquals(3, grpcList.get(4).longValue());
     }
 
     @Test
@@ -285,11 +286,11 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_listdup");
 
         jedis.rpush(key, "a", "a", "b", "a", "b");
-
+        Thread.sleep(500); // replication delay
         List<String> redisList = jedis.lrange(key, 0, -1);
         assertEquals(5, redisList.size());
         assertEquals(3, Collections.frequency(redisList, "a"));
-
+        Thread.sleep(500); // replication delay
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(5, grpcList.size());
     }
@@ -300,10 +301,10 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_listdel");
 
         jedis.rpush(key, "item1", "item2");
-
+        Thread.sleep(500); // replication delay
         // Delete via gRPC
         client.remove(key.getBytes(), null, 0, getGrpcTimeout()).get();
-
+        Thread.sleep(500); // replication delay
         // Verify in Redis
         assertNull(jedis.lindex(key, 0));
     }
@@ -315,7 +316,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // Create empty list via gRPC
         List<Variant> emptyList = new ArrayList<>();
-        client.createList(key.getBytes(), null, emptyList, getContainerTtl(), 0, getGrpcTimeout()).get();
+        client.createVector(key.getBytes(), null, emptyList, getContainerTtl(), 0, getGrpcTimeout()).get();
 
         // Check in Redis
         long len = jedis.llen(key);
@@ -333,7 +334,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
             values.add("value" + i);
         }
         jedis.rpush(key, values.toArray(new String[0]));
-
+        Thread.sleep(500); // replication delay
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(1000, grpcList.size());
@@ -350,7 +351,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         byte[] data2 = new byte[]{0x10, 0x20, 0x30};
 
         jedis.rpush(key.getBytes(), data1, data2);
-
+        Thread.sleep(500); // replication delay
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertArrayEquals(data1, grpcList.get(0).bytesValue());
         assertArrayEquals(data2, grpcList.get(1).bytesValue());
@@ -363,7 +364,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // Create via Redis
         jedis.rpush(key, "first", "middle", "last");
-
+        Thread.sleep(500); // replication delay
         // Pop head via gRPC
         Variant headPopped = client.popHead(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals("first", new String(headPopped.bytesValue()));
@@ -385,13 +386,13 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
 
         // Create via Redis
         jedis.rpush(key, "middle");
-
+        Thread.sleep(500); // replication delay
         // Push head via gRPC
         client.pushHead(key.getBytes(), null, Arrays.asList(toVariant("head")), 0, getGrpcTimeout()).get();
 
         // Push tail via gRPC
         client.pushTail(key.getBytes(), null, Arrays.asList(toVariant("tail")), 0, getGrpcTimeout()).get();
-
+        Thread.sleep(500); // replication delay
         // Verify via Redis
         List<String> redisList = jedis.lrange(key, 0, -1);
         assertEquals(3, redisList.size());
@@ -406,7 +407,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_listuni");
 
         jedis.rpush(key, "\u041F\u0440\u0438\u0432\u0435\u0442", "\u4F60\u597D", "\uD83C\uDF0D");
-
+        Thread.sleep(500); // replication delay
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcList.size());
         assertEquals("\u041F\u0440\u0438\u0432\u0435\u0442", new String(grpcList.get(0).bytesValue()));
@@ -424,7 +425,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
             String key = baseKey + ":" + i;
             jedis.rpush(key, "item1", "item2", "item3");
         }
-
+        Thread.sleep(500); // replication delay
         // Read all via gRPC
         for (int i = 0; i < 10; i++) {
             String key = baseKey + ":" + i;

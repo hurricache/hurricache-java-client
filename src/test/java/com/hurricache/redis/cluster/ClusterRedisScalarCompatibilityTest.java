@@ -69,7 +69,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         // SET via Redis
         String redisValue = "cluster_value";
         jedis.set(key, redisValue);
-
+        Thread.sleep(500); // replication delay
         // GET via gRPC
         Variant grpcResult = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(grpcResult, redisValue);
@@ -84,7 +84,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
 
         // MSET via Redis
         jedis.mset(key1, "val1", key2, "val2", key3, "val3");
-
+        awaitReplication(); // Wait for replication
         // GET via gRPC
         Variant result1 = client.get(key1.getBytes(), null, 0, getGrpcTimeout()).get();
         Variant result2 = client.get(key2.getBytes(), null, 0, getGrpcTimeout()).get();
@@ -102,7 +102,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
 
         assertEquals(1L, jedis.setnx(key, "first"));
         assertEquals(0L, jedis.setnx(key, "second"));
-
+        awaitReplication(); // Wait for replication
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, "first");
     }
@@ -114,7 +114,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
 
         jedis.set(key, "hello");
         jedis.append(key, "_world");
-
+        Thread.sleep(500); // replication delay
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, "hello_world");
     }
@@ -127,6 +127,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
 
         jedis.set(key, value);
 
+        awaitReplication(); // jedis-чтение может попасть на бэкап
         long len = jedis.strlen(key);
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(len, (long)result.bytesValue().length);
@@ -139,7 +140,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
 
         byte[] binaryData = new byte[]{(byte)0x00, (byte)0x01, (byte)0x02, (byte)0xFF, (byte)0xFE};
         jedis.set(key.getBytes(), binaryData);
-
+        Thread.sleep(500); // replication delay
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertArrayEquals(binaryData, result.bytesValue());
     }
@@ -151,6 +152,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         String unicodeValue = "Кластер 你好 🌍";
 
         jedis.set(key, unicodeValue);
+        Thread.sleep(500); // replication delay
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, unicodeValue);
     }
@@ -165,7 +167,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
             String key = baseKey + ":" + i;
             jedis.set(key, "value" + i);
         }
-
+        awaitReplication(); // Wait for replication
         // Read all via gRPC
         for (int i = 0; i < 10; i++) {
             String key = baseKey + ":" + i;
@@ -180,7 +182,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         String key = uniqueKeyWithTag("cluster_empty");
 
         jedis.set(key, "");
-
+        Thread.sleep(500); // replication delay
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertNotNull(result);
         assertEquals(0, result.bytesValue().length);
@@ -192,14 +194,14 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         String key = uniqueKeyWithTag("cluster_delete");
 
         jedis.set(key, "to_delete");
-        
+        Thread.sleep(500); // replication delay
         // Verify exists via gRPC
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertNotNull(result);
 
         // DEL via Redis
         jedis.del(key);
-
+        awaitReplication(); // Wait for replication
         // Verify deleted in gRPC
         try {
             client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
@@ -220,7 +222,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
 
         // Create via Redis
         jedis.set(key, "exists_value");
-
+        awaitReplication(); // Wait for replication
         // Check via gRPC
         exists = client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertTrue(exists);
@@ -234,6 +236,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         jedis.set(key, "string_value");
 
         // Verify type via Redis
+        awaitReplication(); // jedis-чтение может попасть на бэкап
         assertEquals("string", jedis.type(key));
     }
 
@@ -245,12 +248,13 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         // SET + EXPIRE via Redis (SETEX may not be supported)
         jedis.set(key, "expiring_value");
         jedis.expire(key, 600);
-
+        awaitReplication(); // jedis-чтение может попасть на бэкап
         // Read via gRPC
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, "expiring_value");
 
         // Check TTL via Redis
+
         long redisTtl = jedis.ttl(key);
         assertTrue(redisTtl > 0 && redisTtl <= 600);
     }
@@ -261,11 +265,13 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         String key = uniqueKeyWithTag("cluster_update");
 
         jedis.set(key, "original");
+        Thread.sleep(500); // replication delay
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, "original");
 
         // Update via Redis
         jedis.set(key, "updated");
+        awaitReplication(); // Wait for replication
         result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, "updated");
     }
@@ -282,6 +288,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         String largeValue = sb.toString();
 
         jedis.set(key, largeValue);
+        Thread.sleep(500); // replication delay
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, largeValue);
     }

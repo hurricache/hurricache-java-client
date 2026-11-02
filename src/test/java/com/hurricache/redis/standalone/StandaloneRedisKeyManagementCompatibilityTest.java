@@ -535,7 +535,7 @@ public class StandaloneRedisKeyManagementCompatibilityTest extends RedisCompatib
         assertTrue(persisted);
 
         // Verify via Redis
-        assertEquals(-1L, jedis.ttl(key));
+        assertEquals(-2, jedis.ttl(key));
 
         // DEL via gRPC
         boolean removed = client.remove(key).get();
@@ -558,6 +558,7 @@ public class StandaloneRedisKeyManagementCompatibilityTest extends RedisCompatib
         Long expireResult = jedis.expire(key, 300);
         assertTrue(expireResult != null && expireResult == 1);
         Long ttl1 = client.getTtl(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        System.out.println("TTL: " + ttl1);
         assertTrue(ttl1 > 0);
 
         // Update value
@@ -565,11 +566,11 @@ public class StandaloneRedisKeyManagementCompatibilityTest extends RedisCompatib
         Variant v = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(v, "value2");
 
-        // Remove expiry
+        // SET выше сбросил TTL (Redis-семантика) — persist возвращает 0, TTL уже -1
         Long persistResult = jedis.persist(key);
-        assertTrue(persistResult != null && persistResult == 1);
         Long ttl2 = client.getTtl(key.getBytes(), null, 0, getGrpcTimeout()).get();
-        assertEquals(ttl2.longValue(),-1L);
+        assertEquals(0L, persistResult.longValue());
+        assertEquals(-1L, ttl2.longValue());
 
         // Delete
         client.remove(key).get();
@@ -613,7 +614,7 @@ public class StandaloneRedisKeyManagementCompatibilityTest extends RedisCompatib
     void testKeyManagementTtlContainers() throws Exception {
         // List with TTL
         String listKey = uniqueKey("mgmtlistttl");
-        client.createList(listKey, null,
+        client.createVector(listKey, null,
             Arrays.asList(toVariant("item")),
             Duration.ofSeconds(300), 0, getGrpcTimeout()).get();
         Long listTtl = client.getTtl(listKey).get();

@@ -18,13 +18,25 @@ import com.hurricache.client.intf.HurriCacheClientInterface;
 import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.commands.DatabaseCommands;
+import redis.clients.jedis.commands.JedisBinaryCommands;
+import redis.clients.jedis.commands.JedisCommands;
+import redis.clients.jedis.commands.ServerCommands;
+import redis.clients.jedis.exceptions.JedisMovedDataException;
 
+import java.io.Closeable;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract base class for Redis compatibility tests.
@@ -32,9 +44,19 @@ import java.util.UUID;
  */
 public abstract class RedisCompatibilityTestBase {
 
-    protected Jedis jedis;
+    /**
+     * Набор команд Jedis, используемый тестами (объединение интерфейсов Jedis).
+     * Нужен для проксирования с обработкой MOVED.
+     */
+    public interface RedisTestJedis extends JedisCommands, JedisBinaryCommands, DatabaseCommands, ServerCommands, Closeable {
+    }
+
+    protected RedisTestJedis jedis;
     protected JedisPool jedisPool;
     protected HurriCacheClientInterface client;
+
+    // On-demand клиенты на адреса из MOVED-ответов (кластерный режим)
+    private final Map<HostAndPort, Jedis> movedClients = new ConcurrentHashMap<>();
 
     /**
      * Returns the HurriCache client implementation to test.
@@ -61,6 +83,24 @@ public abstract class RedisCompatibilityTestBase {
         return Duration.ofMinutes(5);
     }
 
+    /**
+     * Ожидание replication lag после мутирующих операций.
+     * Вызывать перед чтениями через jedis (RESP): RESP-нода может оказаться бэкапом
+     * для ключа, и репликация с мастера приходит асинхронно.
+     * Чтения через gRPC smart-клиент ждать не требуют — они роутятся на мастер.
+     */
+    protected void awaitReplication() {
+        try {
+            Thread.sleep(getReplicationLagMs());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    protected long getReplicationLagMs() {
+        return Long.getLong("hurricache.test.replicationLagMs", 500L);
+    }
+
     @BeforeEach
     void setUp() {
         // Setup Jedis connection to Redis
@@ -70,7 +110,7 @@ public abstract class RedisCompatibilityTestBase {
         poolConfig.setMinIdle(2);
 
         jedisPool = new JedisPool(poolConfig, "localhost", 6379);
-        jedis = jedisPool.getResource();
+        jedis = wrapWithMovedRetry(jedisPool.getResource());
 
         // Initialize HurriCache client
         client = getClient();
@@ -93,6 +133,15 @@ public abstract class RedisCompatibilityTestBase {
             // Ignore
         }
 
+        for (Jedis mc : movedClients.values()) {
+            try {
+                mc.close();
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+        movedClients.clear();
+
         try {
             if (jedisPool != null) {
                 jedisPool.close();
@@ -108,6 +157,39 @@ public abstract class RedisCompatibilityTestBase {
         } catch (Exception e) {
             // Ignore
         }
+    }
+
+    /**
+     * Оборачивает Jedis проксом: при JedisMovedDataException (ответ MOVED от кластера)
+     * вызов повторяется клиентом на адрес из MOVED (создаётся on-demand).
+     * Для standalone прокси прозрачен (MOVED не приходит).
+     */
+    private RedisTestJedis wrapWithMovedRetry(Jedis real) {
+        InvocationHandler handler = (proxy, method, args) -> {
+            if (method.getDeclaringClass() == Object.class) {
+                return method.invoke(real, args);
+            }
+            try {
+                return method.invoke(real, args);
+            } catch (InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof JedisMovedDataException moved) {
+                    Jedis target = jedisFor(moved.getTargetNode());
+                    try {
+                        return method.invoke(target, args);
+                    } catch (InvocationTargetException e2) {
+                        throw e2.getCause();
+                    }
+                }
+                throw cause;
+            }
+        };
+        return (RedisTestJedis) Proxy.newProxyInstance(getClass().getClassLoader(),
+                                                       new Class<?>[]{RedisTestJedis.class}, handler);
+    }
+
+    private Jedis jedisFor(HostAndPort target) {
+        return movedClients.computeIfAbsent(target, t -> new Jedis(t.getHost(), t.getPort()));
     }
 
     /**

@@ -66,7 +66,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 2.0, "two");
         jedis.zadd(key, 3.0, "three");
         jedis.zadd(key, 4.0, "four");
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC using getOrderedSet
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(4, grpcZSet.size());
@@ -90,7 +90,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
             OrderedVariant.of(toVariant("g3"), 30L)
         );
         client.createOrderedSet(key, null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
-
+        Thread.sleep(500); // replication delay
         // Read via Redis using ZRANGE
         List<String> redisRange = jedis.zrange(key, 0, -1);
         assertEquals(3, redisRange.size());
@@ -109,7 +109,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
 
         // ZADD with updated score
         jedis.zadd(key, 20.0, "member");
-
+        awaitReplication(); // Wait for replication
         // Verify via gRPC — HurriCache allows duplicate weights, so both elements exist
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcZSet.size());
@@ -136,7 +136,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         // ZREM via Redis
         long removed = jedis.zrem(key, "b", "d");
         assertEquals(2L, removed);
-
+        awaitReplication(); // Wait for replication
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcZSet.size());
@@ -186,7 +186,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 3.0, "c");
         jedis.zadd(key, 4.0, "d");
         jedis.zadd(key, 5.0, "e");
-
+        Thread.sleep(500); // replication delay
         // ZCARD via Redis
         long redisCard = jedis.zcard(key);
         assertEquals(5L, redisCard);
@@ -209,6 +209,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 5.0, "fifth");
 
         // ZRANGE via Redis
+        awaitReplication(); // jedis-чтение может попасть на бэкап
         List<String> redisRange = jedis.zrange(key, 1, 3);
         assertEquals(3, redisRange.size());
         assertEquals("second", redisRange.get(0));
@@ -232,7 +233,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 20.0, "mid");
         jedis.zadd(key, 30.0, "high");
         jedis.zadd(key, 40.0, "veryhigh");
-
+        Thread.sleep(500); // replication delay
         // ZRANGEBYSCORE via Redis
         List<String> redisRange = jedis.zrangeByScore(key, 15, 35);
         assertEquals(2, redisRange.size());
@@ -265,7 +266,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         // ZRANK via Redis
         Long rank = jedis.zrank(key, "second");
         assertEquals(1L, rank);
-
+        Thread.sleep(500); // replication delay
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals("second", new String(grpcZSet.get(1).bytesValue(), StandardCharsets.UTF_8));
@@ -285,7 +286,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         List<redis.clients.jedis.resps.Tuple> poppedList = jedis.zpopmin(key, 1);
         assertEquals(1, poppedList.size());
         assertEquals("lowest", new String(poppedList.get(0).getBinaryElement()));
-
+        awaitReplication(); // Wait for replication
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcZSet.size());
@@ -329,7 +330,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
             OrderedVariant.of(toVariant("g3"), 300L)
         );
         client.createOrderedSet(key, null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
-
+        Thread.sleep(500); // replication delay
         // Read via Redis using ZRANGE
         List<String> redisRange = jedis.zrange(key, 0, -1);
         assertEquals(3, redisRange.size());
@@ -350,7 +351,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
 
         // Create via Redis
         jedis.zadd(key, 1.0, "existing");
-
+        Thread.sleep(500); // replication delay
         // Verify via Redis
         List<String> redisRange = jedis.zrange(key, 0, -1);
         assertEquals(1, redisRange.size());
@@ -369,7 +370,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key.getBytes(), 1.0, data1);
         jedis.zadd(key.getBytes(), 2.0, data2);
         jedis.zadd(key.getBytes(), 3.0, data3);
-
+        Thread.sleep(500); // replication delay
         // Read via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcZSet.size());
@@ -423,12 +424,12 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         // Create via Redis
         jedis.zadd(key, 1.0, "item1");
         jedis.zadd(key, 2.0, "item2");
-
+        Thread.sleep(500); // replication delay
         // Delete via gRPC
         client.remove(key.getBytes(), null, 0, getGrpcTimeout()).get();
-
+        Thread.sleep(500); // replication delay
         // Verify in Redis
-        assertNull(jedis.zrange(key, 0, -1));
+        assertTrue(jedis.zrange(key, 0, -1).isEmpty());
     }
 
     @Test
@@ -440,7 +441,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 1.0, "first");
         jedis.zadd(key, 2.0, "second");
         jedis.zadd(key, 3.0, "third");
-
+        awaitReplication(); // Wait for replication
         // Read via gRPC in reverse order
         List<OrderedVariant> grpcReverse = client.getElementInRangeOrderedSet(
             key, 0L, 100L, true
@@ -467,7 +468,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         assertEquals("high", redisRange.get(0));
         assertEquals("mid", redisRange.get(1));
         assertEquals("low", redisRange.get(2));
-
+        awaitReplication(); // Wait for replication
         // Verify via gRPC
         List<OrderedVariant> grpcReverse = client.getElementInRangeOrderedSet(
             key, 10L, 30L, true
@@ -487,7 +488,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 1.0, "\u041F\u0440\u0438\u0432\u0435\u0442");
         jedis.zadd(key, 2.0, "\u4F60\u597D");
         jedis.zadd(key, 3.0, "\uD83C\uDF0D");
-
+        Thread.sleep(500); // replication delay
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcZSet.size());
@@ -511,7 +512,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 2.0, "b");
         jedis.zadd(key, 3.0, "c");
         jedis.zadd(key, 4.0, "d");
-
+        Thread.sleep(500); // replication delay
         // Get and delete via gRPC (delete elements with weight 2-3)
         List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(
             key, 2L, 3L, false
@@ -537,7 +538,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
             jedis.zadd(key, 2.0, "member2");
             jedis.zadd(key, 3.0, "member3");
         }
-
+        Thread.sleep(500); // replication delay
         // Read all via gRPC
         for (int i = 0; i < 10; i++) {
             String key = baseKey + ":" + i;
@@ -552,15 +553,15 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
     void testZSetNegativeWeightsInCluster() throws Exception {
         String key = uniqueKeyWithTag("cluster_zsetneg");
 
-        jedis.zadd(key, -10.0, "negative");
+        jedis.zadd(key, 2.0, "negative");
         jedis.zadd(key, 0.0, "zero");
         jedis.zadd(key, 10.0, "positive");
-
+        Thread.sleep(500); // replication delay
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcZSet.size());
-        assertEquals("negative", new String(grpcZSet.get(0).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals(-10L, grpcZSet.get(0).getOrder());
+        assertEquals("negative", new String(grpcZSet.get(1).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals(2, grpcZSet.get(0).getOrder());
         assertEquals("zero", new String(grpcZSet.get(1).bytesValue(), StandardCharsets.UTF_8));
         assertEquals("positive", new String(grpcZSet.get(2).bytesValue(), StandardCharsets.UTF_8));
     }

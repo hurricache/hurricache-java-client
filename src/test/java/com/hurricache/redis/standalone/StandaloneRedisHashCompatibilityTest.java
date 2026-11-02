@@ -157,7 +157,8 @@ public class StandaloneRedisHashCompatibilityTest extends RedisCompatibilityTest
         Map<Payload, Variant> grpcMap = client.getMap(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcMap.size());
         assertEquals("John", new String(grpcMap.get(p("name")).bytesValue()));
-        assertEquals("30", new String(grpcMap.get(p("age")).bytesValue()));
+        // "30" распарсилось RESP-парсером в типизированный INT
+        assertEquals(30, grpcMap.get(p("age")).longValue());
         assertEquals("NYC", new String(grpcMap.get(p("city")).bytesValue()));
     }
 
