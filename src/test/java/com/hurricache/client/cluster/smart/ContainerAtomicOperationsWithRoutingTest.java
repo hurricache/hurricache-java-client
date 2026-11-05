@@ -33,7 +33,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests for container atomic operations routing (MASTER/BACKUP) with FastCacheAsyncSmartClient.
@@ -52,17 +53,17 @@ public class ContainerAtomicOperationsWithRoutingTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("f1"), vi(10));
         client.createMap(key, initialData).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.containsKey(key).get());
 
         // Operation on MASTER
-        client.setMode(Mode.MASTER);
-        Number oldVal = client.addInContainer(key, p("f1").getValue(), 5).get();
+        Number oldVal = client.setMode(Mode.MASTER).addInContainer(key, p("f1").getValue(), 5).get();
         assertEquals(10, oldVal.longValue());
-        Thread.sleep(500);
-
-        // Validate on BACKUP
-        Variant current = client.setMode(Mode.BACKUP).getInContainer(key, p("f1").getValue()).get();
-        assertEquals(15, current.longValue());
+        assertEventually("Backup did not replicate the expected value (15)", () -> {
+            Variant current = client.setMode(Mode.BACKUP)
+                    .getInContainer(key, p("f1").getValue())
+                    .get();
+            return current != null && current.longValue() == 15;
+        });
     }
 
     @Test
@@ -334,7 +335,7 @@ public class ContainerAtomicOperationsWithRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         client.setMode(Mode.MASTER);
-        
+
         Number r1 = client.addInContainer(key, p("val").getValue(), 50).get();
         assertEquals(100, r1.longValue());
         Thread.sleep(500);
@@ -361,7 +362,7 @@ public class ContainerAtomicOperationsWithRoutingTest extends TestBaseCluster {
         Thread.sleep(500);
 
         client.setMode(Mode.MASTER);
-        
+
         Number r1 = client.addInContainer(key, p("counter").getValue(), 10).get();
         assertEquals(0, r1.longValue());
         Thread.sleep(500);
