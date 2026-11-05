@@ -53,7 +53,7 @@ public class ContainerAtomicOperationsWithRoutingTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("f1"), vi(10));
         client.createMap(key, initialData).get();
-        waitForCondition(() -> client.containsKey(key).get());
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Operation on MASTER
         Number oldVal = client.setMode(Mode.MASTER).addInContainer(key, p("f1").getValue(), 5).get();

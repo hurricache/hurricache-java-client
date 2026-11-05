@@ -36,7 +36,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, new ArrayList<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(0, size);
@@ -57,7 +57,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -78,7 +78,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -101,7 +101,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -123,7 +123,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -150,7 +150,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant element = client.setMode(Mode.MASTER).getAt(key, hint, 1).get();
         assertNotNull(element);
@@ -172,7 +172,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteElementAtPosition on MASTER
         client.setMode(Mode.MASTER);
@@ -197,7 +197,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteElementAtPosition on MASTER
         client.setMode(Mode.MASTER);
@@ -227,7 +227,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> range = client.setMode(Mode.MASTER).getElementInRangeOrderedSet(key, hint, 2L, 4L, false).get();
         assertEquals(3, range.size());
@@ -250,7 +250,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> range = client.setMode(Mode.MASTER).getElementInRangeOrderedSet(key, hint, 1L, 3L, true).get();
         assertEquals(3, range.size());
@@ -274,7 +274,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         KeyHintData hint = client.createOrderedSet(key, List.of(
                 OrderedVariant.ofBytes("first".getBytes(), 1L)
         )).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // AddElementWithWeight on MASTER
         client.setMode(Mode.MASTER);
@@ -305,7 +305,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant element = client.setMode(Mode.MASTER).getElementWithWeight(key, hint, 1).get();
         assertNotNull(element);
@@ -327,7 +327,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndRemoveElementWithWeight on MASTER
         client.setMode(Mode.MASTER);
@@ -356,7 +356,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // RemoveFromContainerByKey on MASTER
         client.setMode(Mode.MASTER);
@@ -384,7 +384,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(3, size);
@@ -406,7 +406,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // On MASTER - should have 3 elements with same weight
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
@@ -441,7 +441,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -471,7 +471,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -507,7 +507,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -533,7 +533,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock with short TTL on MASTER
         client.setMode(Mode.MASTER);
@@ -563,7 +563,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Delete range [2, 4] on MASTER
         client.setMode(Mode.MASTER);
@@ -598,7 +598,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Delete full range with 0,0 on MASTER
         client.setMode(Mode.MASTER);
@@ -627,7 +627,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Delete from weight 2 to max on MASTER
         client.setMode(Mode.MASTER);
@@ -657,7 +657,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Delete from min to weight 2 on MASTER
         client.setMode(Mode.MASTER);
@@ -688,7 +688,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Delete range [3, 1] in reverse on MASTER
         client.setMode(Mode.MASTER);
@@ -719,7 +719,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Delete range [100, 200] - doesn't exist on MASTER
         client.setMode(Mode.MASTER);
@@ -747,7 +747,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Delete without hint - client resolves routing on MASTER
         client.setMode(Mode.MASTER);

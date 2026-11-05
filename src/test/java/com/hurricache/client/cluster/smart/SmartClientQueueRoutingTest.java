@@ -35,7 +35,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createQueue(key, new ArrayList<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(0, size);
@@ -52,7 +52,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant head = client.setMode(Mode.MASTER).peekHead(key, hint).get();
         assertNotNull(head);
@@ -71,7 +71,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant head = client.setMode(Mode.MASTER).peekHead(key, hint).get();
         assertNotNull(head);
@@ -90,7 +90,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant head = client.setMode(Mode.MASTER).peekHead(key, hint).get();
         assertNotNull(head);
@@ -109,7 +109,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createQueue(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant head = client.setMode(Mode.MASTER).peekHead(key, hint).get();
         assertNotNull(head);
@@ -129,7 +129,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         String key = "queue_add_" + UUID.randomUUID();
 
         KeyHintData hint = client.createQueue(key, List.of(v("middle"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Add to tail on MASTER
         client.setMode(Mode.MASTER);
@@ -158,7 +158,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createQueue(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant head = client.setMode(Mode.MASTER).peekHead(key, hint).get();
         assertNotNull(head);
@@ -182,7 +182,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createQueue(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteHead on MASTER
         client.setMode(Mode.MASTER);
@@ -203,7 +203,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createQueue(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteHead on MASTER
         client.setMode(Mode.MASTER);
@@ -228,7 +228,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createQueue(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteTail on MASTER
         client.setMode(Mode.MASTER);
@@ -249,7 +249,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         String key = "queue_add_head_" + UUID.randomUUID();
 
         KeyHintData hint = client.createQueue(key, List.of(v("middle"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // AddElementToHead on MASTER
         client.setMode(Mode.MASTER);
@@ -278,7 +278,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"));
 
         KeyHintData hint = client.createQueue(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Count elements by getting and deleting head on MASTER
         int count = 0;
@@ -301,7 +301,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         String key = "queue_read_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -328,7 +328,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         String key = "queue_write_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -359,7 +359,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         String key = "queue_global_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -382,7 +382,7 @@ public class SmartClientQueueRoutingTest extends TestBaseCluster {
         String key = "queue_lock_expire_" + UUID.randomUUID();
 
         KeyHintData hint = client.createQueue(key, List.of(v("value"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock with short TTL on MASTER
         client.setMode(Mode.MASTER);

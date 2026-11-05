@@ -28,7 +28,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createSet(key, List.of()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key).get();
         assertEquals(0, size);
@@ -41,7 +41,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createSet(key, List.of()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.BACKUP).getSize(key).get();
         assertEquals(0, size);
@@ -55,7 +55,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key).get();
         assertEquals(3, stream.size());
@@ -69,7 +69,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.BACKUP).getSet(key).get();
         assertEquals(3, stream.size());
@@ -83,7 +83,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key).get();
         assertEquals(3, stream.size());
@@ -97,7 +97,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.BACKUP).getSet(key).get();
         assertEquals(3, stream.size());
@@ -109,7 +109,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         String key = "set_no_hint_add_" + UUID.randomUUID();
 
         KeyHintData hint = client.createSet(key, List.of()).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Integer added = client.addElementUnordered(key, null, List.of(v("elem1"))).get();
@@ -126,7 +126,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         String key = "set_no_hint_add_b_" + UUID.randomUUID();
 
         KeyHintData hint = client.createSet(key, List.of()).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         client.addElementUnordered(key, null, List.of(v("elem1"))).get();
@@ -147,7 +147,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("elem1"), v("elem2"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Integer removed = client.removeFromContainerByKeyAndValue(key, ContainerType.SET, List.of(), List.of(v("elem1"))).get();
@@ -165,7 +165,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("elem1"), v("elem2"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         client.removeFromContainerByKeyAndValue(key, ContainerType.SET, List.of(), List.of(v("elem1"))).get();
@@ -182,7 +182,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("elem1"), v("elem2"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Boolean contains = client.setMode(Mode.MASTER).containsKey(key, null, "elem1".getBytes()).get();
         assertTrue(contains);
@@ -195,7 +195,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("elem1"), v("elem2"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         client.removeFromContainerByKeyAndValue(key, ContainerType.SET, List.of(), List.of(v("elem1"))).get();
@@ -212,7 +212,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("elem1"), v("elem2"), v("elem3"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key).get();
         assertEquals(3, size);
@@ -225,7 +225,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("elem1"), v("elem2"), v("elem3"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.BACKUP).getSize(key).get();
         assertEquals(3, size);
@@ -238,7 +238,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("a"), v("b"), v("c"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key).get();
         assertEquals(3, stream.size());
@@ -251,7 +251,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("a"), v("b"), v("c"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.BACKUP).getSet(key).get();
         assertEquals(3, stream.size());
@@ -264,7 +264,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("elem1"), v("elem2"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Integer removed = client.removeFromContainerByKeyAndValue(key, ContainerType.SET, List.of(), List.of(v("elem1"))).get();
@@ -283,7 +283,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // On MASTER - should have 2 unique elements
         List<Variant> stream = client.setMode(Mode.MASTER).getSet(key).get();
@@ -301,7 +301,7 @@ public class SmartClientSetNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("item1"));
 
         KeyHintData hint = client.createSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Try to add duplicate on MASTER
         client.setMode(Mode.MASTER);

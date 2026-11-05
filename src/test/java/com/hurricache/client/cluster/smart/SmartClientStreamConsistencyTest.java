@@ -36,7 +36,7 @@ public class SmartClientStreamConsistencyTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).createList(key, List.of()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<Variant> data = new ArrayList<>();
         for (int i = 0; i < 200; i++) {
             data.add(v("item_" + i));
@@ -64,7 +64,7 @@ public class SmartClientStreamConsistencyTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).createVector(key, List.of()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<Variant> data = new ArrayList<>();
         for (int i = 0; i < 130; i++) {
             data.add(vi(i));
@@ -97,7 +97,7 @@ public class SmartClientStreamConsistencyTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).createMap(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Map<Payload, Variant> masterStream = client.setMode(Mode.MASTER).getMap(key, hint).get();
         assertEquals(data, masterStream);
@@ -122,7 +122,7 @@ public class SmartClientStreamConsistencyTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Full range, ascending
         List<OrderedVariant> masterRange = client.setMode(Mode.MASTER)

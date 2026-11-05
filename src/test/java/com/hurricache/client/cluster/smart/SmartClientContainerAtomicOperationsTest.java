@@ -15,6 +15,7 @@
 package com.hurricache.client.cluster.smart;
 
 import com.hurricache.TestBaseCluster;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import io.grpc.Status;
@@ -65,7 +66,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("f1"), vd(10.5));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         Number oldVal = client.addInContainer(key, p("f1").getValue(), 2.5).get();
         assertEquals(10.5, oldVal.doubleValue(), 0.001);
 
@@ -79,7 +80,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "add_vector_pos_" + UUID.randomUUID();
         List<Variant> initialData = List.of(vi(100), vi(200), vi(300));
         client.createVector(key, initialData).get();
-
+        Thread.sleep(500);
         Number oldVal = client.addInContainer(key, 1, 50).get();
         assertEquals(200, oldVal.longValue());
 
@@ -299,7 +300,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "or_vector_pos_" + UUID.randomUUID();
         List<Variant> initialData = List.of(vi(8), vi(16), vi(32));
         client.createVector(key, initialData).get();
-
+        Thread.sleep(500);
         Long oldVal = client.orInContainer(key, 0, 7L).get();
         assertEquals(8L, oldVal.longValue());
 
@@ -332,7 +333,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("counter"), vi(0));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         Number r1 = client.addInContainer(key, p("counter").getValue(), 10).get();
         assertEquals(0, r1.longValue());
 
@@ -398,7 +399,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("name"), v("test"));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         try {
             client.subInContainer(key, p("name").getValue(), 10).get();
             fail("Expected INVALID_ARGUMENT exception");
@@ -418,7 +419,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("name"), v("world"));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         try {
             client.exchangeInContainer(key, p("name").getValue(), 42).get();
             fail("Expected INVALID_ARGUMENT exception");
@@ -458,7 +459,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("name"), v("info"));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         try {
             client.orInContainer(key, p("name").getValue(), 7L).get();
             fail("Expected INVALID_ARGUMENT exception");
@@ -478,6 +479,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("name"), v("value"));
         client.createMap(key, initialData).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         try {
             client.xorInContainer(key, p("name").getValue(), 42L).get();

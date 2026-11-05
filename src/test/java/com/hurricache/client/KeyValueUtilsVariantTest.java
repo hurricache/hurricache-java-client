@@ -18,43 +18,7 @@ class KeyValueUtilsVariantTest {
     // buildValueFromVariant
     // =========================================================================
 
-    @Test
-    @DisplayName("buildValueFromVariant should create Value from BYTES Variant")
-    void testBuildValueFromVariantBytes() {
-        byte[] data = "hello".getBytes();
-        Variant variant = Variant.ofBytes(data);
-        Duration ttl = Duration.ofSeconds(60);
 
-        Value value = KeyValueUtils.buildValueFromVariant(variant, ttl);
-
-        assertEquals(ValueType.BYTES, value.getValueType());
-        assertArrayEquals(data, value.getValue().getPayload().toByteArray());
-        assertTrue(value.hasTtl());
-    }
-
-    @Test
-    @DisplayName("buildValueFromVariant should create Value from INT Variant")
-    void testBuildValueFromVariantInt() {
-        Variant variant = Variant.ofLong(42L);
-        Duration ttl = Duration.ofSeconds(60);
-
-        Value value = KeyValueUtils.buildValueFromVariant(variant, ttl);
-
-        assertEquals(ValueType.INT, value.getValueType());
-        assertEquals(42L, value.getValue().getIntPayload());
-    }
-
-    @Test
-    @DisplayName("buildValueFromVariant should create Value from DOUBLE Variant")
-    void testBuildValueFromVariantDouble() {
-        Variant variant = Variant.ofDouble(3.14);
-        Duration ttl = Duration.ofSeconds(60);
-
-        Value value = KeyValueUtils.buildValueFromVariant(variant, ttl);
-
-        assertEquals(ValueType.DOUBLE, value.getValueType());
-        assertEquals(3.14, value.getValue().getDoublePayload(), 0.001);
-    }
 
     // =========================================================================
     // buildValueFromVariantCompressed

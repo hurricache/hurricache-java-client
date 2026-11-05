@@ -39,7 +39,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         assertNotNull(hint);
 
         // 2. Pause for replication
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // 3. Read on MASTER
         Variant result = client.setMode(Mode.MASTER).get(key, hint).get();
@@ -60,7 +60,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.create(key, vi(value)).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant result = client.setMode(Mode.MASTER).get(key, hint).get();
         assertNotNull(result);
@@ -79,7 +79,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.create(key, vd(value)).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant result = client.setMode(Mode.MASTER).get(key, hint).get();
         assertNotNull(result);
@@ -101,7 +101,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
 
         // Create with bytes
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Variant v1 = client.setMode(Mode.MASTER).get(key, hint).get();
         assertEquals("hello", new String(v1.bytesValue(), StandardCharsets.UTF_8));
 
@@ -122,7 +122,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
 
         // Create with int
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Update to double on MASTER
         client.setMode(Mode.MASTER);
@@ -142,7 +142,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         // Create with double
         Variant vd = vd(2.5);
         KeyHintData hint = client.create(key, vd).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Variant v1 = client.setMode(Mode.MASTER).get(key, hint).get();
         assertEquals(2.5, v1.doubleValue(), 0.001);
 
@@ -167,7 +167,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "get_delete_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDelete on MASTER
         client.setMode(Mode.MASTER);
@@ -191,7 +191,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "ttl_scalar_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(42)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // SetTtl on MASTER
         client.setMode(Mode.MASTER);
@@ -211,7 +211,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "ttl_expire_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(42)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Set very short TTL on MASTER
         client.setMode(Mode.MASTER);
@@ -233,7 +233,8 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "exist_remove_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("test")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+        
 
         // ExistKey on MASTER
         Boolean exists = client.setMode(Mode.MASTER).containsKey(key, hint).get();
@@ -260,7 +261,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "read_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -296,7 +297,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "write_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -336,7 +337,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "global_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -368,7 +369,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "unlock_owner_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -391,7 +392,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "lock_expire_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock with short TTL on MASTER
         client.setMode(Mode.MASTER);
@@ -414,7 +415,7 @@ public class SmartClientScalarRoutingTest extends TestBaseCluster {
         String key = "scalar_size_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("test_value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertNotNull(size);

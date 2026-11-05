@@ -71,7 +71,7 @@ public class SmartClientRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.create(key, v("value")).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         int succeeded = 0;
         int failedPrecondition = 0;
@@ -117,7 +117,7 @@ public class SmartClientRoutingTest extends TestBaseCluster {
         // Probe: find a node that does not own the shard of this hint
         KeyHintData hint = client.create(probeKey, v("probe")).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(probeKey).get() && client.setMode(Mode.MASTER).containsKey(probeKey).get());
 
         String wrongNodeTarget = findWrongNodeTarget(probeKey, hint);
         assertNotNull(wrongNodeTarget, "Expected a node that rejects the probe key with FAILED_PRECONDITION");
@@ -157,7 +157,7 @@ public class SmartClientRoutingTest extends TestBaseCluster {
         KeyHintData hint = client.create(key, v("initial")).get();
         assertNotNull(hint);
         assertTrue(hint.hasWeekHash());
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // get with hint on MASTER and BACKUP
         Variant value = client.setMode(Mode.MASTER).get(key, hint).get();

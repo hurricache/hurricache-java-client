@@ -157,22 +157,6 @@ public class KeyValueUtils {
                 .build();
     }
 
-    public static   Value buildValueFromVariant(Variant variant, Duration ttl) {
-        Value.Builder b = switch (variant.type()) {
-            case INT -> Value.newBuilder()
-                    .setValue(BinaryPayload.newBuilder().setIntPayload(variant.longValue()))
-                    .setValueType(ValueType.INT);
-            case DOUBLE -> Value.newBuilder()
-                    .setValue(BinaryPayload.newBuilder().setDoublePayload(variant.doubleValue()))
-                    .setValueType(ValueType.DOUBLE);
-            default -> Value.newBuilder()
-                    .setValue(BinaryPayload.newBuilder()
-                                      .setPayload(UnsafeByteOperations.unsafeWrap(variant.bytesValue())))
-                    .setValueType(ValueType.BYTES);
-        };
-        if (ttl != null && !ttl.isZero()) b.setTtl(System.currentTimeMillis() + ttl.toMillis());
-        return b.build();
-    }
 
     /**
      * Builds a Value.Builder from a Variant.

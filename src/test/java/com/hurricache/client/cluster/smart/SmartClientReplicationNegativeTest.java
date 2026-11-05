@@ -37,7 +37,7 @@ public class SmartClientReplicationNegativeTest extends TestBaseCluster {
         // Control: create replicates to BACKUP
         KeyHintData hint = client.create(key, vi(42)).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant backupValue = client.setMode(Mode.BACKUP).get(key, hint).get();
         assertEquals(42, backupValue.longValue());
@@ -70,7 +70,7 @@ public class SmartClientReplicationNegativeTest extends TestBaseCluster {
         // Control: create replicates to BACKUP
         KeyHintData hint = client.create(key, Variant.ofLong(Long.MAX_VALUE)).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant backupValue = client.setMode(Mode.BACKUP).get(key, hint).get();
         assertEquals(Long.MAX_VALUE, backupValue.longValue());
@@ -108,7 +108,7 @@ public class SmartClientReplicationNegativeTest extends TestBaseCluster {
 
         KeyHintData hint = client.create(key, v("value")).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Owner takes WRITE_LOCK on MASTER - replicated to BACKUP
         client.setMode(Mode.MASTER);

@@ -33,7 +33,7 @@ public class SmartClientLargePayloadTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).create(key, payload).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant masterValue = client.setMode(Mode.MASTER).get(key, hint).get();
         assertNotNull(masterValue);
@@ -55,7 +55,7 @@ public class SmartClientLargePayloadTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).create(key, v("large_key_value")).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant masterValue = client.setMode(Mode.MASTER).get(key, hint).get();
         assertNotNull(masterValue);
@@ -113,7 +113,7 @@ public class SmartClientLargePayloadTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).create(key, Variant.ofBytes(allBytes)).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant masterValue = client.setMode(Mode.MASTER).get(key, hint).get();
         assertNotNull(masterValue);

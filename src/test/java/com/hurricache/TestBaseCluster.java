@@ -210,10 +210,11 @@ public abstract class TestBaseCluster {
         long start = System.currentTimeMillis();
         long timeoutMs = timeout.toMillis();
         long pollMs = pollInterval.toMillis();
-
         while (System.currentTimeMillis() - start < timeoutMs) {
             try {
                 if (condition.getAsBoolean()) {
+                    long endTime = System.currentTimeMillis();
+                    System.out.println("Condition met in " + (endTime - start) + " ms");
                     return true;
                 }
             } catch (Exception e) {

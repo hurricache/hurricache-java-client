@@ -40,7 +40,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createMap(key, new HashMap<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(0, size);
@@ -60,7 +60,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key, hint).get();
         assertEquals(3, stream.size());
@@ -92,7 +92,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key, hint).get();
         assertEquals(3, stream.size());
@@ -131,7 +131,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key, hint).get();
         assertEquals(3, stream.size());
@@ -170,7 +170,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key, hint).get();
         assertEquals(3, stream.size());
@@ -206,7 +206,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key2"), vi(100));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant value = client.setMode(Mode.MASTER).getInContainer(key, hint, "key1".getBytes()).get();
         assertNotNull(value);
@@ -228,7 +228,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("value1"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Boolean exists = client.setMode(Mode.MASTER).containsKey(key, hint, "key1".getBytes()).get();
         assertTrue(exists);
@@ -248,7 +248,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("old_value"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Update on MASTER
         client.setMode(Mode.MASTER);
@@ -270,7 +270,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("text"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Update from bytes to int on MASTER
         client.setMode(Mode.MASTER);
@@ -301,7 +301,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key2"), vi(100));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteValueInContainer on MASTER
         client.setMode(Mode.MASTER);
@@ -327,7 +327,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key2"), v("value2"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // RemoveInContainerByKey on MASTER
         client.setMode(Mode.MASTER);
@@ -352,7 +352,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("value1"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // AddElementHashMap on MASTER
         client.setMode(Mode.MASTER);
@@ -381,7 +381,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("k3"), v("other"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteFromContainerByKeyValue on MASTER
         client.setMode(Mode.MASTER);
@@ -409,7 +409,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("k3"), v("v3"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(3, size);
@@ -428,7 +428,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createMap(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // On MASTER - should have 1 unique key with last value
         Map<Payload, Variant> stream = client.setMode(Mode.MASTER).getMap(key, hint).get();
@@ -455,7 +455,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("value"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -484,7 +484,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("value"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -519,7 +519,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("value"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -544,7 +544,7 @@ public class SmartClientHashMapRoutingTest extends TestBaseCluster {
         data.put(p("key1"), v("value"));
 
         KeyHintData hint = client.createMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock with short TTL on MASTER
         client.setMode(Mode.MASTER);
