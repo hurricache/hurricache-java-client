@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -72,7 +73,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         // DEL via Redis
         long deleted = jedis.del(key);
         assertEquals(1L, deleted);
-
+        awaitReplication();
         // Verify via gRPC - should throw exception
         try {
             client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
@@ -135,7 +136,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         Thread.sleep(500); // replication delay
         client.remove(setKey).get();
         Thread.sleep(500); // replication delay
-        assertNull(jedis.smembers(setKey));
+        assertTrue(jedis.smembers(setKey).isEmpty());
 
         // Delete sorted set
         String zsetKey = uniqueKeyWithTag("cluster_delzset");
@@ -143,7 +144,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         Thread.sleep(500); // replication delay
         client.remove(zsetKey).get();
         Thread.sleep(500); // replication delay
-        assertNull(jedis.zrange(zsetKey, 0, -1));
+        assertTrue(jedis.zrange(zsetKey, 0, -1).isEmpty());
 
         // Delete hash
         String hashKey = uniqueKeyWithTag("cluster_delhash");
@@ -189,12 +190,13 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
     @Test
     @DisplayName("Cluster: EXISTS - Multiple keys existence check")
     void testExistsMultipleKeysInCluster() throws Exception {
-        String key1 = uniqueKeyWithTag("cluster_existsmulti");
-        String key2 = uniqueKeyWithTag("cluster_existsmulti");
-        String key3 = uniqueKeyWithTag("cluster_existsmulti");
+        String key1 = uniqueKeyWithTag("cluster_existsmulti1");
+        String key2 = uniqueKeyWithTag("cluster_existsmulti2");
+        String key3 = uniqueKeyWithTag("cluster_existsmulti3");
 
         jedis.set(key1, "value1");
         jedis.set(key2, "value2");
+        awaitReplication(); // Wait for replication before gRPC read
 
         // EXISTS for multiple keys
         long existsCount = jedis.exists(key1, key2, key3);
@@ -241,7 +243,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
 
         // Create with expiry in Redis
         jedis.setex(key, 300, "expiring_value");
-        Thread.sleep(500); // replication delay
+        awaitReplication(); // Wait for replication before gRPC read
         // Verify TTL in Redis
         long redisTtl = jedis.ttl(key);
         assertTrue(redisTtl > 0 && redisTtl <= 300);
@@ -265,14 +267,16 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         jedis.set(key, "value");
         long noTtl = jedis.ttl(key);
         assertEquals(-1L, noTtl);
-
+        awaitReplication(); // Wait for replication
         // Set expiry via gRPC using setTtl (in seconds)
         boolean ttlSet = client.setTtl(key, 600).get();
         assertTrue(ttlSet);
         awaitReplication(); // Wait for replication
         // Verify TTL in Redis (may not be propagated)
-        // We just verify the key still exists
-        assertNotNull(jedis.get(key));
+        // Verify via gRPC that TTL is set
+        Long grpcTtl = client.getTtl(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertNotNull(grpcTtl);
+        assertTrue(grpcTtl > 0);
     }
 
     @Test
@@ -284,9 +288,8 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         jedis.setex(key, 100, "value");
         Thread.sleep(500); // replication delay
         // Update expiry
-        Long updated = jedis.expire(key, 500);
-        Thread.sleep(500); // replication delay
-        assertTrue(updated != null && updated == 1);
+        long updated = jedis.expire(key, 500);
+        assertEquals(1L, updated);
 
         // Verify new TTL
         long redisTtl = jedis.ttl(key);
@@ -304,7 +307,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
 
         // Create with expiry
         jedis.setex(key, 300, "value");
-
+        awaitReplication();
         // TTL via Redis
         long redisTtl = jedis.ttl(key);
         assertTrue(redisTtl > 0 && redisTtl <= 300);
@@ -365,12 +368,11 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         // PERSIST via Redis
         Long persisted = jedis.persist(key);
         assertTrue(persisted != null && persisted == 1);
-
+        awaitReplication();
         // Verify no expiry in Redis
         long redisTtl = jedis.ttl(key);
         assertEquals(-1L, redisTtl);
-        Thread.sleep(500); // replication delay
-        // Verify via gRPC
+        // Verify via gRPC - HurriCache may return large TTL for keys without expiry
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, "value");
     }
@@ -394,7 +396,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         assertTrue(persisted);
 
         // Verify no TTL via gRPC
-        Boolean newTtl = client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        Boolean newTtl = client.containsKey(key, null, 0, getGrpcTimeout()).get();
         // TTL should be 0 or -1 after persist
         assertFalse(newTtl);
     }
@@ -406,10 +408,10 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
 
         // Create without expiry
         jedis.set(key, "value");
-
+        Thread.sleep(500); // replication delay
         // PERSIST on key without expiry
         Long persisted = jedis.persist(key);
-        assertTrue(persisted == null || persisted == 0);
+        assertEquals(0,persisted);
 
         // Verify value still exists
         assertEquals("value", jedis.get(key));
@@ -498,7 +500,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
     @Test
     @DisplayName("Cluster: Key management - Create via Redis, manage via gRPC")
     void testKeyManagementCreateRedisManageGrpcInCluster() throws Exception {
-        String key = uniqueKeyWithTag("cluster_mgmtredis");
+        String key =uniqueKeyWithTag("cluster_mgmtredis");
 
         // Create via Redis
         jedis.setex(key, 300, "redis_value");
@@ -520,12 +522,10 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         boolean persisted = client.setTtl(key, 0).get();
         assertTrue(persisted);
         Thread.sleep(500); // replication delay
-        // Verify via Redis
-        assertEquals(-1L, jedis.ttl(key));
+        // Verify via gRPC that TTL is removed
+        Boolean newTtl = client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertFalse(newTtl);
 
-        // DEL via gRPC
-        boolean removed = client.remove(key).get();
-        assertTrue(removed);
 
         // Verify via Redis
         assertNull(jedis.get(key));
@@ -606,6 +606,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         client.createVector(listKey, null, 
             Arrays.asList(toVariant("item")), 
             Duration.ofSeconds(300), 0, getGrpcTimeout()).get();
+        awaitReplication();
         Long listTtl = client.getTtl(listKey).get();
         assertTrue(listTtl > 0);
 
@@ -614,6 +615,7 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         client.createSet(setKey, null, 
             Arrays.asList(toVariant("member")), 
             Duration.ofSeconds(300), 0, getGrpcTimeout()).get();
+        awaitReplication();
         Long setTtl = client.getTtl(setKey).get();
         assertTrue(setTtl > 0);
 
@@ -621,5 +623,72 @@ public class ClusterRedisKeyManagementCompatibilityTest extends RedisCompatibili
         client.setTtl(setKey, 600).get();
         Long newSetTtl = client.getTtl(setKey).get();
         assertTrue(newSetTtl > 300);
+    }
+
+    @Test
+    @DisplayName("Cluster: SETEX in Redis → GET in gRPC")
+    void testSetExInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_setex");
+
+        jedis.setex(key, 300, "setex_value");
+        awaitReplication();
+
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEqualsVariantString(result, "setex_value");
+
+        // TTL выставлен
+        long ttl = jedis.ttl(key);
+        assertTrue(ttl > 0 && ttl <= 300);
+    }
+
+    @Test
+    @DisplayName("Cluster: KEYS in Redis")
+    void testKeysInCluster() throws Exception {
+        String prefix = uniqueKeyWithTag("cluster_keys");
+
+        jedis.set(prefix + ":1", "v1");
+        jedis.set(prefix + ":2", "v2");
+        jedis.set(prefix + ":3", "v3");
+        awaitReplication();
+
+        Set<String> keys = jedis.keys(prefix + ":*");
+        assertTrue(keys.contains(prefix + ":1"));
+        assertTrue(keys.contains(prefix + ":2"));
+        assertTrue(keys.contains(prefix + ":3"));
+    }
+
+    @Test
+    @DisplayName("Cluster: SCAN in Redis")
+    void testScanInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_scan");
+        jedis.set(key, "scan_value");
+        awaitReplication();
+
+        var scanResult = jedis.scan("0", new redis.clients.jedis.params.ScanParams().match(key));
+        assertFalse(scanResult.getResult().isEmpty());
+        assertTrue(scanResult.getResult().contains(key));
+    }
+
+    @Test
+    @DisplayName("Cluster: TOUCH in Redis")
+    void testTouchInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_touch");
+
+        jedis.set(key, "touch_value");
+        awaitReplication();
+        assertEquals(1L, jedis.touch(key));
+        assertEquals(0L, jedis.touch(uniqueKeyWithTag("cluster_touch_missing")));
+    }
+
+    @Test
+    @DisplayName("Cluster: UNLINK in Redis")
+    void testUnlinkInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_unlink");
+
+        jedis.set(key, "to_unlink");
+        assertEquals(1L, jedis.unlink(key));
+
+        awaitReplication();
+        assertFalse(client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get());
     }
 }

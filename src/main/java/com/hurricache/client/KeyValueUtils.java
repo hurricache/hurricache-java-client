@@ -33,7 +33,14 @@ public class KeyValueUtils {
             case BYTES: case AUTO: default:
                 if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
                 if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
-                if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
+                if (bp.hasPayload()) {
+                    if (val.hasCompressionInfo())
+                        return Variant.ofBytes(CompressionUtils.decompressIfNeeded(val));
+                    else
+                    {
+                        return Variant.ofBytes(bp.getPayload().toByteArray());
+                    }
+                }
                 return Variant.none();
         }
     }
@@ -48,7 +55,14 @@ public class KeyValueUtils {
             case BYTES: case AUTO: default:
                 if (bp.hasIntPayload()) return Variant.ofLong(bp.getIntPayload());
                 if (bp.hasDoublePayload()) return Variant.ofDouble(bp.getDoublePayload());
-                if (bp.hasPayload()) return Variant.ofBytes(bp.getPayload().toByteArray());
+                if (bp.hasPayload()) {
+                    if (val.hasCompressionInfo())
+                        return Variant.ofBytes(CompressionUtils.decompressIfNeeded(val));
+                    else
+                    {
+                        return Variant.ofBytes(bp.getPayload().toByteArray());
+                    }
+                }
                 return Variant.none();
         }
     }

@@ -50,10 +50,10 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         initialData.put(p("f1"), vi(10));
         initialData.put(p("f2"), vi(20));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         Number oldVal = client.addInContainer(key, p("f1").getValue(), 5).get();
         assertEquals(10, oldVal.longValue());
-
+        Thread.sleep(500);
         Variant current = client.getInContainer(key, p("f1").getValue()).get();
         assertEquals(15, current.longValue());
     }
@@ -93,10 +93,10 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "add_list_pos_" + UUID.randomUUID();
         List<Variant> initialData = List.of(vi(10), vi(20), vi(30));
         client.createList(key, initialData).get();
-
+        Thread.sleep(500);
         Number oldVal = client.addInContainer(key, 0, -5).get();
         assertEquals(10, oldVal.longValue());
-
+        Thread.sleep(500);
         Variant current = client.getAt(key, 0).get();
         assertEquals(5, current.longValue());
     }
@@ -139,7 +139,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "add_vector_nopos_" + UUID.randomUUID();
         List<Variant> initialData = List.of(vi(10), vi(20), vi(30));
         client.createVector(key, initialData).get();
-
+        Thread.sleep(500);
         try {
             client.addInContainer(key, 999, 5).get();
             fail("Expected OUT_OF_RANGE exception");
@@ -241,10 +241,10 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("val"), vi(255));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         Long oldVal = client.andInContainer(key, p("val").getValue(), 0b00001111L).get();
         assertEquals(255L, oldVal.longValue());
-
+        Thread.sleep(500);
         Variant current = client.getInContainer(key, p("val").getValue()).get();
         assertEquals(15L, current.longValue());
     }
@@ -271,7 +271,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("val"), vi(15));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         Long oldVal = client.xorInContainer(key, p("val").getValue(), 7L).get();
         assertEquals(15L, oldVal.longValue());
 
@@ -438,7 +438,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("name"), v("data"));
         client.createMap(key, initialData).get();
-
+        Thread.sleep(500);
         try {
             client.andInContainer(key, p("name").getValue(), 15L).get();
             fail("Expected INVALID_ARGUMENT exception");
@@ -497,7 +497,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "err_add_vec_bytes_" + UUID.randomUUID();
         List<Variant> initialData = List.of(v("a"), v("b"), v("c"));
         client.createVector(key, initialData).get();
-
+        Thread.sleep(500);
         try {
             client.addInContainer(key, 0, 10).get();
             fail("Expected INVALID_ARGUMENT exception");
@@ -505,7 +505,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             assertEquals(Status.Code.INVALID_ARGUMENT, cause.getStatus().getCode());
         }
-
+        Thread.sleep(500);
         Variant current = client.getAt(key, 0).get();
         assertEquals("a", new String(current.bytesValue(), StandardCharsets.UTF_8));
     }
@@ -516,7 +516,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "err_and_vec_bytes_" + UUID.randomUUID();
         List<Variant> initialData = List.of(v("x"), v("y"), v("z"));
         client.createVector(key, initialData).get();
-
+        Thread.sleep(500);
         try {
             client.andInContainer(key, 1, 0xFFL).get();
             fail("Expected INVALID_ARGUMENT exception");

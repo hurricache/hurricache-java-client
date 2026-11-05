@@ -288,8 +288,215 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
         String largeValue = sb.toString();
 
         jedis.set(key, largeValue);
-        Thread.sleep(500); // replication delay
-        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        Thread.sleep(1500); // replication delay
+        Variant result = client.get(key, null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, largeValue);
+    }
+
+    // =========================================================================
+    // ATOMIC SCALARS
+    // =========================================================================
+
+    @Test
+    @DisplayName("Cluster: INCR/DECR in Redis → typed INT in gRPC")
+    void testIncrDecrInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_incr");
+
+        jedis.set(key, "100");
+        assertEquals(101L, jedis.incr(key));
+        assertEquals(100L, jedis.decr(key));
+
+        awaitReplication();
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(100, result.longValue());
+    }
+
+    @Test
+    @DisplayName("Cluster: INCRBY/DECRBY in Redis → typed INT in gRPC")
+    void testIncrByDecrByInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_incrby");
+
+        jedis.set(key, "50");
+        assertEquals(75L, jedis.incrBy(key, 25L));
+        assertEquals(55L, jedis.decrBy(key, 20L));
+
+        awaitReplication();
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(55, result.longValue());
+    }
+
+    @Test
+    @DisplayName("Cluster: INCRBYFLOAT in Redis → typed DOUBLE in gRPC")
+    void testIncrByFloatInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_incrbyfloat");
+
+        jedis.set(key, "10.5");
+        double v = jedis.incrByFloat(key, 0.25);
+        assertEquals(10.75, v, 0.0001);
+
+        awaitReplication();
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(10.75, result.doubleValue(), 0.0001);
+    }
+
+    // =========================================================================
+    // READ-MODIFY-DELETE
+    // =========================================================================
+
+    @Test
+    @DisplayName("Cluster: GETDEL in Redis")
+    void testGetDelInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_getdel");
+
+        jedis.set(key, "to_getdel");
+        assertEquals("to_getdel", jedis.getDel(key));
+
+        awaitReplication();
+        assertFalse(client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get());
+    }
+
+    @Test
+    @DisplayName("Cluster: GETEX with EX in Redis")
+    void testGetExInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_getex");
+
+        jedis.set(key, "getex_value");
+        String v = jedis.getEx(key, redis.clients.jedis.params.GetExParams.getExParams().ex(300));
+        assertEquals("getex_value", v);
+
+        awaitReplication();
+        long ttl = jedis.ttl(key);
+        assertTrue(ttl > 0 && ttl <= 300);
+    }
+
+    @Test
+    @DisplayName("Cluster: GETSET in Redis")
+    void testGetSetInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_getset");
+
+        jedis.set(key, "old_value");
+        String old = jedis.getSet(key, "new_value");
+        assertEquals("old_value", old);
+
+        awaitReplication();
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEqualsVariantString(result, "new_value");
+    }
+
+    // =========================================================================
+    // MULTI-KEY
+    // =========================================================================
+
+    @Test
+    @DisplayName("Cluster: MGET in Redis for multiple keys")
+    void testMGetInCluster() throws Exception {
+        String key1 = uniqueKeyWithTag("cluster_mget1");
+        String key2 = uniqueKeyWithTag("cluster_mget2");
+
+        jedis.mset(key1, "mv1", key2, "mv2");
+        awaitReplication();
+
+        List<String> values = jedis.mget(key1, key2);
+        assertEquals(2, values.size());
+        assertEquals("mv1", values.get(0));
+        assertEquals("mv2", values.get(1));
+    }
+
+    @Test
+    @DisplayName("Cluster: MSETNX in Redis")
+    void testMSetNxInCluster() throws Exception {
+        String key1 = uniqueKeyWithTag("cluster_msetnx1");
+        String key2 = uniqueKeyWithTag("cluster_msetnx2");
+
+        // Все ключи новые — создаются
+        assertEquals(1L, jedis.msetnx(key1, "nx1", key2, "nx2"));
+
+        // Хотя бы один существует — ничего не пишется
+        assertEquals(0L, jedis.msetnx(key1, "other", uniqueKeyWithTag("cluster_msetnx3"), "nx3"));
+
+        awaitReplication();
+        assertEqualsVariantString(client.get(key1.getBytes(), null, 0, getGrpcTimeout()).get(), "nx1");
+        assertEqualsVariantString(client.get(key2.getBytes(), null, 0, getGrpcTimeout()).get(), "nx2");
+    }
+
+    // =========================================================================
+    // UNLINK / TOUCH
+    // =========================================================================
+
+    @Test
+    @DisplayName("Cluster: UNLINK in Redis")
+    void testUnlinkInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_unlink");
+
+        jedis.set(key, "to_unlink");
+        assertEquals(1L, jedis.unlink(key));
+
+        awaitReplication();
+        assertFalse(client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get());
+    }
+
+    @Test
+    @DisplayName("Cluster: TOUCH in Redis")
+    void testTouchInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_touch");
+
+        jedis.set(key, "touch_value");
+        awaitReplication();
+        assertEquals(1L, jedis.touch(key));
+        assertEquals(0L, jedis.touch(uniqueKeyWithTag("cluster_touch_missing")));
+    }
+
+    // =========================================================================
+    // TTL: PEXPIRE / PTTL / EXPIREAT / PEXPIREAT
+    // =========================================================================
+
+    @Test
+    @DisplayName("Cluster: PEXPIRE + PTTL in Redis")
+    void testPexpirePttlInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_pexpire");
+
+        jedis.set(key, "pexpire_value");
+        assertEquals(1L, jedis.pexpire(key, 300000));
+
+        awaitReplication();
+        long pttl = jedis.pttl(key);
+        assertTrue(pttl > 0 && pttl <= 300000);
+    }
+
+    @Test
+    @DisplayName("Cluster: EXPIREAT/PEXPIREAT in Redis")
+    void testExpireAtInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_expireat");
+
+        long futureSec = System.currentTimeMillis() / 1000 + 600;
+        long futureMs = System.currentTimeMillis() + 600000;
+
+        jedis.set(key, "expireat_value");
+        assertEquals(1L, jedis.expireAt(key, futureSec));
+
+        String key2 = uniqueKeyWithTag("cluster_pexpireat");
+        jedis.set(key2, "pexpireat_value");
+        assertEquals(1L, jedis.pexpireAt(key2, futureMs));
+
+        awaitReplication();
+        assertTrue(jedis.ttl(key) > 0);
+        assertTrue(jedis.pttl(key2) > 0);
+    }
+
+    // =========================================================================
+    // GETRANGE / SETRANGE
+    // =========================================================================
+
+    @Test
+    @DisplayName("Cluster: GETRANGE/SETRANGE in Redis")
+    void testGetSetRangeInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_range");
+
+        jedis.set(key, "hello world");
+        assertEquals("hello", jedis.getrange(key, 0, 4));
+
+        jedis.setrange(key, 6, "redis");
+        awaitReplication();
+        assertEquals("hello redis", jedis.get(key));
     }
 }

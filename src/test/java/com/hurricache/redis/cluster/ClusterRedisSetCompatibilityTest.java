@@ -295,12 +295,13 @@ public class ClusterRedisSetCompatibilityTest extends RedisCompatibilityTestBase
             toVariant("x1"), toVariant("x2"), toVariant("x3")
         );
         client.createSet(key, null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
-        Thread.sleep(500); // replication delay
+        awaitReplication(); // Wait for replication before Redis pop
         // SPOP via Redis
         String redisPopped = jedis.spop(key);
         assertNotNull(redisPopped);
         assertTrue(Arrays.asList("x1", "x2", "x3").contains(redisPopped));
 
+        awaitReplication(); // Wait for replication before gRPC read
         // Verify via gRPC
         List<Variant> grpcSet = client.getSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcSet.size());
@@ -380,7 +381,7 @@ public class ClusterRedisSetCompatibilityTest extends RedisCompatibilityTestBase
         client.remove(key.getBytes(), null, 0, getGrpcTimeout()).get();
         Thread.sleep(500); // replication delay
         // Verify in Redis
-        assertNull(jedis.smembers(key));
+        assertTrue(jedis.smembers(key).isEmpty());
     }
 
     @Test
@@ -432,7 +433,7 @@ public class ClusterRedisSetCompatibilityTest extends RedisCompatibilityTestBase
 
         // Create with unicode values
         jedis.sadd(key, "\u041F\u0440\u0438\u0432\u0435\u0442", "\u4F60\u597D", "\uD83C\uDF0D");
-
+        awaitReplication();
         // Verify via gRPC
         List<Variant> grpcSet = client.getSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcSet.size());
@@ -488,5 +489,35 @@ public class ClusterRedisSetCompatibilityTest extends RedisCompatibilityTestBase
         }
         assertTrue(grpcSetValues.contains("small"));
         assertTrue(grpcSetValues.contains(largeValue));
+    }
+
+    @Test
+    @DisplayName("Cluster: SMISMEMBER in Redis → getSet in gRPC")
+    void testSMIsMemberInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_smismember");
+
+        jedis.sadd(key, "m1", "m2", "m3");
+        awaitReplication();
+
+        List<Boolean> results = jedis.smismember(key, "m1", "missing", "m3");
+        assertEquals(3, results.size());
+        assertTrue(results.get(0));
+        assertFalse(results.get(1));
+        assertTrue(results.get(2));
+    }
+
+    @Test
+    @DisplayName("Cluster: SSCAN in Redis")
+    void testSScanInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_sscan");
+
+        jedis.sadd(key, "s1", "s2", "s3");
+        awaitReplication();
+
+        var scanResult = jedis.sscan(key, "0");
+        assertFalse(scanResult.getResult().isEmpty());
+        assertTrue(scanResult.getResult().contains("s1"));
+        assertTrue(scanResult.getResult().contains("s2"));
+        assertTrue(scanResult.getResult().contains("s3"));
     }
 }

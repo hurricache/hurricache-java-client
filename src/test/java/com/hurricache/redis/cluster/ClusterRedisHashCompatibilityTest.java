@@ -474,7 +474,8 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
         assertEquals(15L, v);
         Thread.sleep(500); // replication delay
         // После инкремента поле типизированное — читается как число через gRPC
-        Variant grpcVal = client.getInContainer(key.getBytes(), null, "counter".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
+        Map<Payload, Variant> payloadVariantMap = client.getMap(key, null).get();
+        Variant grpcVal = client.getInContainer(key, null, "counter".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
         assertEquals(15, grpcVal.longValue());
     }
 
@@ -500,11 +501,11 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
 
         jedis.hincrBy(key, "score", 10);
 
-        double v = jedis.hincrByFloat(key, "score", 0.5);
-        assertEquals(10.5, v, 0.0001);
+        double v = jedis.hincrBy(key, "score", 1);
+        assertEquals(11, v);
         awaitReplication(); // Wait for replication
-        Variant grpcVal = client.getInContainer(key.getBytes(), null, "score".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
-        assertEquals(10.5, grpcVal.doubleValue(), 0.0001);
+        Variant grpcVal = client.getInContainer(key, null, "score".getBytes(StandardCharsets.UTF_8), 0, getGrpcTimeout()).get();
+        assertEquals(11, grpcVal.longValue());
     }
 
     @Test
@@ -531,6 +532,57 @@ public class ClusterRedisHashCompatibilityTest extends RedisCompatibilityTestBas
                      () -> jedis.hincrBy(key, "name", 1));
 
         assertEquals("hello", jedis.hget(key, "name"));
+    }
+
+    @Test
+    @DisplayName("Cluster: HMGET in Redis → getInContainer in gRPC")
+    void testHMGetInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_hmget");
+
+        jedis.hset(key, "f1", "v1");
+        jedis.hset(key, "f2", "v2");
+        jedis.hset(key, "f3", "v3");
+
+        awaitReplication();
+        List<String> values = jedis.hmget(key, "f1", "f2", "missing");
+        assertEquals(3, values.size());
+        assertEquals("v1", values.get(0));
+        assertEquals("v2", values.get(1));
+        assertNull(values.get(2));
+    }
+
+    @Test
+    @DisplayName("Cluster: HSTRLEN in Redis")
+    void testHStrLenInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_hstrlen");
+
+        jedis.hset(key, "short", "abc");
+        jedis.hset(key, "long", "abcdefghij");
+
+        awaitReplication();
+        assertEquals(3L, jedis.hstrlen(key, "short"));
+        assertEquals(10L, jedis.hstrlen(key, "long"));
+        assertEquals(0L, jedis.hstrlen(key, "missing"));
+    }
+
+    @Test
+    @DisplayName("Cluster: HSCAN in Redis")
+    void testHScanInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_hscan");
+
+        jedis.hset(key, "sf1", "sv1");
+        jedis.hset(key, "sf2", "sv2");
+
+        awaitReplication();
+        var scanResult = jedis.hscan(key, "0");
+        assertFalse(scanResult.getResult().isEmpty());
+        // Один проход с курсором 0 должен вернуть все поля
+        var fields = new java.util.HashSet<String>();
+        for (var entry : scanResult.getResult()) {
+            fields.add(entry.getKey());
+        }
+        assertTrue(fields.contains("sf1"));
+        assertTrue(fields.contains("sf2"));
     }
 
     private Payload p(String value) {

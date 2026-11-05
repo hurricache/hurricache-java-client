@@ -18,8 +18,10 @@ import com.hurricache.client.intf.HurriCacheClientInterface;
 import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.commands.DatabaseCommands;
@@ -41,8 +43,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Abstract base class for Redis compatibility tests.
  * Provides bidirectional testing between Redis protocol (via Jedis) and HurriCache gRPC client.
+ *
+ * Осознанно НЕ поддерживаются коннектором (тестировать не нужно):
+ * SINTER/SUNION/SDIFF (возвращают пустой массив), HRANDFIELD, RANDOMKEY (nil),
+ * RENAME/RENAMENX (not supported), pub/sub, MULTI/EXEC/WATCH, EVAL.
  */
 public abstract class RedisCompatibilityTestBase {
+
+    private DefaultJedisClientConfig clientConfig;
 
     /**
      * Набор команд Jedis, используемый тестами (объединение интерфейсов Jedis).
@@ -108,19 +116,23 @@ public abstract class RedisCompatibilityTestBase {
         poolConfig.setMaxTotal(10);
         poolConfig.setMaxIdle(5);
         poolConfig.setMinIdle(2);
-
-        jedisPool = new JedisPool(poolConfig, "localhost", 6379);
+        clientConfig = DefaultJedisClientConfig.builder()
+                .connectionTimeoutMillis(15000) // Таймаут на установку TCP-соединения
+                .socketTimeoutMillis(15000)     // Таймаут на чтение (ожидание ответа от сервера)
+                .build();
+        HostAndPort hostAndPort = new HostAndPort("localhost", 6379);
+        jedisPool = new JedisPool(poolConfig, hostAndPort,clientConfig);
         jedis = wrapWithMovedRetry(jedisPool.getResource());
 
         // Initialize HurriCache client
         client = getClient();
 
         // Clean up before each test
-        try {
-            jedis.flushDB();
-        } catch (Exception e) {
-            System.err.println("Warning: Could not flush Redis: " + e.getMessage());
-        }
+//        try {
+//            jedis.flushDB();
+//        } catch (Exception e) {
+//            System.err.println("Warning: Could not flush Redis: " + e.getMessage());
+//        }
     }
 
     @AfterEach
@@ -189,7 +201,7 @@ public abstract class RedisCompatibilityTestBase {
     }
 
     private Jedis jedisFor(HostAndPort target) {
-        return movedClients.computeIfAbsent(target, t -> new Jedis(t.getHost(), t.getPort()));
+        return movedClients.computeIfAbsent(target, t -> new Jedis(t.getHost(), t.getPort(),clientConfig));
     }
 
     /**
@@ -220,14 +232,18 @@ public abstract class RedisCompatibilityTestBase {
      * Helper to create a unique key prefix.
      */
     protected String uniqueKey(String prefix) {
-        return prefix + ":" + UUID.randomUUID().toString().substring(0, 8);
+        String s = prefix + ":" + UUID.randomUUID().toString().substring(0, 8);
+        System.out.println("uniqueKey: " + s );
+        return s;
     }
 
     /**
      * Helper to create a unique key with cluster tag.
      */
     protected String uniqueKeyWithTag(String prefix) {
-        return prefix + ":{" + UUID.randomUUID().toString().substring(0, 8) + "}";
+        String s = prefix + ":{" + UUID.randomUUID().toString().substring(0, 8) + "}";
+        System.out.println("uniqueKeyWithTag: " + s);
+        return s;
     }
 
     /**

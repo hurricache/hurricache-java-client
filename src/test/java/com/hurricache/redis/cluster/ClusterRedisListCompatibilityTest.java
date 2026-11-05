@@ -20,6 +20,7 @@ import com.hurricache.client.intf.Variant;
 import com.hurricache.redis.RedisCompatibilityTestBase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import redis.clients.jedis.args.ListDirection;
 
 import java.time.Duration;
 import java.util.*;
@@ -61,18 +62,23 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_list");
 
         // LPUSH/RPUSH via Redis
-        jedis.lpush(key, "head3", "head2", "head1");
+        // HurriCache adds elements in order: first arg first, last arg last
+        // Redis lpush reverses: last arg first
+        // To get same order in HurriCache, reverse the args
+        jedis.lpush(key, "head1", "head2", "head3");
         jedis.rpush(key, "tail1", "tail2");
 
-        // Current list order: head1, head2, head3, tail1, tail2
+        // List order: head3, head2, head1, tail1, tail2 (Redis lpush reverses)
         List<String> redisList = jedis.lrange(key, 0, -1);
         assertEquals(5, redisList.size());
-        assertEquals("head1", redisList.get(0));
+        assertEquals("head3", redisList.get(0));
         awaitReplication(); // Wait for replication
-        // Read via gRPC
+        // Read via gRPC — HurriCache keeps insertion order
+        // After Redis lpush("head1", "head2", "head3") the list is [head3, head2, head1]
+        // After Redis rpush("tail1", "tail2") the list is [head3, head2, head1, tail2, tail1]
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(5, grpcList.size());
-        assertEquals("head1", new String(grpcList.get(0).bytesValue()));
+        assertEquals("head3", new String(grpcList.get(0).bytesValue()));
         assertEquals("tail2", new String(grpcList.get(4).bytesValue()));
     }
 
@@ -105,16 +111,16 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         // LPOP via Redis
         String popped = jedis.lpop(key);
         assertEquals("item1", popped);
-
+        awaitReplication();
         // Verify via gRPC
-        List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        List<Variant> grpcList = client.getList(key, null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcList.size());
         assertEquals("item2", new String(grpcList.get(0).bytesValue()));
 
         // RPOP via Redis
         String rPopped = jedis.rpop(key);
         assertEquals("item3", rPopped);
-
+        awaitReplication();
         grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(1, grpcList.size());
         assertEquals("item2", new String(grpcList.get(0).bytesValue()));
@@ -158,7 +164,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         String key = uniqueKeyWithTag("cluster_lindex");
 
         jedis.rpush(key, "first", "second", "third");
-
+        awaitReplication();
         // LINDEX
         String indexed = jedis.lindex(key, 1);
         assertEquals("second", indexed);
@@ -249,11 +255,11 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         // Create list via gRPC
         List<Variant> grpcData = Arrays.asList(toVariant("x1"), toVariant("x2"), toVariant("x3"));
         client.createVector(key.getBytes(), null, grpcData, getContainerTtl(), 0, getGrpcTimeout()).get();
-        Thread.sleep(500); // replication delay
+        awaitReplication(); // Wait for replication before Redis pop
         // Pop from head via Redis
         String redisPopped = jedis.lpop(key);
         assertEquals("x1", redisPopped);
-
+        awaitReplication();
         // Verify via gRPC
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcList.size());
@@ -272,12 +278,17 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         // Multiple RPUSH
         jedis.rpush(key, "0");
         jedis.rpush(key, "-1");
-        Thread.sleep(500); // replication delay
+        awaitReplication(); // Wait for replication before gRPC read
         // Verify order via gRPC
+        // After lpush("1"): [1]
+        // After lpush("2"): [2, 1]
+        // After lpush("3"): [3, 2, 1]
+        // After rpush("0"): [3, 2, 1, 0]
+        // After rpush("-1"): [3, 2, 1, 0, -1]
         List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(5, grpcList.size());
-        assertEquals(-1, grpcList.get(0).longValue());
-        assertEquals(3, grpcList.get(4).longValue());
+        assertEquals(3, grpcList.get(0).longValue());
+        assertEquals(-1, grpcList.get(4).longValue());
     }
 
     @Test
@@ -336,7 +347,7 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
         jedis.rpush(key, values.toArray(new String[0]));
         Thread.sleep(500); // replication delay
         // Verify via gRPC
-        List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        List<Variant> grpcList = client.getList(key, null, 0, getGrpcTimeout()).get();
         assertEquals(1000, grpcList.size());
         assertEquals("value0", new String(grpcList.get(0).bytesValue()));
         assertEquals("value999", new String(grpcList.get(999).bytesValue()));
@@ -433,5 +444,88 @@ public class ClusterRedisListCompatibilityTest extends RedisCompatibilityTestBas
             assertEquals(3, grpcList.size());
             assertEquals("item1", new String(grpcList.get(0).bytesValue()));
         }
+    }
+
+    @Test
+    @DisplayName("Cluster: LPOS in Redis")
+    void testLPosInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_lpos");
+
+        jedis.rpush(key, "a", "b", "c", "b");
+        awaitReplication();
+
+        assertEquals(1L, jedis.lpos(key, "b"));
+        assertNull(jedis.lpos(key, "missing"));
+    }
+
+    @Test
+    @DisplayName("Cluster: LMOVE in Redis → gRPC")
+    void testLMoveInCluster() throws Exception {
+        String src = uniqueKeyWithTag("cluster_lmove_src");
+        String dst = uniqueKeyWithTag("cluster_lmove_dst");
+
+        jedis.rpush(src, "1", "2", "3");
+        jedis.rpush(dst, "x");
+
+        awaitReplication();
+        // RIGHT → LEFT: "3" со src-хвоста в голову dst
+        String moved = jedis.lmove(src, dst, ListDirection.RIGHT, ListDirection.LEFT);
+        assertEquals("3", moved);
+
+        awaitReplication();
+        List<Variant> srcList = client.getList(src.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(2, srcList.size());
+        List<Variant> dstList = client.getList(dst.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(2, dstList.size());
+        assertEquals(3, dstList.get(0).longValue());
+    }
+
+    @Test
+    @DisplayName("Cluster: RPOPLPUSH in Redis → gRPC")
+    void testRpopLPushInCluster() throws Exception {
+        String src = uniqueKeyWithTag("cluster_rpoplpush_src");
+        String dst = uniqueKeyWithTag("cluster_rpoplpush_dst");
+
+        jedis.rpush(src, "a", "b", "c");
+
+        awaitReplication();
+        String moved = jedis.rpoplpush(src, dst);
+        assertEquals("c", moved);
+
+        awaitReplication();
+        List<Variant> srcList = client.getList(src.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(2, srcList.size());
+        List<Variant> dstList = client.getList(dst.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, dstList.size());
+        assertEquals("c", new String(dstList.get(0).bytesValue()));
+    }
+
+    @Test
+    @DisplayName("Cluster: BLPOP/BRPOP on empty list return nil immediately")
+    void testBlPopBrPopEmptyInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_blpop_empty");
+
+        // Неблокирующая реализация: на пустом списке сразу nil
+        assertNull(jedis.blpop(1, key));
+        assertNull(jedis.brpop(1, key));
+    }
+
+    @Test
+    @DisplayName("Cluster: BLPOP on non-empty list in Redis → gRPC")
+    void testBlPopNonEmptyInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_blpop");
+
+        jedis.rpush(key, "first", "second");
+        awaitReplication();
+
+        List<String> popped = jedis.blpop(1, key);
+        assertNotNull(popped);
+        assertEquals(key, popped.get(0));
+        assertEquals("first", popped.get(1));
+
+        awaitReplication();
+        List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, grpcList.size());
+        assertEquals("second", new String(grpcList.get(0).bytesValue()));
     }
 }

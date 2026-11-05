@@ -162,6 +162,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         // ZINCRBY via Redis
         jedis.zincrby(key, 5.0, "counter");
 
+        awaitReplication(); // Wait for replication before gRPC read
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(1, grpcZSet.size());
@@ -171,6 +172,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         // ZINCRBY negative
         jedis.zincrby(key, -3.0, "counter");
 
+        awaitReplication(); // Wait for replication before gRPC read
         grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(12L, grpcZSet.get(0).getOrder());
     }
@@ -241,10 +243,12 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         assertEquals("high", redisRange.get(1));
 
         // Verify via gRPC using weight range
+        // Redis zrangeByScore(15, 35) returns mid(20) and high(30)
+        // HurriCache getElementInRange uses inclusive range, so use 20L-30L
         List<OrderedVariant> grpcRange = client.getElementInRangeOrderedSet(
-            key, 10L, 40L, false
+            key, 20L, 30L, false
         ).get();
-        assertEquals(3, grpcRange.size());
+        assertEquals(2, grpcRange.size());
         assertTrue(grpcRange.stream().anyMatch(
             v -> "mid".equals(new String(v.bytesValue(), StandardCharsets.UTF_8))
         ));
@@ -309,7 +313,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         List<redis.clients.jedis.resps.Tuple> poppedMaxList = jedis.zpopmax(key, 1);
         assertEquals(1, poppedMaxList.size());
         assertEquals("highest", new String(poppedMaxList.get(0).getBinaryElement()));
-
+        awaitReplication();
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(2, grpcZSet.size());
@@ -394,7 +398,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         for (int i = 0; i < 1000; i++) {
             jedis.zadd(key, (double) i, "value" + i);
         }
-
+        awaitReplication();
         // Verify via gRPC
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(1000, grpcZSet.size());
@@ -518,7 +522,7 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
             key, 2L, 3L, false
         ).get();
         assertEquals(2, deleted.size());
-
+        Thread.sleep(500); // replication delay
         // Verify remaining via Redis
         List<String> redisRange = jedis.zrange(key, 0, -1);
         assertEquals(2, redisRange.size());
@@ -556,13 +560,97 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         jedis.zadd(key, 2.0, "negative");
         jedis.zadd(key, 0.0, "zero");
         jedis.zadd(key, 10.0, "positive");
-        Thread.sleep(500); // replication delay
+        awaitReplication(); // Wait for replication before gRPC read
         // Verify via gRPC
+        // Sorted by weight: zero(0.0), negative(2.0), positive(10.0)
         List<OrderedVariant> grpcZSet = client.getOrderedSet(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(3, grpcZSet.size());
+        assertEquals("zero", new String(grpcZSet.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals(0L, grpcZSet.get(0).getOrder());
         assertEquals("negative", new String(grpcZSet.get(1).bytesValue(), StandardCharsets.UTF_8));
-        assertEquals(2, grpcZSet.get(0).getOrder());
-        assertEquals("zero", new String(grpcZSet.get(1).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals(2L, grpcZSet.get(1).getOrder());
         assertEquals("positive", new String(grpcZSet.get(2).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals(10L, grpcZSet.get(2).getOrder());
+    }
+
+    @Test
+    @DisplayName("Cluster: ZMSCORE in Redis")
+    void testZMScoreInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_zmscore");
+
+        jedis.zadd(key, 1.0, "one");
+        jedis.zadd(key, 2.0, "two");
+        awaitReplication();
+
+        List<Double> scores = jedis.zmscore(key, "one", "missing", "two");
+        assertEquals(3, scores.size());
+        assertEquals(1.0, scores.get(0), 0.0001);
+        assertNull(scores.get(1));
+        assertEquals(2.0, scores.get(2), 0.0001);
+    }
+
+    @Test
+    @DisplayName("Cluster: ZCOUNT in Redis")
+    void testZCountInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_zcount");
+
+        jedis.zadd(key, 1.0, "a");
+        jedis.zadd(key, 2.0, "b");
+        jedis.zadd(key, 3.0, "c");
+        jedis.zadd(key, 4.0, "d");
+        awaitReplication();
+
+        assertEquals(2L, jedis.zcount(key, 2, 3));
+        assertEquals(4L, jedis.zcount(key, "-inf", "+inf"));
+    }
+
+    @Test
+    @DisplayName("Cluster: ZREVRANGE in Redis")
+    void testZRevRangeInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_zrevrange");
+
+        jedis.zadd(key, 1.0, "first");
+        jedis.zadd(key, 2.0, "second");
+        jedis.zadd(key, 3.0, "third");
+        awaitReplication();
+
+        List<String> rev = jedis.zrevrange(key, 0, -1);
+        assertEquals(3, rev.size());
+        assertEquals("third", rev.get(0));
+        assertEquals("first", rev.get(2));
+    }
+
+    @Test
+    @DisplayName("Cluster: ZREVRANK in Redis")
+    void testZRevRankInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_zrevrank");
+
+        jedis.zadd(key, 1.0, "first");
+        jedis.zadd(key, 2.0, "second");
+        jedis.zadd(key, 3.0, "third");
+        awaitReplication();
+
+        // Самый тяжёлый — ранг 0
+        assertEquals(0L, jedis.zrevrank(key, "third"));
+        assertEquals(2L, jedis.zrevrank(key, "first"));
+    }
+
+    @Test
+    @DisplayName("Cluster: ZSCAN in Redis")
+    void testZScanInCluster() throws Exception {
+        String key = uniqueKeyWithTag("cluster_zscan");
+
+        jedis.zadd(key, 1.0, "z1");
+        jedis.zadd(key, 2.0, "z2");
+        awaitReplication();
+
+        var scanResult = jedis.zscan(key, "0");
+        assertFalse(scanResult.getResult().isEmpty());
+        Set<String> members = new HashSet<>();
+        for (var tuple : scanResult.getResult()) {
+            members.add(tuple.getElement());
+        }
+        assertTrue(members.contains("z1"));
+        assertTrue(members.contains("z2"));
     }
 }
