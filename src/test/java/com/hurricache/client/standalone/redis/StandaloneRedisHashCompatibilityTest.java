@@ -440,6 +440,54 @@ public class StandaloneRedisHashCompatibilityTest extends RedisCompatibilityTest
         assertEquals("hello", jedis.hget(key, "name"));
     }
 
+    @Test
+    @DisplayName("HMGET in Redis returns values and nulls for missing fields")
+    void testHMGet() throws Exception {
+        String key = uniqueKey("hmget");
+
+        jedis.hset(key, "f1", "v1");
+        jedis.hset(key, "f2", "v2");
+        jedis.hset(key, "f3", "v3");
+
+        List<String> values = jedis.hmget(key, "f1", "f2", "missing");
+        assertEquals(3, values.size());
+        assertEquals("v1", values.get(0));
+        assertEquals("v2", values.get(1));
+        assertNull(values.get(2));
+    }
+
+    @Test
+    @DisplayName("HSTRLEN in Redis")
+    void testHStrLen() throws Exception {
+        String key = uniqueKey("hstrlen");
+
+        jedis.hset(key, "short", "abc");
+        jedis.hset(key, "long", "abcdefghij");
+
+        assertEquals(3L, jedis.hstrlen(key, "short"));
+        assertEquals(10L, jedis.hstrlen(key, "long"));
+        assertEquals(0L, jedis.hstrlen(key, "missing"));
+    }
+
+    @Test
+    @DisplayName("HSCAN in Redis returns all fields")
+    void testHScan() throws Exception {
+        String key = uniqueKey("hscan");
+
+        jedis.hset(key, "sf1", "sv1");
+        jedis.hset(key, "sf2", "sv2");
+
+        var scanResult = jedis.hscan(key, "0");
+        assertFalse(scanResult.getResult().isEmpty());
+        // Один проход с курсором 0 должен вернуть все поля
+        var fields = new HashSet<String>();
+        for (var entry : scanResult.getResult()) {
+            fields.add(entry.getKey());
+        }
+        assertTrue(fields.contains("sf1"));
+        assertTrue(fields.contains("sf2"));
+    }
+
     private Payload p(String value) {
         return Payload.of(value.getBytes(StandardCharsets.UTF_8));
     }

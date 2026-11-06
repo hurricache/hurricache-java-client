@@ -633,4 +633,51 @@ public class StandaloneRedisKeyManagementCompatibilityTest extends RedisCompatib
         Long newSetTtl = client.getTtl(setKey).get();
         assertTrue(newSetTtl > 300);
     }
+
+    @Test
+    @DisplayName("KEYS in Redis matches by pattern")
+    void testKeys() throws Exception {
+        String prefix = uniqueKey("keys");
+
+        jedis.set(prefix + ":1", "v1");
+        jedis.set(prefix + ":2", "v2");
+        jedis.set(prefix + ":3", "v3");
+
+        java.util.Set<String> keys = jedis.keys(prefix + ":*");
+        assertTrue(keys.contains(prefix + ":1"));
+        assertTrue(keys.contains(prefix + ":2"));
+        assertTrue(keys.contains(prefix + ":3"));
+    }
+
+    @Test
+    @DisplayName("SCAN in Redis finds the key")
+    void testScan() throws Exception {
+        String key = uniqueKey("scan");
+        jedis.set(key, "scan_value");
+
+        var scanResult = jedis.scan("0", new redis.clients.jedis.params.ScanParams().match(key));
+        assertFalse(scanResult.getResult().isEmpty());
+        assertTrue(scanResult.getResult().contains(key));
+    }
+
+    @Test
+    @DisplayName("TOUCH in Redis")
+    void testTouch() throws Exception {
+        String key = uniqueKey("touch");
+
+        jedis.set(key, "touch_value");
+        assertEquals(1L, jedis.touch(key));
+        assertEquals(0L, jedis.touch(uniqueKey("touch_missing")));
+    }
+
+    @Test
+    @DisplayName("UNLINK in Redis removes key visible via gRPC")
+    void testUnlink() throws Exception {
+        String key = uniqueKey("unlink");
+
+        jedis.set(key, "to_unlink");
+        assertEquals(1L, jedis.unlink(key));
+
+        assertFalse(client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get());
+    }
 }

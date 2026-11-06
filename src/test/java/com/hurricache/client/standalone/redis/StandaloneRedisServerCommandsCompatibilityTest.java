@@ -344,4 +344,89 @@ public class StandaloneRedisServerCommandsCompatibilityTest extends RedisCompati
             client.getList(key3.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEquals(1, list.size());
     }
+
+    @Test
+    @DisplayName("Server commands: All container types work after FLUSHDB")
+    void testMultipleContainerTypesAfterFlush() throws Exception {
+        // Flush
+        jedis.flushDB();
+
+        // Create different container types
+        String stringKey = uniqueKey("strtype");
+        String listKey = uniqueKey("lsttype");
+        String setKey = uniqueKey("sttype");
+        String zsetKey = uniqueKey("zstype");
+        String hashKey = uniqueKey("hashtype");
+
+        jedis.set(stringKey, "string_val");
+        jedis.rpush(listKey, "list_item");
+        jedis.sadd(setKey, "set_member");
+        jedis.zadd(zsetKey, 1.0, "zset_member");
+        jedis.hset(hashKey, "field", "hash_val");
+
+        // Verify all via HurriCache
+        Variant strResult = client.get(stringKey.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEqualsVariantString(strResult, "string_val");
+
+        List<Variant> listResult = client.getList(listKey.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, listResult.size());
+
+        List<Variant> setResult = client.getSet(setKey.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, setResult.size());
+
+        List<com.hurricache.client.intf.OrderedVariant> zsetResult =
+            client.getOrderedSet(zsetKey.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, zsetResult.size());
+
+        Map<com.hurricache.client.intf.Payload, Variant> hashResult =
+            client.getMap(hashKey.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, hashResult.size());
+    }
+
+    @Test
+    @DisplayName("Server commands: FLUSHDB cleanup verification")
+    void testFlushDbCleanupVerification() throws Exception {
+        // Create multiple types of data
+        String key1 = uniqueKey("flush_verify_1");
+        String key2 = uniqueKey("flush_verify_2");
+        String key3 = uniqueKey("flush_verify_3");
+
+        jedis.set(key1, "string");
+        jedis.rpush(key2, "list");
+        jedis.sadd(key3, "set");
+
+        // Verify exists
+        assertNotNull(jedis.get(key1));
+        assertNotNull(jedis.lindex(key2, 0));
+        assertNotNull(jedis.smembers(key3));
+
+        // Flush
+        jedis.flushDB();
+
+        // Verify all cleaned up
+        assertNull(jedis.get(key1));
+        assertNull(jedis.lindex(key2, 0));
+        assertTrue(jedis.smembers(key3).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Server commands: TTL persistence after operations")
+    void testTtlPersistenceAfterOps() throws Exception {
+        String key = uniqueKey("ttlpersist");
+
+        // Create with TTL
+        client.create(key, null, toVariant("value"), Duration.ofSeconds(300), 0, getGrpcTimeout()).get();
+
+        // Verify TTL exists
+        Long ttl1 = client.getTtl(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertTrue(ttl1 > 0);
+
+        // Read value (should not affect TTL)
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEqualsVariantString(result, "value");
+
+        // Verify TTL still exists
+        Long ttl2 = client.getTtl(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertTrue(ttl2 > 0);
+    }
 }

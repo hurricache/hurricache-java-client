@@ -5,6 +5,7 @@ import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Payload;
 import com.hurricache.client.intf.Variant;
 import com.hurricache.grpc.ContainerType;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

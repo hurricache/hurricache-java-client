@@ -350,4 +350,158 @@ public class StandaloneRedisScalarCompatibilityTest extends RedisCompatibilityTe
         Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
         assertEqualsVariantString(result, unicodeValue);
     }
+
+    @Test
+    @DisplayName("INCRBYFLOAT in Redis → GET in gRPC")
+    void testIncrByFloat() throws Exception {
+        String key = uniqueKey("incrbyfloat");
+
+        jedis.set(key, "10.5");
+        double v = jedis.incrByFloat(key, 0.25);
+        assertEquals(10.75, v, 0.0001);
+
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(10.75, result.doubleValue(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("GETDEL in Redis removes key visible via gRPC")
+    void testGetDel() throws Exception {
+        String key = uniqueKey("getdel");
+
+        jedis.set(key, "to_getdel");
+        assertEquals("to_getdel", jedis.getDel(key));
+
+        assertFalse(client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get());
+    }
+
+    @Test
+    @DisplayName("GETEX with EX in Redis sets TTL")
+    void testGetEx() throws Exception {
+        String key = uniqueKey("getex");
+
+        jedis.set(key, "getex_value");
+        String v = jedis.getEx(key, redis.clients.jedis.params.GetExParams.getExParams().ex(300));
+        assertEquals("getex_value", v);
+
+        long ttl = jedis.ttl(key);
+        assertTrue(ttl > 0 && ttl <= 300);
+    }
+
+    @Test
+    @DisplayName("GETSET in Redis → GET in gRPC")
+    void testGetSet() throws Exception {
+        String key = uniqueKey("getset");
+
+        jedis.set(key, "old_value");
+        String old = jedis.getSet(key, "new_value");
+        assertEquals("old_value", old);
+
+        Variant result = client.get(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEqualsVariantString(result, "new_value");
+    }
+
+    @Test
+    @DisplayName("MGET in Redis for multiple keys")
+    void testMGet() throws Exception {
+        String key1 = uniqueKey("mget1");
+        String key2 = uniqueKey("mget2");
+
+        jedis.mset(key1, "mv1", key2, "mv2");
+
+        java.util.List<String> values = jedis.mget(key1, key2);
+        assertEquals(2, values.size());
+        assertEquals("mv1", values.get(0));
+        assertEquals("mv2", values.get(1));
+    }
+
+    @Test
+    @DisplayName("MSETNX in Redis: all-or-nothing semantics")
+    void testMSetNx() throws Exception {
+        String key1 = uniqueKey("msetnx1");
+        String key2 = uniqueKey("msetnx2");
+
+        // Все ключи новые — создаются
+        assertEquals(1L, jedis.msetnx(key1, "nx1", key2, "nx2"));
+
+        // Хотя бы один существует — ничего не пишется
+        assertEquals(0L, jedis.msetnx(key1, "other", uniqueKey("msetnx3"), "nx3"));
+
+        assertEqualsVariantString(client.get(key1.getBytes(), null, 0, getGrpcTimeout()).get(), "nx1");
+        assertEqualsVariantString(client.get(key2.getBytes(), null, 0, getGrpcTimeout()).get(), "nx2");
+    }
+
+    @Test
+    @DisplayName("UNLINK in Redis removes key visible via gRPC")
+    void testUnlink() throws Exception {
+        String key = uniqueKey("unlink");
+
+        jedis.set(key, "to_unlink");
+        assertEquals(1L, jedis.unlink(key));
+
+        assertFalse(client.containsKey(key.getBytes(), null, 0, getGrpcTimeout()).get());
+    }
+
+    @Test
+    @DisplayName("TOUCH in Redis")
+    void testTouch() throws Exception {
+        String key = uniqueKey("touch");
+
+        jedis.set(key, "touch_value");
+        assertEquals(1L, jedis.touch(key));
+        assertEquals(0L, jedis.touch(uniqueKey("touch_missing")));
+    }
+
+    @Test
+    @DisplayName("TYPE in Redis")
+    void testType() throws Exception {
+        String key = uniqueKey("type");
+
+        jedis.set(key, "string_value");
+
+        assertEquals("string", jedis.type(key));
+    }
+
+    @Test
+    @DisplayName("PEXPIRE + PTTL in Redis")
+    void testPexpirePttl() throws Exception {
+        String key = uniqueKey("pexpire");
+
+        jedis.set(key, "pexpire_value");
+        assertEquals(1L, jedis.pexpire(key, 300000));
+
+        long pttl = jedis.pttl(key);
+        assertTrue(pttl > 0 && pttl <= 300000);
+    }
+
+    @Test
+    @DisplayName("EXPIREAT/PEXPIREAT in Redis")
+    void testExpireAt() throws Exception {
+        String key = uniqueKey("expireat");
+
+        long futureSec = System.currentTimeMillis() / 1000 + 600;
+        long futureMs = System.currentTimeMillis() + 600000;
+
+        jedis.set(key, "expireat_value");
+        assertEquals(1L, jedis.expireAt(key, futureSec));
+
+        String key2 = uniqueKey("pexpireat");
+        jedis.set(key2, "pexpireat_value");
+        assertEquals(1L, jedis.pexpireAt(key2, futureMs));
+
+        assertTrue(jedis.ttl(key) > 0);
+        assertTrue(jedis.pttl(key2) > 0);
+    }
+
+    @Test
+    @DisplayName("GETRANGE/SETRANGE in Redis")
+    void testGetSetRange() throws Exception {
+        String key = uniqueKey("range");
+
+        jedis.set(key, "hello world");
+        assertEquals("hello", jedis.getrange(key, 0, 4));
+
+        jedis.setrange(key, 6, "redis");
+        assertEquals("hello redis", jedis.get(key));
+    }
 }

@@ -434,4 +434,32 @@ public class StandaloneRedisSetCompatibilityTest extends RedisCompatibilityTestB
         assertTrue(grpcSetValues.contains("\u4F60\u597D"));
         assertTrue(grpcSetValues.contains("\uD83C\uDF0D"));
     }
+
+    @Test
+    @DisplayName("SMISMEMBER in Redis returns per-member flags")
+    void testSMIsMember() throws Exception {
+        String key = uniqueKey("smismember");
+
+        jedis.sadd(key, "m1", "m2", "m3");
+
+        List<Boolean> results = jedis.smismember(key, "m1", "missing", "m3");
+        assertEquals(3, results.size());
+        assertTrue(results.get(0));
+        assertFalse(results.get(1));
+        assertTrue(results.get(2));
+    }
+
+    @Test
+    @DisplayName("SSCAN in Redis returns all members")
+    void testSScan() throws Exception {
+        String key = uniqueKey("sscan");
+
+        jedis.sadd(key, "s1", "s2", "s3");
+
+        var scanResult = jedis.sscan(key, "0");
+        assertFalse(scanResult.getResult().isEmpty());
+        assertTrue(scanResult.getResult().contains("s1"));
+        assertTrue(scanResult.getResult().contains("s2"));
+        assertTrue(scanResult.getResult().contains("s3"));
+    }
 }

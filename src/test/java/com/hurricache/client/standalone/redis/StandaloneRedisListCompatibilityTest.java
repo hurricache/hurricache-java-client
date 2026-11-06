@@ -386,4 +386,82 @@ public class StandaloneRedisListCompatibilityTest extends RedisCompatibilityTest
         assertEquals("middle", redisList.get(1));
         assertEquals("tail", redisList.get(2));
     }
+
+    @Test
+    @DisplayName("BLPOP on non-empty list pops head, visible via gRPC")
+    void testBlPopNonEmpty() throws Exception {
+        String key = uniqueKey("blpop");
+
+        jedis.rpush(key, "first", "second");
+
+        List<String> popped = jedis.blpop(1, key);
+        assertNotNull(popped);
+        assertEquals(key, popped.get(0));
+        assertEquals("first", popped.get(1));
+
+        List<Variant> grpcList = client.getList(key.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, grpcList.size());
+        assertEquals("second", new String(grpcList.get(0).bytesValue()));
+    }
+
+    @Test
+    @DisplayName("BLPOP/BRPOP on empty list return nil (non-blocking implementation)")
+    void testBlPopBrPopEmpty() throws Exception {
+        String key = uniqueKey("blpop_empty");
+
+        // Неблокирующая реализация: на пустом списке сразу nil
+        assertNull(jedis.blpop(1, key));
+        assertNull(jedis.brpop(1, key));
+    }
+
+    @Test
+    @DisplayName("LMOVE RIGHT→LEFT moves element between lists")
+    void testLMove() throws Exception {
+        String src = uniqueKey("lmove_src");
+        String dst = uniqueKey("lmove_dst");
+
+        jedis.rpush(src, "1", "2", "3");
+        jedis.rpush(dst, "x");
+
+        // RIGHT → LEFT: "3" со src-хвоста в голову dst
+        String moved = jedis.lmove(src, dst,
+            redis.clients.jedis.args.ListDirection.RIGHT,
+            redis.clients.jedis.args.ListDirection.LEFT);
+        assertEquals("3", moved);
+
+        List<Variant> srcList = client.getList(src.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(2, srcList.size());
+        List<Variant> dstList = client.getList(dst.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(2, dstList.size());
+        assertEquals(3, dstList.get(0).longValue());
+    }
+
+    @Test
+    @DisplayName("LPOS finds element index")
+    void testLPos() throws Exception {
+        String key = uniqueKey("lpos");
+
+        jedis.rpush(key, "a", "b", "c", "b");
+
+        assertEquals(1L, jedis.lpos(key, "b"));
+        assertNull(jedis.lpos(key, "missing"));
+    }
+
+    @Test
+    @DisplayName("RPOPLPUSH moves tail of source to head of destination")
+    void testRpopLPush() throws Exception {
+        String src = uniqueKey("rpoplpush_src");
+        String dst = uniqueKey("rpoplpush_dst");
+
+        jedis.rpush(src, "a", "b", "c");
+
+        String moved = jedis.rpoplpush(src, dst);
+        assertEquals("c", moved);
+
+        List<Variant> srcList = client.getList(src.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(2, srcList.size());
+        List<Variant> dstList = client.getList(dst.getBytes(), null, 0, getGrpcTimeout()).get();
+        assertEquals(1, dstList.size());
+        assertEquals("c", new String(dstList.get(0).bytesValue()));
+    }
 }

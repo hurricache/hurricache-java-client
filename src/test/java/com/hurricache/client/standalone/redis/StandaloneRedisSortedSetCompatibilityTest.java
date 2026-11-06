@@ -542,4 +542,80 @@ public class StandaloneRedisSortedSetCompatibilityTest extends RedisCompatibilit
         assertTrue(redisRange.contains("a"));
         assertTrue(redisRange.contains("d"));
     }
+
+    @Test
+    @DisplayName("ZCOUNT in Redis counts elements in score range")
+    void testZCount() throws Exception {
+        String key = uniqueKey("zcount");
+
+        jedis.zadd(key, 1.0, "a");
+        jedis.zadd(key, 2.0, "b");
+        jedis.zadd(key, 3.0, "c");
+        jedis.zadd(key, 4.0, "d");
+
+        assertEquals(2L, jedis.zcount(key, 2, 3));
+        assertEquals(4L, jedis.zcount(key, "-inf", "+inf"));
+    }
+
+    @Test
+    @DisplayName("ZMSCORE in Redis returns scores with nulls for missing members")
+    void testZMScore() throws Exception {
+        String key = uniqueKey("zmscore");
+
+        jedis.zadd(key, 1.0, "one");
+        jedis.zadd(key, 2.0, "two");
+
+        List<Double> scores = jedis.zmscore(key, "one", "missing", "two");
+        assertEquals(3, scores.size());
+        assertEquals(1.0, scores.get(0), 0.0001);
+        assertNull(scores.get(1));
+        assertEquals(2.0, scores.get(2), 0.0001);
+    }
+
+    @Test
+    @DisplayName("ZREVRANGE in Redis returns members in descending score order")
+    void testZRevRange() throws Exception {
+        String key = uniqueKey("zrevrange");
+
+        jedis.zadd(key, 1.0, "first");
+        jedis.zadd(key, 2.0, "second");
+        jedis.zadd(key, 3.0, "third");
+
+        List<String> rev = jedis.zrevrange(key, 0, -1);
+        assertEquals(3, rev.size());
+        assertEquals("third", rev.get(0));
+        assertEquals("first", rev.get(2));
+    }
+
+    @Test
+    @DisplayName("ZREVRANK in Redis: heaviest member has rank 0")
+    void testZRevRank() throws Exception {
+        String key = uniqueKey("zrevrank");
+
+        jedis.zadd(key, 1.0, "first");
+        jedis.zadd(key, 2.0, "second");
+        jedis.zadd(key, 3.0, "third");
+
+        // Самый тяжёлый — ранг 0
+        assertEquals(0L, jedis.zrevrank(key, "third"));
+        assertEquals(2L, jedis.zrevrank(key, "first"));
+    }
+
+    @Test
+    @DisplayName("ZSCAN in Redis returns all members with scores")
+    void testZScan() throws Exception {
+        String key = uniqueKey("zscan");
+
+        jedis.zadd(key, 1.0, "z1");
+        jedis.zadd(key, 2.0, "z2");
+
+        var scanResult = jedis.zscan(key, "0");
+        assertFalse(scanResult.getResult().isEmpty());
+        Set<String> members = new HashSet<>();
+        for (var tuple : scanResult.getResult()) {
+            members.add(tuple.getElement());
+        }
+        assertTrue(members.contains("z1"));
+        assertTrue(members.contains("z2"));
+    }
 }
