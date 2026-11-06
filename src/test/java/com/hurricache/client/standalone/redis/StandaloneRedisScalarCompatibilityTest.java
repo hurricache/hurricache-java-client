@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-package com.hurricache.redis.standalone;
+package com.hurricache.client.standalone.redis;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.intf.HurriCacheClientInterface;
@@ -21,7 +21,6 @@ import com.hurricache.redis.RedisCompatibilityTestBase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;

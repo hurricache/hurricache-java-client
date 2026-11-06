@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-package com.hurricache.redis.standalone;
+package com.hurricache.client.standalone.redis;
 
 import com.hurricache.client.FastCacheAsyncSimpleClient;
 import com.hurricache.client.intf.HurriCacheClientInterface;
