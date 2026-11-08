@@ -35,6 +35,7 @@ import com.hurricache.grpc.TtlRequest;
 import com.hurricache.grpc.UnLockRequest;
 import com.hurricache.grpc.UnlockResponse;
 import com.hurricache.grpc.UpdateContainerRequest;
+import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.UpdateRequest;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
@@ -1644,6 +1645,48 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             }
             return Variant.none();
         }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> update(byte[] key,
+                                             KeyHintData hint,
+                                             OrderedPayload elementKey,
+                                             long new_order,
+                                             int clientId,
+                                             Duration timeout) {
+        if (elementKey == null || elementKey.getOrder() == null) {
+            throw new IllegalArgumentException("elementKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        UpdateContainerRequest.Builder builder = UpdateContainerRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(elementKey.getValue(), elementKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setNewOrder(new_order);
+        getStub(timeout).updateValueInContainer(builder.build(),
+                                                new CompletableFutureObserver<>(future, UpdateValueResponse::getResult));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> incrementOrder(byte[] key,
+                                                     KeyHintData hint,
+                                                     OrderedPayload elementKey,
+                                                     long delta,
+                                                     int clientId,
+                                                     Duration timeout) {
+        if (elementKey == null || elementKey.getOrder() == null) {
+            throw new IllegalArgumentException("elementKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        UpdateContainerRequest.Builder builder = UpdateContainerRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(elementKey.getValue(), elementKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setDeltaOrder(delta);
+        getStub(timeout).updateValueInContainer(builder.build(),
+                                                new CompletableFutureObserver<>(future, UpdateValueResponse::getResult));
         return future;
     }
 

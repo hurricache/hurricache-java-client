@@ -77,7 +77,7 @@ public class SmartClientLargePayloadTest extends TestBaseCluster {
 
         KeyHintData hint = client.setMode(Mode.MASTER).createList(key, List.of()).get();
         assertNotNull(hint);
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<Variant> data = new ArrayList<>();
         for (int i = 0; i < 50; i++) {
             byte[] element = new byte[10 * 1024];

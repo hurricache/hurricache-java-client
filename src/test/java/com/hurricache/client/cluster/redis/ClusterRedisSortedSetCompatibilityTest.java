@@ -32,6 +32,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -659,5 +660,74 @@ public class ClusterRedisSortedSetCompatibilityTest extends RedisCompatibilityTe
         }
         assertTrue(members.contains("z1"));
         assertTrue(members.contains("z2"));
+    }
+
+    // =========================================================================
+    // gRPC weight update (updateValueInContainer, ordered_element_key) <-> Redis
+    // =========================================================================
+
+    @Test
+    @DisplayName("Cluster: gRPC incrementOrder -> Redis ZSCORE sees new weight")
+    void testGrpcIncrementOrderVisibleViaRedis() throws Exception {
+        String key = uniqueKeyWithTag("cluster_winc_grpc");
+
+        jedis.zadd(key, 10.0, "member");
+        jedis.zadd(key, 20.0, "other");
+        awaitReplication();
+
+        Boolean ok = client.incrementOrder(key, null,
+                                           com.hurricache.client.intf.OrderedPayload.of(10L, "member".getBytes(StandardCharsets.UTF_8)),
+                                           5, 0, getGrpcTimeout()).get();
+        assertTrue(ok);
+
+        awaitReplication();
+        assertEquals(15.0, jedis.zscore(key, "member"), 0.0001);
+        assertEquals(20.0, jedis.zscore(key, "other"), 0.0001);
+    }
+
+    @Test
+    @DisplayName("Cluster: gRPC absolute weight update -> Redis ZSCORE")
+    void testGrpcSetWeightVisibleViaRedis() throws Exception {
+        String key = uniqueKeyWithTag("cluster_wset_grpc");
+
+        jedis.zadd(key, 10.0, "member");
+        awaitReplication();
+
+        Boolean ok = client.update(key, null,
+                                   com.hurricache.client.intf.OrderedPayload.of(10L, "member".getBytes(StandardCharsets.UTF_8)),
+                                   42, 0, getGrpcTimeout()).get();
+        assertTrue(ok);
+
+        awaitReplication();
+        assertEquals(42.0, jedis.zscore(key, "member"), 0.0001);
+    }
+
+    @Test
+    @DisplayName("Cluster: ZINCRBY underflow below zero -> error, value unchanged")
+    void testZincrbyUnderflowError() throws Exception {
+        String key = uniqueKeyWithTag("cluster_zincr_oor");
+
+        jedis.zadd(key, 5.0, "member");
+
+        assertThrows(redis.clients.jedis.exceptions.JedisDataException.class,
+                     () -> jedis.zincrby(key, -6.0, "member"));
+
+        assertEquals(5.0, jedis.zscore(key, "member"), 0.0001);
+    }
+
+    @Test
+    @DisplayName("Cluster: gRPC incrementOrder underflow -> OUT_OF_RANGE, Redis value unchanged")
+    void testGrpcIncrementOrderUnderflow() throws Exception {
+        String key = uniqueKeyWithTag("cluster_winc_oor");
+
+        jedis.zadd(key, 5.0, "member");
+        awaitReplication();
+
+        assertThrows(java.util.concurrent.ExecutionException.class,
+                     () -> client.incrementOrder(key, null,
+                                                 com.hurricache.client.intf.OrderedPayload.of(5L, "member".getBytes(StandardCharsets.UTF_8)),
+                                                 -6, 0, getGrpcTimeout()).get());
+
+        assertEquals(5.0, jedis.zscore(key, "member"), 0.0001);
     }
 }

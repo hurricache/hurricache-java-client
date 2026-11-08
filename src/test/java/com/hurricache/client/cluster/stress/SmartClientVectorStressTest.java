@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +17,10 @@ public class SmartClientVectorStressTest extends BaseClusterStressTest {
     void stressTestGetVector() throws Exception {
         String key = "stress_v_get_" + UUID.randomUUID();
         KeyHintData hint = client.createVector(key, generateListData(VECTOR_CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == VECTOR_CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == VECTOR_CONTAINER_SIZE;
+        });
+
 
         runWarmup(WARMUP_ITERATIONS, i -> client.getVector(key, hint));
         runBenchmark("Vector.getVector", VECTOR_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getVector(key, hint));
@@ -38,7 +42,10 @@ public class SmartClientVectorStressTest extends BaseClusterStressTest {
     void stressTestPopAt() throws Exception {
         String key = "stress_v_pop_" + UUID.randomUUID();
         KeyHintData hint = client.createVector(key, generateListData(VECTOR_CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == VECTOR_CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == VECTOR_CONTAINER_SIZE;
+        });
+
 
         runWarmup(WARMUP_ITERATIONS, i -> client.popAt(key, hint, i % VECTOR_CONTAINER_SIZE));
         runBenchmark("Vector.popAt", VECTOR_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.popAt(key, hint, i % VECTOR_CONTAINER_SIZE));
@@ -95,7 +102,10 @@ public class SmartClientVectorStressTest extends BaseClusterStressTest {
     void stressTestPopAtMultiThreaded() throws Exception {
         String key = "stress_v_mt_pop_" + UUID.randomUUID();
         KeyHintData hint = client.createVector(key, generateListData(VECTOR_CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == VECTOR_CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == VECTOR_CONTAINER_SIZE;
+        });
+
 
         runMultiThreadedBenchmark("Vector.popAt", VECTOR_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             var future = client.popAt(key, hint, i % VECTOR_CONTAINER_SIZE);

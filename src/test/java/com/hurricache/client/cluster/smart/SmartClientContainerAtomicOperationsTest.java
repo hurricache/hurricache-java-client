@@ -109,7 +109,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         Map<Payload, Variant> initialData = new LinkedHashMap<>();
         initialData.put(p("counter"), vi(100));
         client.createMap(key, initialData).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Number oldVal = client.addInContainer(key, p("counter").getValue(), -30).get();
         assertEquals(100, oldVal.longValue());
 
@@ -223,7 +223,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "exch_vector_pos_" + UUID.randomUUID();
         List<Variant> initialData = List.of(vi(10), vi(20), vi(30));
         client.createVector(key, initialData).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Number oldVal = client.exchangeInContainer(key, 2, 42).get();
         assertEquals(30, oldVal.longValue());
 

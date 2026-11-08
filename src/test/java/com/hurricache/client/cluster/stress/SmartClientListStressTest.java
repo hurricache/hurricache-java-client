@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +17,9 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestGetList() throws Exception {
         String key = "stress_l_get_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(10000);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == LIST_CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == LIST_CONTAINER_SIZE;
+        });
 
         runWarmup(WARMUP_ITERATIONS, i -> client.getList(key, hint));
         runBenchmark("List.getList", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getList(key, hint));
@@ -148,7 +151,9 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestGetListMultiThreaded() throws Exception {
         String key = "stress_l_mt_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == LIST_CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == LIST_CONTAINER_SIZE;
+        });
 
         runMultiThreadedBenchmark("List.getList", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
                                   (threadId, i) -> client.getList(key, hint));

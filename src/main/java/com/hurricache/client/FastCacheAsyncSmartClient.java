@@ -921,6 +921,16 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
+    public CompletableFuture<Boolean> update(byte[] key, KeyHintData hint, OrderedPayload elementKey, long newOrder, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.update(key, hint, elementKey, newOrder, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> incrementOrder(byte[] key, KeyHintData hint, OrderedPayload elementKey, long delta, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.incrementOrder(key, hint, elementKey, delta, clientId, timeout));
+    }
+
+    @Override
     public CompletableFuture<Integer> remove(byte[] key,
                                              KeyHintData hint,
                                              byte[] elementKey,

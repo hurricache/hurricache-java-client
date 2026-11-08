@@ -135,8 +135,15 @@ message UpdateRequest {
 
 message UpdateContainerRequest {
   Key key = 1;
-  Key element_key = 2;
-  Value value = 3;
+  oneof keys{ //subset
+    Key element_key = 2; //used for unordered containers
+    OrderedKey ordered_element_key = 3; // used for ordered containers
+  }
+  oneof values {            //used approach of update
+    Value value = 4;        //used for direct update case key container key + value
+    uint64 new_order = 6;        //used to update order
+    int64 delta_order = 7;        //used int/dec order to update order
+  }
 }
 
 message DeleteRequest {
@@ -171,7 +178,7 @@ message BatchValueResponse {
 
 message UpdateValueResponse {
   bool result = 1;                            // Success flag
-  optional Value value = 2;                  // Previous value
+  optional Value value = 2;                  // Previous value only for update. In case of update weigh this value will be sent
 }
 
 message KeyHintResponse {

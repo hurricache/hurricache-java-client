@@ -618,4 +618,68 @@ public class StandaloneRedisSortedSetCompatibilityTest extends RedisCompatibilit
         assertTrue(members.contains("z1"));
         assertTrue(members.contains("z2"));
     }
+
+    // =========================================================================
+    // gRPC weight update (updateValueInContainer, ordered_element_key) <-> Redis
+    // =========================================================================
+
+    @Test
+    @DisplayName("gRPC incrementOrder -> Redis ZSCORE sees new weight")
+    void testGrpcIncrementOrderVisibleViaRedis() throws Exception {
+        String key = uniqueKey("zset_winc_grpc");
+
+        jedis.zadd(key, 10.0, "member");
+        jedis.zadd(key, 20.0, "other");
+
+        Boolean ok = client.incrementOrder(key, null,
+                                           com.hurricache.client.intf.OrderedPayload.of(10L, "member".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                                           5, 0, getGrpcTimeout()).get();
+        assertTrue(ok);
+
+        assertEquals(15.0, jedis.zscore(key, "member"), 0.0001);
+        assertEquals(20.0, jedis.zscore(key, "other"), 0.0001);
+    }
+
+    @Test
+    @DisplayName("gRPC absolute weight update -> Redis ZSCORE")
+    void testGrpcSetWeightVisibleViaRedis() throws Exception {
+        String key = uniqueKey("zset_wset_grpc");
+
+        jedis.zadd(key, 10.0, "member");
+
+        Boolean ok = client.update(key, null,
+                                   com.hurricache.client.intf.OrderedPayload.of(10L, "member".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                                   42, 0, getGrpcTimeout()).get();
+        assertTrue(ok);
+
+        assertEquals(42.0, jedis.zscore(key, "member"), 0.0001);
+    }
+
+    @Test
+    @DisplayName("ZINCRBY underflow below zero -> error, value unchanged")
+    void testZincrbyUnderflowError() throws Exception {
+        String key = uniqueKey("zset_zincr_oor");
+
+        jedis.zadd(key, 5.0, "member");
+
+        assertThrows(redis.clients.jedis.exceptions.JedisDataException.class,
+                     () -> jedis.zincrby(key, -6.0, "member"));
+
+        assertEquals(5.0, jedis.zscore(key, "member"), 0.0001);
+    }
+
+    @Test
+    @DisplayName("gRPC incrementOrder underflow -> OUT_OF_RANGE, Redis value unchanged")
+    void testGrpcIncrementOrderUnderflow() throws Exception {
+        String key = uniqueKey("zset_winc_oor");
+
+        jedis.zadd(key, 5.0, "member");
+
+        assertThrows(java.util.concurrent.ExecutionException.class,
+                     () -> client.incrementOrder(key, null,
+                                                 com.hurricache.client.intf.OrderedPayload.of(5L, "member".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                                                 -6, 0, getGrpcTimeout()).get());
+
+        assertEquals(5.0, jedis.zscore(key, "member"), 0.0001);
+    }
 }

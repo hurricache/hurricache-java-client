@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.ContainerType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,9 @@ public class SmartClientHashMapStressTest extends BaseClusterStressTest {
         KeyHintData hint = client.createMap(key, generateMapData(CONTAINER_SIZE)).get();
         System.out.println("Created map: " + key + " with hint: " + hint);
         Thread.sleep(5000);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == CONTAINER_SIZE;
+        });
 
         runWarmup(WARMUP_ITERATIONS, i -> {
             if (i % 10 == 0) client.putAll(key, hint, List.of(p("key_" + i)), List.of(v("value_" + i))).get();
@@ -83,7 +87,9 @@ public class SmartClientHashMapStressTest extends BaseClusterStressTest {
     void stressTestRemove() throws Exception {
         String key = "stress_m_remove_" + UUID.randomUUID();
         KeyHintData hint = client.createMap(key, generateMapData(CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == CONTAINER_SIZE;
+        });
 
         runWarmup(WARMUP_ITERATIONS, i -> {
             client.remove(key, hint, ("key_" + (i % CONTAINER_SIZE)).getBytes()).get();
@@ -132,7 +138,9 @@ public class SmartClientHashMapStressTest extends BaseClusterStressTest {
         String key = "stress_m_remove_key_" + UUID.randomUUID();
         KeyHintData hint = client.createMap(key, generateMapData(CONTAINER_SIZE)).get();
         System.out.println("Created map: " + key + " with hint: " + hint);
-        Thread.sleep(1000);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == CONTAINER_SIZE;
+        });
 
         runWarmup(WARMUP_ITERATIONS, i -> {
             client.removeFromContainerByKey(key, hint, p("key_" + (i % CONTAINER_SIZE))).get();
@@ -200,7 +208,9 @@ public class SmartClientHashMapStressTest extends BaseClusterStressTest {
     void stressTestPopInContainerMultiThreaded() throws Exception {
         String key = "stress_m_mt_pop_" + UUID.randomUUID();
         KeyHintData hint = client.createMap(key, generateMapData(CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == CONTAINER_SIZE;
+        });
 
         runMultiThreadedBenchmark("Map.popInContainer", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             var future = client.popInContainer(key, hint, ("key_" + (i % CONTAINER_SIZE)).getBytes());
@@ -216,7 +226,10 @@ public class SmartClientHashMapStressTest extends BaseClusterStressTest {
     void stressTestRemoveMultiThreaded() throws Exception {
         String key = "stress_m_mt_remove_" + UUID.randomUUID();
         KeyHintData hint = client.createMap(key, generateMapData(CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == CONTAINER_SIZE;
+        });
 
         runMultiThreadedBenchmark("Map.remove", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             var future = client.remove(key, hint, ("key_" + (i % CONTAINER_SIZE)).getBytes());
@@ -253,7 +266,9 @@ public class SmartClientHashMapStressTest extends BaseClusterStressTest {
     void stressTestRemoveFromContainerByKeyMultiThreaded() throws Exception {
         String key = "stress_m_mt_remove_key_" + UUID.randomUUID();
         KeyHintData hint = client.createMap(key, generateMapData(CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> {
+            return client.setMode(Mode.MASTER).getSize(key, hint).get() == CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == CONTAINER_SIZE;
+        });
 
         runMultiThreadedBenchmark("Map.removeFromContainerByKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             var future = client.removeFromContainerByKey(key, hint, p("key_" + (i % CONTAINER_SIZE)));

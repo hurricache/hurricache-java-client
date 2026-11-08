@@ -148,6 +148,72 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
     }
 
     /**
+     * Updates the order of key in a container.
+     *
+     * @param key         target container key in byte array form.
+     * @param hint        optional key routing hint.
+     * @param elementKey  element key in byte array form.
+     * @param new_order   new order of the element.
+     * @param clientId    identifier of the issuing client.
+     * @param timeout     execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous value as Variant.
+     */
+    CompletableFuture<Boolean> update(byte[] key,
+                                      KeyHintData hint,
+                                      OrderedPayload elementKey,
+                                      long new_order,
+                                      int clientId,
+                                      Duration timeout);
+
+    default CompletableFuture<Boolean> update(String key,
+                                              KeyHintData hint,
+                                              OrderedPayload elementKey,
+                                              long new_order,
+                                              int clientId,
+                                              Duration timeout) {
+        return update(serializeKey(key), hint, elementKey, new_order, clientId, timeout);
+    }
+
+    default CompletableFuture<Boolean> update(String key,
+                                              OrderedPayload elementKey,
+                                              long new_order) {
+        return update(key, null, elementKey, new_order, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Updates the order of key in a container.
+     *
+     * @param key         target container key in byte array form.
+     * @param hint        optional key routing hint.
+     * @param elementKey  element key in byte array form.
+     * @param delta       delta to add/subtract to the current value.
+     * @param clientId    identifier of the issuing client.
+     * @param timeout     execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous value as Variant.
+     */
+    CompletableFuture<Boolean> incrementOrder(byte[] key,
+                                      KeyHintData hint,
+                                      OrderedPayload elementKey,
+                                      long delta,
+                                      int clientId,
+                                      Duration timeout);
+
+    default CompletableFuture<Boolean> incrementOrder(String key,
+                                                      KeyHintData hint,
+                                                      OrderedPayload elementKey,
+                                                      long delta,
+                                                      int clientId,
+                                                      Duration timeout) {
+        return incrementOrder(serializeKey(key), hint, elementKey, delta, clientId, timeout);
+    }
+
+    default CompletableFuture<Boolean> incrementOrder(String key,
+                                                      OrderedPayload elementKey,
+                                                      long delta) {
+        return incrementOrder(key, null, elementKey, delta, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
      * Updates the value associated with an element key in a container.
      * The value can be bytes, int, or double depending on the {@link Variant} type.
      *

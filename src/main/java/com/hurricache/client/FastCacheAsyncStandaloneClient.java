@@ -1069,6 +1069,16 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
     }
 
     @Override
+    public CompletableFuture<Boolean> update(byte[] key, KeyHintData hint, OrderedPayload elementKey, long newOrder, int clientId, Duration timeout) {
+        return delegate.update(key, hint, elementKey, newOrder, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> incrementOrder(byte[] key, KeyHintData hint, OrderedPayload elementKey, long delta, int clientId, Duration timeout) {
+        return delegate.incrementOrder(key, hint, elementKey, delta, clientId, timeout);
+    }
+
+    @Override
     public CompletableFuture<Integer> remove(byte[] key, KeyHintData hint, byte[] elementKey, int clientId, Duration timeout) {
         return delegate.remove(key, hint, elementKey, clientId, timeout);
     }
