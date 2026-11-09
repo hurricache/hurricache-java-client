@@ -286,7 +286,7 @@ public class SmartClientContainerAtomicOperationsTest extends TestBaseCluster {
         String key = "and_vector_pos_" + UUID.randomUUID();
         List<Variant> initialData = List.of(vi(255), vi(128), vi(64));
         client.createVector(key, initialData).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Long oldVal = client.andInContainer(key, 0, 0b00001111L).get();
         assertEquals(255L, oldVal.longValue());
 

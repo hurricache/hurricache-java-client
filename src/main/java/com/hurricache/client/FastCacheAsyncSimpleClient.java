@@ -180,7 +180,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         TtlRequest request = TtlRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setTtl(ttl < 0 ? -1L : System.currentTimeMillis() + ttl)
+                .setTtl(ttl > 0 ? System.currentTimeMillis() + ttl  : 0 )
                 .build();
         getStub(timeout).setTtl(request, new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
