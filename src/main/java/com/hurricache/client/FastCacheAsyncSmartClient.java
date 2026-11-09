@@ -931,6 +931,26 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
     }
 
     @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long expectedValue, long newValue, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.compareAndSetInContainer(key, hint, containerKey, expectedValue, newValue, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double expectedValue, double newValue, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.compareAndSetInContainer(key, hint, containerKey, expectedValue, newValue, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey, long expectedValue, long newValue, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.compareAndSetInContainer(key, hint, orderedKey, expectedValue, newValue, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey, double expectedValue, double newValue, int clientId, Duration timeout) {
+        return executeWrite(hint, c -> c.compareAndSetInContainer(key, hint, orderedKey, expectedValue, newValue, clientId, timeout));
+    }
+
+    @Override
     public CompletableFuture<Integer> remove(byte[] key,
                                              KeyHintData hint,
                                              byte[] elementKey,

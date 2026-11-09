@@ -950,6 +950,26 @@ public class FastCacheAsyncStandaloneClient implements HurriCacheClientInterface
         return delegate.compareAndSet(key, hint, expectedValue, newValue, ttl, clientId, timeout);
     }
 
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long expectedValue, long newValue, int clientId, Duration timeout) {
+        return delegate.compareAndSetInContainer(key, hint, containerKey, expectedValue, newValue, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double expectedValue, double newValue, int clientId, Duration timeout) {
+        return delegate.compareAndSetInContainer(key, hint, containerKey, expectedValue, newValue, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey, long expectedValue, long newValue, int clientId, Duration timeout) {
+        return delegate.compareAndSetInContainer(key, hint, orderedKey, expectedValue, newValue, clientId, timeout);
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey, double expectedValue, double newValue, int clientId, Duration timeout) {
+        return delegate.compareAndSetInContainer(key, hint, orderedKey, expectedValue, newValue, clientId, timeout);
+    }
+
     // =========================================================================
     // CONTAINER ATOMICS
     // =========================================================================

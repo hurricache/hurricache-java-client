@@ -314,6 +314,10 @@ message AtomicCas {
   Key key = 1;
   Value expected = 2;                  // Expected value
   Value toSet = 3;                     // New value to set
+  oneof keys{ //subset
+    Key element_key = 4; //used for unordered containers
+    OrderedKey ordered_element_key = 5; // used for ordered containers
+  }
 }
 
 

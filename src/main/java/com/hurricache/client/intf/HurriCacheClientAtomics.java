@@ -588,6 +588,58 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos, long delta, Duration ttl, int clientId, Duration timeout);
     CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos, double delta, Duration ttl, int clientId, Duration timeout);
 
+    /**
+     * Compare-and-set on a container field (MAP/ORDERED_MAP). Atomic single-RPC conditional write
+     * on the element value, same scenario as addInContainer.
+     *
+     * @param key           target container key in byte array form.
+     * @param hint          optional key routing hint.
+     * @param containerKey  element key inside the container.
+     * @param expectedValue expected current value of the element.
+     * @param newValue      value to set if the expectation matches.
+     * @param clientId      identifier of the issuing client.
+     * @param timeout       execution timeout duration.
+     * @return a {@link CompletableFuture} containing {@link AtomicCasRes} with getResult()=true on success.
+     */
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                             long expectedValue, long newValue, int clientId, Duration timeout);
+
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                             double expectedValue, double newValue, int clientId, Duration timeout);
+
+    /**
+     * Compare-and-set on an OrderedMap element addressed by exact (key+weight) via OrderedPayload.
+     */
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                             long expectedValue, long newValue, int clientId, Duration timeout);
+
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                             double expectedValue, double newValue, int clientId, Duration timeout);
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, byte[] containerKey,
+                                                                     long expectedValue, long newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, containerKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, byte[] containerKey,
+                                                                     double expectedValue, double newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, containerKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, OrderedPayload orderedKey,
+                                                                     long expectedValue, long newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, orderedKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, OrderedPayload orderedKey,
+                                                                     double expectedValue, double newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, orderedKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
     default CompletableFuture<Number> addInContainer(String key, byte[] containerKey, long delta) {
         return addInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }

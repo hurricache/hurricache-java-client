@@ -1406,6 +1406,98 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                                    long expectedValue, long newValue, int clientId,
+                                                                    Duration timeout) {
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(expectedValue))
+                .setValueType(ValueType.INT);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(newValue))
+                .setValueType(ValueType.INT);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setElementKey(buildKey(containerKey, null, clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                                    double expectedValue, double newValue, int clientId,
+                                                                    Duration timeout) {
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(expectedValue))
+                .setValueType(ValueType.DOUBLE);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(newValue))
+                .setValueType(ValueType.DOUBLE);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setElementKey(buildKey(containerKey, null, clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                                    long expectedValue, long newValue, int clientId,
+                                                                    Duration timeout) {
+        if (orderedKey == null || orderedKey.getOrder() == null) {
+            throw new IllegalArgumentException("orderedKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(expectedValue))
+                .setValueType(ValueType.INT);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(newValue))
+                .setValueType(ValueType.INT);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(orderedKey.getValue(), orderedKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                                    double expectedValue, double newValue, int clientId,
+                                                                    Duration timeout) {
+        if (orderedKey == null || orderedKey.getOrder() == null) {
+            throw new IllegalArgumentException("orderedKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(expectedValue))
+                .setValueType(ValueType.DOUBLE);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(newValue))
+                .setValueType(ValueType.DOUBLE);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(orderedKey.getValue(), orderedKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
     public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
                                                     long delta, Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<Number> future = new CompletableFuture<>();
