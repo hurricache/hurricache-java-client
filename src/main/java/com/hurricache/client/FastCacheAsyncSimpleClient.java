@@ -50,12 +50,19 @@ import com.hurricache.utils.StreamBatchUnorderedObserver;
 import com.hurricache.utils.StreamBatchVariantObserver;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
+import io.grpc.netty.shaded.io.netty.channel.ChannelOption;
+import io.grpc.netty.shaded.io.netty.channel.EventLoopGroup;
+import io.grpc.netty.shaded.io.netty.channel.epoll.Epoll;
+
+import io.grpc.netty.shaded.io.netty.channel.epoll.EpollEventLoopGroup;
+import io.grpc.netty.shaded.io.netty.channel.epoll.EpollSocketChannel;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -74,18 +81,25 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     private final int defaultCompressionThreshold;
     private final String target;
     private final boolean ownedChannel;
+    private final ExecutorService customExecutor = Executors.newWorkStealingPool();
+    private final EventLoopGroup eventLoopGroup ;
 
     public FastCacheAsyncSimpleClient(String host,
                                       int port,
                                       int defaultClientId,
                                       Duration timeout,
                                       int defaultCompressionThreshold) {
-        this.channel = NettyChannelBuilder.forAddress(host, port)
+        NettyChannelBuilder nettyChannelBuilder = NettyChannelBuilder.forAddress(host, port)
                 .flowControlWindow(4 * 1024 * 1024)
                 .maxInboundMessageSize(64 * 1024 * 1024)
-                .usePlaintext()
-                .executor(Executors.newWorkStealingPool())
-                .build();
+                .executor(Executors.newWorkStealingPool()).withOption(ChannelOption.TCP_NODELAY, true).usePlaintext();
+        if (Epoll.isAvailable()){
+            eventLoopGroup = new EpollEventLoopGroup();
+            nettyChannelBuilder.eventLoopGroup(eventLoopGroup).channelType(EpollSocketChannel.class);
+        } else {
+            eventLoopGroup= null;
+        }
+        this.channel = nettyChannelBuilder.build();
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
@@ -141,6 +155,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         this.defaultCompressionThreshold = defaultCompressionThreshold;
         this.target = channel.authority();
         this.ownedChannel = ownedChannel;
+        eventLoopGroup= null;
+
     }
 
     @Override
@@ -1897,10 +1913,32 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         try {
             if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
                 channel.shutdownNow();
+                // Даем еще немного времени на принудительный сброс
+                if (!channel.awaitTermination(2, TimeUnit.SECONDS)) {
+                    System.err.println("Channel did not terminate gracefully");
+                }
             }
         } catch (InterruptedException e) {
             channel.shutdownNow();
             Thread.currentThread().interrupt();
+        }
+
+        // 2. Обязательно гасим кастомный экзекьютор задач gRPC
+        if (customExecutor != null && !customExecutor.isShutdown()) {
+            customExecutor.shutdown();
+            try {
+                if (!customExecutor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    customExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                customExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        // 3. Гасим нативную Epoll/Nio группу Netty (если она создавалась отдельно)
+        if (eventLoopGroup != null && !eventLoopGroup.isShuttingDown()) {
+            eventLoopGroup.shutdownGracefully(2, 5, TimeUnit.SECONDS);
         }
     }
 
