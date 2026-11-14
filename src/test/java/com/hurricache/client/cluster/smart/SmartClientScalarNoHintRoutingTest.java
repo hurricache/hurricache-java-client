@@ -36,7 +36,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         KeyHintData hint = client.create(key, v(value)).get();
 
         // Read on MASTER without keyHint
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Variant result = client.setMode(Mode.MASTER).get(key).get();
         assertNotNull(result);
         assertEquals("hello_world", new String(result.bytesValue(), StandardCharsets.UTF_8));
@@ -49,7 +49,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         int value = 42;
 
         KeyHintData hint = client.create(key, vi(value)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant result = client.setMode(Mode.MASTER).get(key).get();
         assertNotNull(result);
@@ -63,7 +63,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         double value = 3.14;
 
         KeyHintData hint = client.create(key, vd(value)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant result = client.setMode(Mode.MASTER).get(key).get();
         assertNotNull(result);
@@ -80,11 +80,11 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "switch_no_hint_bytes_to_int_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Update to int on MASTER without keyHint
         client.setMode(Mode.MASTER);
-        client.replace(key, vi(42)).get();
+        Variant variant = client.replace(key, vi(42)).get();
         Thread.sleep(500);
 
         // Verify on BACKUP without keyHint
@@ -98,7 +98,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "switch_no_hint_int_to_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         client.replace(key, vd(3.14)).get();
@@ -118,7 +118,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "get_delete_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDelete on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -141,7 +141,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "ttl_no_hint_scalar_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(42)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // SetTtl on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -165,7 +165,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "exist_remove_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("test")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // ExistKey on MASTER without keyHint
         Boolean exists = client.setMode(Mode.MASTER).containsKey(key).get();
@@ -192,7 +192,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "read_lock_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -219,7 +219,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "write_lock_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -250,7 +250,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "global_lock_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -273,7 +273,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "lock_expire_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock with short TTL on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -296,7 +296,7 @@ public class SmartClientScalarNoHintRoutingTest extends TestBaseCluster {
         String key = "scalar_no_hint_size_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("test_value")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key).get();
         assertNotNull(size);

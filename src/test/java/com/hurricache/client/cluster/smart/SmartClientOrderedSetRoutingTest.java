@@ -36,7 +36,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, new ArrayList<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(0, size);
@@ -57,7 +57,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -78,7 +78,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -101,7 +101,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -123,7 +123,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
         assertEquals(3, stream.size());
@@ -150,7 +150,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant element = client.setMode(Mode.MASTER).getAt(key, hint, 1).get();
         assertNotNull(element);
@@ -172,7 +172,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteElementAtPosition on MASTER
         client.setMode(Mode.MASTER);
@@ -197,7 +197,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteElementAtPosition on MASTER
         client.setMode(Mode.MASTER);
@@ -227,7 +227,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> range = client.setMode(Mode.MASTER).getElementInRangeOrderedSet(key, hint, 2L, 4L, false).get();
         assertEquals(3, range.size());
@@ -250,7 +250,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<OrderedVariant> range = client.setMode(Mode.MASTER).getElementInRangeOrderedSet(key, hint, 1L, 3L, true).get();
         assertEquals(3, range.size());
@@ -274,7 +274,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         KeyHintData hint = client.createOrderedSet(key, List.of(
                 OrderedVariant.ofBytes("first".getBytes(), 1L)
         )).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // AddElementWithWeight on MASTER
         client.setMode(Mode.MASTER);
@@ -305,7 +305,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant element = client.setMode(Mode.MASTER).getElementWithWeight(key, hint, 1).get();
         assertNotNull(element);
@@ -327,7 +327,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndRemoveElementWithWeight on MASTER
         client.setMode(Mode.MASTER);
@@ -356,7 +356,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // RemoveFromContainerByKey on MASTER
         client.setMode(Mode.MASTER);
@@ -384,7 +384,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(3, size);
@@ -406,7 +406,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // On MASTER - should have 3 elements with same weight
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
@@ -441,7 +441,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -471,7 +471,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -507,7 +507,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -533,7 +533,7 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         );
 
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock with short TTL on MASTER
         client.setMode(Mode.MASTER);
@@ -544,5 +544,224 @@ public class SmartClientOrderedSetRoutingTest extends TestBaseCluster {
         // Lock expired, can access on BACKUP
         List<OrderedVariant> val = client.setMode(Mode.BACKUP).getOrderedSet(key, hint, 100).get();
         assertNotNull(val);
+    }
+
+    // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE (ORDERED SET)
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - partial range, validate on MASTER and BACKUP")
+    void testGetAndDeleteElementInRangeOrderedSetPartialRange() throws ExecutionException, InterruptedException {
+        String key = "os_getdel_partial_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L),
+                OrderedVariant.ofBytes("5".getBytes(), 5L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete range [2, 4] on MASTER
+        client.setMode(Mode.MASTER);
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 2, 4, false).get();
+        assertEquals(3, deleted.size());
+        assertEquals("2", new String(deleted.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("3", new String(deleted.get(1).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("4", new String(deleted.get(2).bytesValue(), StandardCharsets.UTF_8));
+
+        // Verify remaining on MASTER
+        List<OrderedVariant> remaining = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("5", new String(remaining.get(1).bytesValue(), StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getOrderedSet(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("5", new String(remaining.get(1).bytesValue(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - full range (0,0)")
+    void testGetAndDeleteElementInRangeOrderedSetFullRange() throws ExecutionException, InterruptedException {
+        String key = "os_getdel_full_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("a".getBytes(), 1L),
+                OrderedVariant.ofBytes("b".getBytes(), 2L),
+                OrderedVariant.ofBytes("c".getBytes(), 3L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete full range with 0,0 on MASTER
+        client.setMode(Mode.MASTER);
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify container is empty on MASTER
+        List<OrderedVariant> remaining = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
+        assertEquals(0, remaining.size());
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getOrderedSet(key, hint).get();
+        assertEquals(0, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - start only (end=0)")
+    void testGetAndDeleteElementInRangeOrderedSetStartOnly() throws ExecutionException, InterruptedException {
+        String key = "os_getdel_start_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete from weight 2 to max on MASTER
+        client.setMode(Mode.MASTER);
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 2, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify only weight 1 remains on MASTER
+        List<OrderedVariant> remaining = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
+        assertEquals(1, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getOrderedSet(key, hint).get();
+        assertEquals(1, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - end only (start=0)")
+    void testGetAndDeleteElementInRangeOrderedSetEndOnly() throws ExecutionException, InterruptedException {
+        String key = "os_getdel_end_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete from min to weight 2 on MASTER
+        client.setMode(Mode.MASTER);
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 2, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify weights 3, 4 remain on MASTER
+        List<OrderedVariant> remaining = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("3", new String(remaining.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("4", new String(remaining.get(1).bytesValue(), StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getOrderedSet(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - reverse order")
+    void testGetAndDeleteElementInRangeOrderedSetReverse() throws ExecutionException, InterruptedException {
+        String key = "os_getdel_reverse_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L),
+                OrderedVariant.ofBytes("3".getBytes(), 3L),
+                OrderedVariant.ofBytes("4".getBytes(), 4L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete range [3, 1] in reverse on MASTER
+        client.setMode(Mode.MASTER);
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 3, 1, true).get();
+        assertEquals(3, deleted.size());
+        // Reverse order: 3, 2, 1
+        assertEquals("3", new String(deleted.get(0).bytesValue(), StandardCharsets.UTF_8));
+        assertEquals("1", new String(deleted.get(2).bytesValue(), StandardCharsets.UTF_8));
+
+        // Verify only weight 4 remains on MASTER
+        List<OrderedVariant> remaining = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
+        assertEquals(1, remaining.size());
+        assertEquals("4", new String(remaining.get(0).bytesValue(), StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getOrderedSet(key, hint).get();
+        assertEquals(1, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - empty range (no match)")
+    void testGetAndDeleteElementInRangeOrderedSetEmptyRange() throws ExecutionException, InterruptedException {
+        String key = "os_getdel_empty_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("1".getBytes(), 1L),
+                OrderedVariant.ofBytes("2".getBytes(), 2L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete range [100, 200] - doesn't exist on MASTER
+        client.setMode(Mode.MASTER);
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, hint, 100, 200, false).get();
+        assertEquals(0, deleted.size());
+
+        // Verify original elements unchanged on MASTER
+        List<OrderedVariant> remaining = client.setMode(Mode.MASTER).getOrderedSet(key, hint).get();
+        assertEquals(2, remaining.size());
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getOrderedSet(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteElementInRangeOrderedSet - with no hint")
+    void testGetAndDeleteElementInRangeOrderedSetNoHint() throws ExecutionException, InterruptedException {
+        String key = "os_getdel_no_hint_" + UUID.randomUUID();
+        List<OrderedVariant> data = List.of(
+                OrderedVariant.ofBytes("a".getBytes(), 1L),
+                OrderedVariant.ofBytes("b".getBytes(), 2L),
+                OrderedVariant.ofBytes("c".getBytes(), 3L)
+        );
+
+        KeyHintData hint = client.createOrderedSet(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete without hint - client resolves routing on MASTER
+        client.setMode(Mode.MASTER);
+        List<OrderedVariant> deleted = client.getAndDeleteElementInRangeOrderedSet(key, null, 1, 2, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only weight 3 remains on MASTER
+        List<OrderedVariant> remaining = client.setMode(Mode.MASTER).getOrderedSet(key).get();
+        assertEquals(1, remaining.size());
+        assertEquals("c", new String(remaining.get(0).bytesValue(), StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getOrderedSet(key).get();
+        assertEquals(1, remaining.size());
     }
 }

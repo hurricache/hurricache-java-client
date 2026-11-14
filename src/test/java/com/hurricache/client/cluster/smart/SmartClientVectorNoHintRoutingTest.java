@@ -36,7 +36,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, new ArrayList<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key).get();
         assertEquals(0, size);
@@ -50,7 +50,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getVector(key).get();
         assertEquals(3, stream.size());
@@ -65,7 +65,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getVector(key).get();
         assertEquals(3, stream.size());
@@ -80,7 +80,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getVector(key).get();
         assertEquals(3, stream.size());
@@ -99,7 +99,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         String key = "vector_no_hint_add_ends_" + UUID.randomUUID();
 
         KeyHintData hint = client.createVector(key, List.of(v("middle"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Add to tail on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -125,7 +125,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant head = client.setMode(Mode.MASTER).peekHead(key).get();
         assertNotNull(head);
@@ -143,7 +143,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteHead on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -170,7 +170,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteHead on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -199,7 +199,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), vi(42), vd(3.14));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant element = client.setMode(Mode.MASTER).getAt(key, 1).get();
         assertNotNull(element);
@@ -213,7 +213,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteElementAtPosition on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -234,7 +234,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("a"), v("b"), v("a"), v("c"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteFromContainerByKeyValue on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -258,7 +258,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Add to position on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -289,7 +289,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> range = client.setMode(Mode.MASTER).getRange(key, null, ContainerType.VECTOR, 1, 3).get();
         assertEquals(3, range.size());
@@ -309,7 +309,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key).get();
         assertEquals(3, size);
@@ -326,7 +326,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -358,7 +358,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -392,7 +392,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -418,7 +418,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock with short TTL on MASTER without keyHint
         client.setMode(Mode.MASTER);
@@ -443,7 +443,7 @@ public class SmartClientVectorNoHintRoutingTest extends TestBaseCluster {
         String key = "vector_no_hint_add_element_" + UUID.randomUUID();
 
         KeyHintData hint = client.createVector(key, List.of(v("first"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // AddElement on MASTER without keyHint
         client.setMode(Mode.MASTER);

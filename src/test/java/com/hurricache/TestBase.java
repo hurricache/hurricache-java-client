@@ -46,7 +46,7 @@ public abstract class TestBase {
         client = new FastCacheAsyncStandaloneClient("127.0.0.1",50000,0,  Duration.ofSeconds(3600)){
             @Override
             public Duration getDefaultTtl() {
-                return Duration.ofMinutes(10);
+                return getTestTtl();
             }
         };
     }

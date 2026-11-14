@@ -36,7 +36,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, new ArrayList<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(0, size);
@@ -53,7 +53,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getVector(key, hint).get();
         assertEquals(3, stream.size());
@@ -72,7 +72,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getVector(key, hint).get();
         assertEquals(3, stream.size());
@@ -91,7 +91,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
 
         KeyHintData hint = client.createVector(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> stream = client.setMode(Mode.MASTER).getVector(key, hint).get();
         assertEquals(3, stream.size());
@@ -113,7 +113,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         String key = "vector_add_ends_" + UUID.randomUUID();
 
         KeyHintData hint = client.createVector(key, List.of(v("middle"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Add to tail on MASTER
         client.setMode(Mode.MASTER);
@@ -139,7 +139,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant head = client.setMode(Mode.MASTER).peekHead(key, hint).get();
         assertNotNull(head);
@@ -163,7 +163,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteHead on MASTER
         client.setMode(Mode.MASTER);
@@ -190,7 +190,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("middle"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteHead on MASTER
         client.setMode(Mode.MASTER);
@@ -219,7 +219,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), vi(42), vd(3.14));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Variant element = client.setMode(Mode.MASTER).getAt(key, hint, 1).get();
         assertNotNull(element);
@@ -237,7 +237,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // GetAndDeleteElementAtPosition on MASTER
         client.setMode(Mode.MASTER);
@@ -258,7 +258,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteElementAtPosition on MASTER
         client.setMode(Mode.MASTER);
@@ -278,7 +278,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("a"), v("b"), v("a"), v("c"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // DeleteFromContainerByKeyValue on MASTER
         client.setMode(Mode.MASTER);
@@ -302,7 +302,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("first"), v("last"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Add to position on MASTER
         client.setMode(Mode.MASTER);
@@ -329,7 +329,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(vi(100));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Add to position before on MASTER
         client.setMode(Mode.MASTER);
@@ -356,7 +356,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         List<Variant> range = client.setMode(Mode.MASTER).getRange(key, hint, ContainerType.VECTOR, 1, 3).get();
         assertEquals(3, range.size());
@@ -379,7 +379,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("1"), v("2"), v("3"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         Integer size = client.setMode(Mode.MASTER).getSize(key, hint).get();
         assertEquals(3, size);
@@ -399,7 +399,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         int ownerClientId = 100;
         int intruderClientId = 999;
@@ -430,7 +430,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         int ownerClientId = 100;
 
@@ -464,7 +464,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         int ownerClientId = 100;
 
@@ -490,7 +490,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         List<Variant> data = List.of(v("value"));
 
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         int ownerClientId = 100;
 
@@ -515,7 +515,7 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         String key = "vector_add_element_" + UUID.randomUUID();
 
         KeyHintData hint = client.createVector(key, List.of(v("first"))).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // AddElement on MASTER with hint
         client.setMode(Mode.MASTER);
@@ -526,5 +526,162 @@ public class SmartClientVectorRoutingTest extends TestBaseCluster {
         // Verify on BACKUP with hint
         List<Variant> stream = client.setMode(Mode.BACKUP).getVector(key, hint).get();
         assertEquals(3, stream.size());
+    }
+
+    // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE (VECTOR)
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - partial range, validate on MASTER and BACKUP")
+    void testGetAndDeleteVectorElementsInRangePartialRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_partial_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete range [1, 3] on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 1, 3, false).get();
+        assertEquals(3, deleted.size());
+        assertEquals("2", new String(deleted.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("3", new String(deleted.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(deleted.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify remaining on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("5", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - full range (0,0)")
+    void testGetAndDeleteVectorElementsInRangeFullRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_full_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("a"), v("b"), v("c"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete full range with 0,0 on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 0, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify container is empty on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(0, remaining.size());
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(0, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - start only (end=0)")
+    void testGetAndDeleteVectorElementsInRangeStartOnly() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_start_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete from position 2 to end on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 2, 0, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only position 0 remains on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - end only (start=0)")
+    void testGetAndDeleteVectorElementsInRangeEndOnly() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_end_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete from start to position 1 on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 0, 1, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify positions 2, 3 remain on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+        assertEquals("3", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - empty range (no match)")
+    void testGetAndDeleteVectorElementsInRangeEmptyRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_empty_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete range [10, 20] - doesn't exist on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 10, 20, false).get();
+        assertEquals(0, deleted.size());
+
+        // Verify original elements unchanged on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key, hint).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - with no hint")
+    void testGetAndDeleteVectorElementsInRangeNoHint() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_no_hint_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("a"), v("b"), v("c"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // Delete without hint - client resolves routing on MASTER
+        client.setMode(Mode.MASTER);
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, null, 0, 1, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only position 2 remains on MASTER
+        List<Variant> remaining = client.setMode(Mode.MASTER).getVector(key).get();
+        assertEquals(1, remaining.size());
+        assertEquals("c", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify replication on BACKUP
+        Thread.sleep(500);
+        remaining = client.setMode(Mode.BACKUP).getVector(key).get();
+        assertEquals(1, remaining.size());
     }
 }

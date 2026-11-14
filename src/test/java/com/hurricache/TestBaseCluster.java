@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BooleanSupplier;
 
 /**
  * Base class for in-memory gRPC tests.
@@ -59,6 +60,7 @@ public abstract class TestBaseCluster {
         }
         return Variant.ofBytes(payload);
     }
+
     protected byte[] createLargePayloadKey(int size) {
         byte[] bytes = UUID.randomUUID().toString().getBytes();
         byte[] payload = new byte[size];
@@ -69,10 +71,11 @@ public abstract class TestBaseCluster {
         return payload;
     }
 
-
     @BeforeEach
     void setUp() throws IOException {
-        client = new FastCacheAsyncSmartClient(List.of("192.168.0.123:51000","192.168.0.123:61000","192.168.0.123:21000"), 0, Duration.ofSeconds(3600)) {
+        client = new FastCacheAsyncSmartClient(List.of("192.168.0.123:51000",
+                                                       "192.168.0.123:61000",
+                                                       "192.168.0.123:21000"), 0, Duration.ofSeconds(10)) {
             @Override
             public Duration getDefaultTtl() {
                 return getTestTtl();
@@ -87,7 +90,7 @@ public abstract class TestBaseCluster {
 
     }
 
-    protected Duration getTestTtl(){
+    protected Duration getTestTtl() {
         return Duration.ofMinutes(1);
     }
 
@@ -97,6 +100,7 @@ public abstract class TestBaseCluster {
             client.shutdown();
         }
     }
+
     protected byte[] bytes(String val) {
         return val.getBytes(StandardCharsets.UTF_8);
     }
@@ -110,7 +114,7 @@ public abstract class TestBaseCluster {
                     Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock details: " + lockStatus.name());
                 }
             } else {
-                Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock details: " + result );
+                Assertions.fail("Expected PERMISSION_DENIED - Access Denied by Lock details: " + result);
             }
 
         } catch (ExecutionException e) {
@@ -123,6 +127,7 @@ public abstract class TestBaseCluster {
             Assertions.fail(e.getMessage());
         }
     }
+
     protected Variant v(String val) {
         return Variant.ofBytes(val.getBytes(StandardCharsets.UTF_8));
     }
@@ -138,6 +143,7 @@ public abstract class TestBaseCluster {
     protected String str(Variant payload) {
         return new String(payload.bytesValue(), StandardCharsets.UTF_8);
     }
+
     protected String str(Payload payload) {
         return new String(payload.getValue(), StandardCharsets.UTF_8);
     }
@@ -145,7 +151,6 @@ public abstract class TestBaseCluster {
     protected OrderedPayload op(Long order, String val) {
         return OrderedPayload.of(order, val.getBytes(StandardCharsets.UTF_8));
     }
-
 
     protected Variant v(byte[] val) {
         return Variant.ofBytes(val);
@@ -159,15 +164,14 @@ public abstract class TestBaseCluster {
         return Variant.ofDouble(val);
     }
 
-
-
     protected OrderedPayload op(byte[] value, Long order) {
         return OrderedPayload.of(value, order);
     }
 
-    protected OrderedPayload op(Long order,byte[] value) {
+    protected OrderedPayload op(Long order, byte[] value) {
         return OrderedPayload.of(value, order);
     }
+
     protected OrderedVariant ov(byte[] value, Long order) {
         return OrderedVariant.of(v(value), order);
     }
@@ -197,4 +201,93 @@ public abstract class TestBaseCluster {
             Assertions.fail(e.getMessage());
         }
     }
+    @FunctionalInterface
+    public interface ThrowingBooleanSupplier {
+        boolean getAsBoolean() throws Exception;
+    }
+
+    public static boolean waitForCondition(ThrowingBooleanSupplier condition, Duration timeout, Duration pollInterval) {
+        long start = System.currentTimeMillis();
+        long timeoutMs = timeout.toMillis();
+        long pollMs = pollInterval.toMillis();
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            try {
+                if (condition.getAsBoolean()) {
+                    long endTime = System.currentTimeMillis();
+                    System.out.println("Condition met in " + (endTime - start) + " ms");
+                    return true;
+                }
+            } catch (Exception e) {
+                // Игнорируем сетевые ошибки, таймауты и исключения «пока не найдено»,
+                // так как реплика/сервер может еще подниматься
+            }
+
+            try {
+                Thread.sleep(pollMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+
+        // Финальная попытка перед падением по таймауту (если упадет здесь, вернет false)
+        try {
+            return condition.getAsBoolean();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Перегрузка с дефолтными значениями (2 секунды, шаг 20 мс)
+    public static boolean waitForCondition(ThrowingBooleanSupplier condition) {
+        return waitForCondition(condition, Duration.ofSeconds(2), Duration.ofMillis(20));
+    }
+
+
+    public static void assertEventually(String message, ThrowingBooleanSupplier condition) {
+        assertEventually(Duration.ofSeconds(2), Duration.ofMillis(20), message, condition);
+    }
+
+    // Перегрузка без сообщения (с дефолтным текстом)
+    public static void assertEventually(ThrowingBooleanSupplier condition) {
+        assertEventually(Duration.ofSeconds(2), Duration.ofMillis(20), "Condition was not met within the given timeout.", condition);
+    }
+
+    // Полная версия с кастомным таймаутом и шагом поллинга
+    public static void assertEventually(Duration timeout, Duration pollInterval, String message, ThrowingBooleanSupplier condition) {
+        long start = System.currentTimeMillis();
+        long timeoutMs = timeout.toMillis();
+        long pollMs = pollInterval.toMillis();
+
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            try {
+                if (condition.getAsBoolean()) {
+                    return; // Успех! Выходим из метода без ошибок
+                }
+            } catch (Exception e) {
+                // Игнорируем временные сетевые ошибки и исключения во время поллинга
+            }
+
+            try {
+                Thread.sleep(pollMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Polling interrupted: " + message, e);
+            }
+        }
+
+        // Финальная попытка перед падением
+        try {
+            if (condition.getAsBoolean()) {
+                return;
+            }
+        } catch (Exception e) {
+            // Игнорируем и падаем по общему таймауту ниже
+        }
+
+        // Если вышли по тайм-ауту и условие так и не выполнилось — роняем тест
+        throw new AssertionError("Assertion Failed: " + message);
+    }
+
+
 }

@@ -1,13 +1,9 @@
 package com.hurricache.client.intf;
 
-import com.hurricache.grpc.KeyHint;
-
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import com.hurricache.client.intf.Variant;
 
 public interface HurriCacheClientQueue extends HurriCacheClientInterfaceCommon,HurriCacheClientDequeBased {
     /**
@@ -59,5 +55,51 @@ public interface HurriCacheClientQueue extends HurriCacheClientInterfaceCommon,H
         return createQueue(serializeKey(key), keyHint, initialValue == null
                                                     ? Collections.emptyList()
                                                     : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+
+    /**
+     * Creates a Queue container with the default TTL and default execution timeout.
+     *
+     * @param key          target container key in String form (UTF-8 encoded).
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @param clientId     identifier of the issuing client.
+     * @return a {@link CompletableFuture} with created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createQueue(String key, KeyHintData keyHint, List<Variant> initialValue,
+                                                       int clientId) {
+        return createQueue(serializeKey(key), keyHint, initialValue == null
+                                                    ? Collections.emptyList()
+                                                    : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Creates a Queue container with the default TTL and default execution timeout.
+     *
+     * @param key          target container key in byte array form.
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @param clientId     identifier of the issuing client.
+     * @return a {@link CompletableFuture} with created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createQueue(byte[] key, KeyHintData keyHint, List<Variant> initialValue,
+                                                       int clientId) {
+        return createQueue(key, keyHint, initialValue == null
+                                         ? Collections.emptyList()
+                                         : initialValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Creates a Queue container with the default TTL, default client id and default execution timeout.
+     *
+     * @param key          target container key in byte array form.
+     * @param keyHint      optional key routing hint.
+     * @param initialValue initial sequence of {@link Variant} elements.
+     * @return a {@link CompletableFuture} with created {@link KeyHintData}.
+     */
+    default CompletableFuture<KeyHintData> createQueue(byte[] key, KeyHintData keyHint, List<Variant> initialValue) {
+        return createQueue(key, keyHint, initialValue == null
+                                         ? Collections.emptyList()
+                                         : initialValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 }

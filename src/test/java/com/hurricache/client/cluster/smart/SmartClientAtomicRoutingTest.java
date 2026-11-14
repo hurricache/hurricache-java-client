@@ -35,7 +35,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with int
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Exchange on MASTER
         client.setMode(Mode.MASTER);
@@ -57,7 +57,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with double
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Exchange double with double on MASTER
         client.setMode(Mode.MASTER);
@@ -78,7 +78,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with double on MASTER
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Exchange double with int on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -102,7 +102,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with bytes on MASTER
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Exchange bytes with int on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -128,7 +128,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_add_int_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAdd returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -144,27 +144,24 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
     }
 
     @Test
-    @DisplayName("atomicAdd with double value - adding int is INVALID_ARGUMENT on MASTER")
-    void testAtomicAddDoubleWithIntInvalidOnMaster() throws ExecutionException, InterruptedException {
+    @DisplayName("atomicAdd with double value - adding int is allowed on MASTER")
+    void testAtomicAddDoubleWithIntOnMaster() throws ExecutionException, InterruptedException {
         String key = "atomic_add_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(10.5)).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // atomicAdd double with int on MASTER - should succeed and convert to double
+        client.setMode(Mode.MASTER);
+        Number result = client.add(key, hint, 1).get();
+        assertNotNull(result);
         Thread.sleep(500);
 
-        // atomicAdd double with int on MASTER - should return INVALID_ARGUMENT
-        client.setMode(Mode.MASTER);
-        try {
-            client.add(key, hint, 1).get();
-            fail("Expected exception for type mismatch");
-        } catch (ExecutionException e) {
-            // Expected - type mismatch
-        }
-
-        // Verify value remains unchanged on BACKUP
+        // Verify value on BACKUP
         Variant current = client.setMode(Mode.BACKUP).get(key, hint).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
-        assertEquals(10.5, current.doubleValue(), 0.001);
+        assertEquals(11.5, current.doubleValue(), 0.001);
     }
 
     @Test
@@ -173,7 +170,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_add_bytes_invalid_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAdd on bytes on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -199,7 +196,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_add_int_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAdd returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -220,7 +217,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_add_negative_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -240,7 +237,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_add_double_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(10.5)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAdd double with double on MASTER
         client.setMode(Mode.MASTER);
@@ -265,7 +262,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_sub_int_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicSub returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -286,7 +283,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_sub_double_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(50.0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicSub double with double on MASTER
         client.setMode(Mode.MASTER);
@@ -307,7 +304,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_sub_negative_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -331,7 +328,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_and_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(255)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAnd returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -351,7 +348,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_and_mask_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(255)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAnd returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -370,7 +367,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_and_double_invalid_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAnd on double on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -392,7 +389,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_and_bytes_invalid_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAnd on bytes on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -418,7 +415,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_or_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(8)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicOr returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -438,7 +435,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_or_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Bitwise OR on double on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -460,7 +457,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_or_bytes_invalid_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Bitwise OR on bytes on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -486,7 +483,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_xor_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(15)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicXor returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -506,7 +503,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_xor_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(2.71)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Bitwise XOR on double on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -528,7 +525,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_xor_bytes_invalid_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Bitwise XOR on bytes on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -554,7 +551,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_success_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // CAS on MASTER - should succeed
         client.setMode(Mode.MASTER);
@@ -575,7 +572,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_failure_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // CAS on MASTER - should fail
         client.setMode(Mode.MASTER);
@@ -596,7 +593,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // CAS with double values on MASTER - should succeed
         client.setMode(Mode.MASTER);
@@ -617,7 +614,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_double_int_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // CAS with int expected on double value on MASTER - should return INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -640,7 +637,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_bytes_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // CAS with bytes on MASTER - expecting long is INVALID_ARGUMENT
         client.setMode(Mode.MASTER);
@@ -666,7 +663,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_add_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -695,7 +692,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_exchange_read_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -723,7 +720,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_lock_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Lock on MASTER
         client.setMode(Mode.MASTER);
@@ -751,27 +748,24 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
     // =========================================================================
 
     @Test
-    @DisplayName("atomicSub with double value - subtracting int is INVALID_ARGUMENT on MASTER")
-    void testAtomicSubDoubleWithIntInvalidOnMaster() throws ExecutionException, InterruptedException {
+    @DisplayName("atomicSub with double value - subtracting int is allowed on MASTER")
+    void testAtomicSubDoubleWithIntOnMaster() throws ExecutionException, InterruptedException {
         String key = "atomic_sub_double_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(50.0)).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        // atomicSub double with int on MASTER - should succeed and convert to double
+        client.setMode(Mode.MASTER);
+        Number result = client.sub(key, hint, 1).get();
+        assertNotNull(result);
         Thread.sleep(500);
 
-        // atomicSub double with int on MASTER - should return INVALID_ARGUMENT
-        client.setMode(Mode.MASTER);
-        try {
-            client.sub(key, hint, 1).get();
-            fail("Expected exception for type mismatch");
-        } catch (ExecutionException e) {
-            // Expected - type mismatch
-        }
-
-        // Verify value remains unchanged on BACKUP
+        // Verify value on BACKUP
         Variant current = client.setMode(Mode.BACKUP).get(key, hint).get();
         assertNotNull(current);
         assertTrue(current.isDouble());
-        assertEquals(50.0, current.doubleValue(), 0.001);
+        assertEquals(49.0, current.doubleValue(), 0.001);
     }
 
     @Test
@@ -781,12 +775,12 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with bytes on MASTER
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Switch to int explicitly on MASTER
         client.setMode(Mode.MASTER);
         client.replace(key, hint, vi(50)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAdd int with int on MASTER - returns OLD value
         Number result = client.add(key, hint, 10).get();
@@ -809,12 +803,12 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with int on MASTER
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Switch to double explicitly on MASTER
         client.setMode(Mode.MASTER);
         client.replace(key, hint, vd(50.5)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicSub double with double on MASTER - returns OLD value
         Number result = client.sub(key, hint, 5.5).get();
@@ -839,12 +833,12 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with bytes
         KeyHintData hint = client.create(key, v("hello")).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Switch to int explicitly on MASTER
         client.setMode(Mode.MASTER);
         client.replace(key, hint, vi(50)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAdd int with int on MASTER - returns OLD value
         Number result = client.add(key, hint, 10).get();
@@ -865,12 +859,12 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
 
         // Create with int
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Switch to double explicitly on MASTER
         client.setMode(Mode.MASTER);
         client.replace(key, hint, vd(50.5)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicSub double with double on MASTER - returns OLD value
         Number result = client.sub(key, hint, 5.5).get();
@@ -894,7 +888,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_chained_add_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // atomicAdd returns OLD value on MASTER
         client.setMode(Mode.MASTER);
@@ -919,7 +913,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_chained_add_sub_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // All operations on int type on MASTER
         client.setMode(Mode.MASTER);
@@ -945,7 +939,7 @@ public class SmartClientAtomicRoutingTest extends TestBaseCluster {
         String key = "atomic_exchange_cas_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // Exchange on MASTER
         client.setMode(Mode.MASTER);

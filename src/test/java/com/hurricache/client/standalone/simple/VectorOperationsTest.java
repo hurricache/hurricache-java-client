@@ -413,4 +413,119 @@ public class VectorOperationsTest extends TestBase {
         List<Variant> val = client.getVector(key.getBytes(), INTRUDER_CLIENT_ID).get();
         assertNotNull(val);
     }
+
+    // =========================================================================
+    // 5. GET AND DELETE ELEMENTS IN RANGE (VECTOR)
+    // =========================================================================
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - partial range")
+    void testGetAndDeleteVectorElementsInRangePartial() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_range_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"), v("5"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+
+        // Delete range [1, 3]
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 1, 3, false).get();
+        assertEquals(3, deleted.size());
+        assertEquals("2", new String(deleted.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("3", new String(deleted.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(deleted.get(2).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+
+        // Verify remaining elements
+        List<Variant> remaining = client.getVector(key).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("5", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - full range (0,0)")
+    void testGetAndDeleteVectorElementsInRangeFullRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_full_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("a"), v("b"), v("c"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+
+        // Delete full range with 0,0
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 0, 0, false).get();
+        assertEquals(3, deleted.size());
+
+        // Verify container is empty
+        List<Variant> remaining = client.getVector(key).get();
+        assertEquals(0, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - start only (end=0)")
+    void testGetAndDeleteVectorElementsInRangeStartOnly() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_start_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+
+        // Delete from position 2 to end
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 2, 0, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only position 0 remains
+        List<Variant> remaining = client.getVector(key).get();
+        assertEquals(2, remaining.size());
+        assertEquals("1", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - end only (start=0)")
+    void testGetAndDeleteVectorElementsInRangeEndOnly() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_end_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"), v("3"), v("4"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+
+        // Delete from start to position 1
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 0, 1, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify positions 2, 3 remain
+        List<Variant> remaining = client.getVector(key).get();
+        assertEquals(2, remaining.size());
+        assertEquals("3", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals("4", new String(remaining.get(1).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - empty range (no match)")
+    void testGetAndDeleteVectorElementsInRangeEmptyRange() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_empty_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("1"), v("2"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+
+        // Delete range [10, 20] - doesn't exist
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, hint, 10, 20, false).get();
+        assertEquals(0, deleted.size());
+
+        // Verify original elements unchanged
+        List<Variant> remaining = client.getVector(key).get();
+        assertEquals(2, remaining.size());
+    }
+
+    @Test
+    @DisplayName("getAndDeleteVectorElementsInRange - with no hint")
+    void testGetAndDeleteVectorElementsInRangeNoHint() throws ExecutionException, InterruptedException {
+        String key = "vector_getdel_no_hint_" + UUID.randomUUID();
+        List<Variant> data = List.of(v("a"), v("b"), v("c"));
+
+        KeyHintData hint = client.createVector(key, data).get();
+
+        // Delete without hint - client resolves routing
+        List<Variant> deleted = client.getAndDeleteVectorElementsInRange(key, null, 0, 1, false).get();
+        assertEquals(2, deleted.size());
+
+        // Verify only position 2 remains
+        List<Variant> remaining = client.getVector(key).get();
+        assertEquals(1, remaining.size());
+        assertEquals("c", new String(remaining.get(0).bytesValue(), java.nio.charset.StandardCharsets.UTF_8));
+    }
 }

@@ -16,9 +16,9 @@ message BinaryPayload {
     bytes payload = 1 [ctype = CORD]; // Raw bytes of the value (uses CORD for Zero-Copy acceleration)
     int64 intPayload = 2;
     double doublePayload = 3;
+    bytes non_cord_payload = 4;
   }
-  uint32 size = 4;                  // Payload size in bytes
-
+  uint32 size = 5;                  // Payload size in bytes
 }
 
 // Binary data of a key.
@@ -115,9 +115,16 @@ message TtlResponse {
   optional uint64 ttl = 1;                   // Remaining Time-To-Live
 }
 
+message ContainerKey{
+  oneof key{
+    Key container_key = 1;
+    uint64 pos = 2;
+  }
+}
+
 message CreateRequest {
   Key key = 1;
-  optional Key container_key = 2;
+  optional ContainerKey container_key = 2;
   Value value = 3;
 }
 
@@ -128,8 +135,15 @@ message UpdateRequest {
 
 message UpdateContainerRequest {
   Key key = 1;
-  Key element_key = 2;
-  Value value = 3;
+  oneof keys{ //subset
+    Key element_key = 2; //used for unordered containers
+    OrderedKey ordered_element_key = 3; // used for ordered containers
+  }
+  oneof values {            //used approach of update
+    Value value = 4;        //used for direct update case key container key + value
+    uint64 new_order = 6;        //used to update order
+    int64 delta_order = 7;        //used int/dec order to update order
+  }
 }
 
 message DeleteRequest {
@@ -164,7 +178,7 @@ message BatchValueResponse {
 
 message UpdateValueResponse {
   bool result = 1;                            // Success flag
-  optional Value value = 2;                  // Previous value
+  optional Value value = 2;                  // Previous value only for update. In case of update weigh this value will be sent
 }
 
 message KeyHintResponse {
@@ -182,8 +196,8 @@ message KeyPositionRequest {
   Key key = 1;
   optional ContainerType type = 2;           // Container type
 
-  uint64 pos = 3;
-  optional uint64 end = 4;
+  optional uint64 pos = 3;                   // for ordered containers if pos not specified it means that start from min order for unordered meand that pos=0
+  optional uint64 end = 4;                   // for ordered containers if end not specified it means that end by end of order for unordered meand that end=size of container
   bool reverse = 6;                          // Reverse traversal flag
 }
 
@@ -300,6 +314,10 @@ message AtomicCas {
   Key key = 1;
   Value expected = 2;                  // Expected value
   Value toSet = 3;                     // New value to set
+  oneof keys{ //subset
+    Key element_key = 4; //used for unordered containers
+    OrderedKey ordered_element_key = 5; // used for ordered containers
+  }
 }
 
 
@@ -352,6 +370,7 @@ message BatchCommand {
   optional RemoveFromContainerRequest remove_from_container_by_key_value = 15;
   optional ContainerGetRequest remove_from_container_by_key = 16;
   optional UpdateContainerRequest update_in_container_by_key = 17;
+  optional AtomicCas compare_and_set = 18;
 }
 
 message BatchSingleMessage {
@@ -379,7 +398,6 @@ service DataReplicationService {
   rpc removeTail(GetRequest) returns (BoolResponse) {}
   rpc removeHead(GetRequest) returns (BoolResponse) {}
   rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse) {}
-  rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse) {}
   rpc removeFromContainerByKeyValue(RemoveFromContainerRequest) returns (BoolResponse) {}
   rpc removeInContainer(ContainerGetRequest) returns (BoolResponse) {}
 
@@ -388,7 +406,14 @@ service DataReplicationService {
   rpc addElement(AddToRequest) returns (BoolResponse) {}
   rpc addElementToPositionByValue(AddToValRequest) returns (BoolResponse) {}
 
-  rpc atomicCompareAndSet(CreateRequest) returns (BoolResponse) {}
+  rpc atomicExchange(CreateRequest) returns (BoolResponse) {}
+  rpc atomicAdd(CreateRequest) returns (BoolResponse) {}
+  rpc atomicSub(CreateRequest) returns (BoolResponse) {}
+  rpc atomicOr(CreateRequest) returns (BoolResponse) {}
+  rpc atomicAnd(CreateRequest) returns (BoolResponse) {}
+  rpc atomicXor(CreateRequest) returns (BoolResponse) {}
+
+  rpc atomicCompareAndSet(AtomicCas) returns (BoolResponse) {}
 }
 
 // ============================================================================
@@ -431,21 +456,21 @@ service HurriCacheGrpcService {
 
   // --------------------------------------------------------------------------
   // Boundary & Positional Reads
-  // Supported targets: VECTOR, LIST, QUEUE, MAP, ORDERED_MAP, ORDERED_SET
+  // Supported targets: VECTOR, LIST, QUEUE, SET, MAP, ORDERED_MAP, ORDERED_SET
   // --------------------------------------------------------------------------
   rpc getTail(GetRequest) returns (ValueResponse) {}          // VECTOR, LIST, QUEUE
   rpc getHead(GetRequest) returns (ValueResponse) {}          // VECTOR, LIST, QUEUE
   rpc getValueInContainerByKey(ContainerGetRequest) returns (ValueResponse) {} // MAP, ORDERED_MAP
   rpc getElementAtPosition(KeyPositionRequest) returns (ValueResponse) {}     // VECTOR, LIST, ORDERED_SET
-  rpc existInContainerByKey(ContainerGetRequest) returns (BoolResponse) {}     // MAP, ORDERED_MAP, SET
+  rpc existInContainerByKey(ContainerGetRequest) returns (BoolResponse) {}     // MAP, ORDERED_MAP, SET, ORDERED_SET
 
   // --------------------------------------------------------------------------
   // Pop Operations (Extraction with removal)
   // Supported targets: VECTOR, LIST, QUEUE, ORDERED_SET, MAP, ORDERED_MAP
   // --------------------------------------------------------------------------
   rpc getAndDeleteHead(GetRequest) returns (ValueResponse) {}          // VECTOR, LIST, QUEUE
-  rpc getAndDeleteTail(GetRequest) returns (ValueResponse) {}          // VECTOR, LIST
-  rpc getAndDeleteElementAtPosition(KeyPositionRequest) returns (ValueResponse) {} // VECTOR, LIST, ORDERED_SET
+  rpc getAndDeleteTail(GetRequest) returns (ValueResponse) {}          // VECTOR, LIST, QUEUE
+  rpc getAndDeleteElementAtPosition(KeyPositionRequest) returns (ValueResponse) {} // VECTOR, LIST, ORDERED_SET, ORDERED_MAP
   rpc getAndDeleteValueInContainer(ContainerGetRequest) returns (ValueResponse) {} // MAP, ORDERED_MAP
   rpc updateValueInContainer(UpdateContainerRequest) returns (UpdateValueResponse) {} // MAP, ORDERED_MAP
 
@@ -454,30 +479,29 @@ service HurriCacheGrpcService {
   // Supported targets: VECTOR, LIST, ORDERED_MAP, ORDERED_SET
   // --------------------------------------------------------------------------
   rpc getElementsInRange(KeyPositionRequest) returns (stream BatchValueResponse) {}
-
+  rpc getAndDeleteElementsInRange(KeyPositionRequest) returns (stream BatchValueResponse) {}
   // --------------------------------------------------------------------------
   // Deletion Operations
   // Supported targets: VECTOR, LIST, QUEUE, SET, MAP, ORDERED_MAP, ORDERED_SET
   // --------------------------------------------------------------------------
   rpc deleteHead(GetRequest) returns (IntResponse) {}          // VECTOR, LIST, QUEUE
-  rpc deleteTail(GetRequest) returns (IntResponse) {}          // VECTOR, LIST
-  rpc deleteElementAtPosition(KeyPositionRequest) returns (IntResponse) {} // VECTOR, LIST, ORDERED_SET
-  rpc deleteFromContainerByKeyValue(RemoveFromContainerRequest) returns (IntResponse) {} // SET, VECTOR, LIST
-  rpc deleteFromContainerByKey(ContainerGetRequest) returns (IntResponse) {} // MAP, ORDERED_MAP, SET, ORDERED_SET
+  rpc deleteTail(GetRequest) returns (IntResponse) {}          // VECTOR, LIST, QUEUE
+  rpc deleteElementAtPosition(KeyPositionRequest) returns (IntResponse) {} // VECTOR, LIST, ORDERED_SET, ORDERED_MAP
+  rpc deleteFromContainerByKeyValue(RemoveFromContainerRequest) returns (IntResponse) {} // VECTOR, LIST, SET, MAP, ORDERED_MAP, ORDERED_SET
+  rpc deleteFromContainerByKey(ContainerGetRequest) returns (IntResponse) {} // VECTOR, LIST, SET, MAP, ORDERED_MAP, ORDERED_SET
 
   // --------------------------------------------------------------------------
   // Insertion Operations
   // Supported targets: VECTOR, LIST, QUEUE, SET, MAP, ORDERED_MAP, ORDERED_SET
   // --------------------------------------------------------------------------
   rpc addElementToTail(AddToRequest) returns (IntResponse) {}         // VECTOR, LIST, QUEUE
-  rpc addElementToHead(AddToRequest) returns (IntResponse) {}         // VECTOR, LIST
+  rpc addElementToHead(AddToRequest) returns (IntResponse) {}         // VECTOR, LIST, QUEUE
   rpc addElement(AddToRequest) returns (IntResponse) {}               // VECTOR, LIST, QUEUE, SET, MAP, ORDERED_MAP, ORDERED_SET
   rpc addElementToPositionByValue(AddToValRequest) returns (IntResponse) {} // VECTOR, LIST
 
   // --------------------------------------------------------------------------
   // Atomic Primitives (Atomic Lock-Free operations)
-  // Supported targets: SCALAR VALUES and elements inside VECTOR, LIST, MAP, ORDERED_MAP
-  // Excluded containers: QUEUE, SET, ORDERED_SET
+  // Supported targets: SCALAR VALUES (INT and DOUBLE; containers are not supported)
   // --------------------------------------------------------------------------
   rpc atomicExchange(CreateRequest) returns (ValueResponse) {}
   rpc atomicAdd(CreateRequest) returns (ValueResponse) {}

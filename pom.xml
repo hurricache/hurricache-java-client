@@ -29,7 +29,7 @@
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>7.2.0</version>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>

@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
  *   <li>Full signature: {@code method(byte[]|String key, KeyHintData hint, value, Duration ttl, int clientId, Duration timeout)}</li>
  *   <li>Minimal signature: {@code method(String key, KeyHintData hint, value)} — uses defaults for ttl, clientId, timeout</li>
  *   <li>With clientId: {@code method(String|byte[] key, KeyHintData hint, value, int clientId)} — uses defaults for ttl, timeout</li>
+ *   <li>Without hint: {@code method(String|byte[] key, value)} and {@code method(String|byte[] key, value, int clientId)} — hint is {@code null}</li>
  * </ul>
  * 
  * Default values:
@@ -236,7 +237,7 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
      */
     CompletableFuture<Number> sub(byte[] key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout);
 
-    /** Default overloads for atomicSub(long) */
+    /** Default overloads for sub(long) */
     default CompletableFuture<Number> sub(String key, KeyHintData hint, long delta, Duration ttl, int clientId, Duration timeout) {
         return sub(serializeKey(key), hint, delta, ttl, clientId, timeout);
     }
@@ -265,7 +266,7 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
         return sub(key, hint, delta, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
-    /** Default overloads for atomicSub(double) */
+    /** Default overloads for sub(double) */
     default CompletableFuture<Number> sub(String key, KeyHintData hint, double delta, Duration ttl, int clientId, Duration timeout) {
         return sub(serializeKey(key), hint, delta, ttl, clientId, timeout);
     }
@@ -327,6 +328,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     default CompletableFuture<Long> and(String key, long mask) {
         return and(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<Long> and(String key, long mask, int clientId) {
+        return and(serializeKey(key), null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> and(byte[] key, long mask, int clientId) {
+        return and(key, null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
     default CompletableFuture<Long> and(String key, KeyHintData hint, long mask, int clientId) {
         return and(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
@@ -367,6 +374,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     default CompletableFuture<Long> or(String key, long mask) {
         return or(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<Long> or(String key, long mask, int clientId) {
+        return or(serializeKey(key), null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> or(byte[] key, long mask, int clientId) {
+        return or(key, null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
     default CompletableFuture<Long> or(String key, KeyHintData hint, long mask, int clientId) {
         return or(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
@@ -406,6 +419,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     }
     default CompletableFuture<Long> xor(String key, long mask) {
         return xor(serializeKey(key), null, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> xor(String key, long mask, int clientId) {
+        return xor(serializeKey(key), null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> xor(byte[] key, long mask, int clientId) {
+        return xor(key, null, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
     default CompletableFuture<Long> xor(String key, KeyHintData hint, long mask, int clientId) {
         return xor(serializeKey(key), hint, mask, getDefaultTtl(), clientId, getDefaultTimeout());
@@ -462,6 +481,12 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, long expectedValue, long newValue) {
         return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, long expectedValue, long newValue, int clientId) {
+        return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, long expectedValue, long newValue, int clientId) {
+        return compareAndSet(key, null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint, long expectedValue, long newValue, int clientId) {
         return compareAndSet(serializeKey(key), hint, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
@@ -485,10 +510,284 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, double expectedValue, double newValue) {
         return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
+    default CompletableFuture<AtomicCasRes> compareAndSet(String key, double expectedValue, double newValue, int clientId) {
+        return compareAndSet(serializeKey(key), null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, double expectedValue, double newValue, int clientId) {
+        return compareAndSet(key, null, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
     default CompletableFuture<AtomicCasRes> compareAndSet(String key, KeyHintData hint, double expectedValue, double newValue, int clientId) {
         return compareAndSet(serializeKey(key), hint, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
     }
     default CompletableFuture<AtomicCasRes> compareAndSet(byte[] key, KeyHintData hint, double expectedValue, double newValue, int clientId) {
         return compareAndSet(key, hint, expectedValue, newValue, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    // =========================================================================
+    // CONTAINER ATOMICS — атомики над элементами контейнеров.
+    // Адресация: containerKey для MAP/ORDERED_MAP, pos для VECTOR/LIST.
+    // Возвращается СТАРОЕ значение элемента (как у скалярных атомиков).
+    // =========================================================================
+
+    /**
+     * Atomically sets a new 64-bit value on a container element and returns the old value.
+     *
+     * @param key          target container key in byte array form.
+     * @param hint         optional key routing hint.
+     * @param containerKey element key inside a MAP/ORDERED_MAP container.
+     * @param value        new long value.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous element value as Number.
+     */
+    CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long value, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double value, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos, long value, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos, double value, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<Number> exchangeInContainer(String key, byte[] containerKey, long value) {
+        return exchangeInContainer(serializeKey(key), null, containerKey, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> exchangeInContainer(String key, byte[] containerKey, long value, int clientId) {
+        return exchangeInContainer(serializeKey(key), null, containerKey, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> exchangeInContainer(String key, byte[] containerKey, double value) {
+        return exchangeInContainer(serializeKey(key), null, containerKey, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> exchangeInContainer(String key, byte[] containerKey, double value, int clientId) {
+        return exchangeInContainer(serializeKey(key), null, containerKey, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> exchangeInContainer(String key, long pos, long value) {
+        return exchangeInContainer(serializeKey(key), null, pos, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> exchangeInContainer(String key, long pos, long value, int clientId) {
+        return exchangeInContainer(serializeKey(key), null, pos, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> exchangeInContainer(String key, long pos, double value) {
+        return exchangeInContainer(serializeKey(key), null, pos, value, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> exchangeInContainer(String key, long pos, double value, int clientId) {
+        return exchangeInContainer(serializeKey(key), null, pos, value, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Atomically increments a container element by a given delta and returns the old value.
+     *
+     * @param key          target container key in byte array form.
+     * @param hint         optional key routing hint.
+     * @param containerKey element key inside a MAP/ORDERED_MAP container.
+     * @param delta        increment value.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous element value as Number.
+     */
+    CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos, long delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos, double delta, Duration ttl, int clientId, Duration timeout);
+
+    /**
+     * Compare-and-set on a container field (MAP/ORDERED_MAP). Atomic single-RPC conditional write
+     * on the element value, same scenario as addInContainer.
+     *
+     * @param key           target container key in byte array form.
+     * @param hint          optional key routing hint.
+     * @param containerKey  element key inside the container.
+     * @param expectedValue expected current value of the element.
+     * @param newValue      value to set if the expectation matches.
+     * @param clientId      identifier of the issuing client.
+     * @param timeout       execution timeout duration.
+     * @return a {@link CompletableFuture} containing {@link AtomicCasRes} with getResult()=true on success.
+     */
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                             long expectedValue, long newValue, int clientId, Duration timeout);
+
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                             double expectedValue, double newValue, int clientId, Duration timeout);
+
+    /**
+     * Compare-and-set on an OrderedMap element addressed by exact (key+weight) via OrderedPayload.
+     */
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                             long expectedValue, long newValue, int clientId, Duration timeout);
+
+    CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                             double expectedValue, double newValue, int clientId, Duration timeout);
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, byte[] containerKey,
+                                                                     long expectedValue, long newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, containerKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, byte[] containerKey,
+                                                                     double expectedValue, double newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, containerKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, OrderedPayload orderedKey,
+                                                                     long expectedValue, long newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, orderedKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<AtomicCasRes> compareAndSetInContainer(String key, OrderedPayload orderedKey,
+                                                                     double expectedValue, double newValue) {
+        return compareAndSetInContainer(serializeKey(key), null, orderedKey, expectedValue, newValue,
+                                        getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Number> addInContainer(String key, byte[] containerKey, long delta) {
+        return addInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> addInContainer(String key, byte[] containerKey, long delta, int clientId) {
+        return addInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> addInContainer(String key, byte[] containerKey, double delta) {
+        return addInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> addInContainer(String key, byte[] containerKey, double delta, int clientId) {
+        return addInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> addInContainer(String key, long pos, long delta) {
+        return addInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> addInContainer(String key, long pos, long delta, int clientId) {
+        return addInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> addInContainer(String key, long pos, double delta) {
+        return addInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> addInContainer(String key, long pos, double delta, int clientId) {
+        return addInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Atomically decrements a container element by a given delta and returns the old value.
+     *
+     * @param key          target container key in byte array form.
+     * @param hint         optional key routing hint.
+     * @param containerKey element key inside a MAP/ORDERED_MAP container.
+     * @param delta        decrement value.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous element value as Number.
+     */
+    CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey, double delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos, long delta, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos, double delta, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<Number> subInContainer(String key, byte[] containerKey, long delta) {
+        return subInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> subInContainer(String key, byte[] containerKey, long delta, int clientId) {
+        return subInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> subInContainer(String key, byte[] containerKey, double delta) {
+        return subInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> subInContainer(String key, byte[] containerKey, double delta, int clientId) {
+        return subInContainer(serializeKey(key), null, containerKey, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> subInContainer(String key, long pos, long delta) {
+        return subInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> subInContainer(String key, long pos, long delta, int clientId) {
+        return subInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Number> subInContainer(String key, long pos, double delta) {
+        return subInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Number> subInContainer(String key, long pos, double delta, int clientId) {
+        return subInContainer(serializeKey(key), null, pos, delta, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Applies an atomic bitwise AND mask on a container element and returns the old value.
+     *
+     * @param key          target container key in byte array form.
+     * @param hint         optional key routing hint.
+     * @param containerKey element key inside a MAP/ORDERED_MAP container.
+     * @param mask         bitmask.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous element value.
+     */
+    CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long mask, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, long pos, long mask, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<Long> andInContainer(String key, byte[] containerKey, long mask) {
+        return andInContainer(serializeKey(key), null, containerKey, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> andInContainer(String key, byte[] containerKey, long mask, int clientId) {
+        return andInContainer(serializeKey(key), null, containerKey, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> andInContainer(String key, long pos, long mask) {
+        return andInContainer(serializeKey(key), null, pos, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> andInContainer(String key, long pos, long mask, int clientId) {
+        return andInContainer(serializeKey(key), null, pos, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Applies an atomic bitwise OR mask on a container element and returns the old value.
+     *
+     * @param key          target container key in byte array form.
+     * @param hint         optional key routing hint.
+     * @param containerKey element key inside a MAP/ORDERED_MAP container.
+     * @param mask         bitmask.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous element value.
+     */
+    CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long mask, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, long pos, long mask, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<Long> orInContainer(String key, byte[] containerKey, long mask) {
+        return orInContainer(serializeKey(key), null, containerKey, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> orInContainer(String key, byte[] containerKey, long mask, int clientId) {
+        return orInContainer(serializeKey(key), null, containerKey, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> orInContainer(String key, long pos, long mask) {
+        return orInContainer(serializeKey(key), null, pos, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> orInContainer(String key, long pos, long mask, int clientId) {
+        return orInContainer(serializeKey(key), null, pos, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+
+    /**
+     * Applies an atomic bitwise XOR mask on a container element and returns the old value.
+     *
+     * @param key          target container key in byte array form.
+     * @param hint         optional key routing hint.
+     * @param containerKey element key inside a MAP/ORDERED_MAP container.
+     * @param mask         bitmask.
+     * @param ttl          container expiration duration.
+     * @param clientId     identifier of the issuing client.
+     * @param timeout      execution timeout duration.
+     * @return a {@link CompletableFuture} containing the previous element value.
+     */
+    CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, byte[] containerKey, long mask, Duration ttl, int clientId, Duration timeout);
+    CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, long pos, long mask, Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<Long> xorInContainer(String key, byte[] containerKey, long mask) {
+        return xorInContainer(serializeKey(key), null, containerKey, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> xorInContainer(String key, byte[] containerKey, long mask, int clientId) {
+        return xorInContainer(serializeKey(key), null, containerKey, mask, getDefaultTtl(), clientId, getDefaultTimeout());
+    }
+    default CompletableFuture<Long> xorInContainer(String key, long pos, long mask) {
+        return xorInContainer(serializeKey(key), null, pos, mask, getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
+    }
+    default CompletableFuture<Long> xorInContainer(String key, long pos, long mask, int clientId) {
+        return xorInContainer(serializeKey(key), null, pos, mask, getDefaultTtl(), clientId, getDefaultTimeout());
     }
 }

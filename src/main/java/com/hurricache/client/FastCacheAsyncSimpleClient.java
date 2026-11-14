@@ -35,6 +35,7 @@ import com.hurricache.grpc.TtlRequest;
 import com.hurricache.grpc.UnLockRequest;
 import com.hurricache.grpc.UnlockResponse;
 import com.hurricache.grpc.UpdateContainerRequest;
+import com.hurricache.grpc.UpdateValueResponse;
 import com.hurricache.grpc.UpdateRequest;
 import com.hurricache.grpc.Value;
 import com.hurricache.grpc.ValueResponse;
@@ -61,7 +62,7 @@ import java.util.concurrent.TimeUnit;
 import static com.hurricache.client.KeyValueUtils.buildAtomicCreateRequest;
 import static com.hurricache.client.KeyValueUtils.buildGetReq;
 import static com.hurricache.client.KeyValueUtils.buildKey;
-import static com.hurricache.client.KeyValueUtils.buildValueFromVariant;
+import static com.hurricache.client.KeyValueUtils.buildValueFromVariantCompressed;
 import static com.hurricache.client.KeyValueUtils.toVariant;
 
 public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
@@ -72,6 +73,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     private final Duration defaultTimeout;
     private final int defaultCompressionThreshold;
     private final String target;
+    private final boolean ownedChannel;
 
     public FastCacheAsyncSimpleClient(String host,
                                       int port,
@@ -89,6 +91,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         this.defaultTimeout = timeout;
         this.defaultCompressionThreshold = defaultCompressionThreshold;
         this.target = host + ":" + port;
+        this.ownedChannel = true;
     }
 
     public FastCacheAsyncSimpleClient(String host, int port, int defaultClientId, Duration timeout) {
@@ -123,12 +126,21 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                       int defaultClientId,
                                       Duration duration,
                                       int defaultCompressionThreshold) {
+        this(channel, defaultClientId, duration, defaultCompressionThreshold, false);
+    }
+
+    public FastCacheAsyncSimpleClient(ManagedChannel channel,
+                                      int defaultClientId,
+                                      Duration duration,
+                                      int defaultCompressionThreshold,
+                                      boolean ownedChannel) {
         this.channel = channel;
         this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = duration;
         this.defaultCompressionThreshold = defaultCompressionThreshold;
-        this.target = channel.toString();
+        this.target = channel.authority();
+        this.ownedChannel = ownedChannel;
     }
 
     @Override
@@ -160,12 +172,17 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     // TTL MANAGEMENT
     // =========================================================================
 
+    /**
+     * ttl — relative milliseconds from now; a negative value means "persist"
+     * (sent on the wire as UINT64_MAX = remove TTL, key never expires).
+     * Positive values are converted to an absolute expiration timestamp.
+     */
     @Override
     public CompletableFuture<Boolean> setTtl(byte[] key, KeyHintData hint, long ttl, int clientId, Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         TtlRequest request = TtlRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setTtl(System.currentTimeMillis() + ttl)
+                .setTtl(ttl > 0 ? System.currentTimeMillis() + ttl  : 0 )
                 .build();
         getStub(timeout).setTtl(request, new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
@@ -207,11 +224,16 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                  int clientId,
                                                  Duration timeout) {
         CompletableFuture<KeyHintData> future = new CompletableFuture<>();
-        CreateRequest req = CreateRequest.newBuilder()
-                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setValue(buildValueFromVariant(value, ttl))
-                .build();
-        getStub(timeout).createKeyValue(req, new CompletableFutureObserver<>(future, keyHintResponse -> {
+        CreateRequest.Builder builder = CreateRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()));
+
+        Value.Builder valueBuilder = buildValueFromVariantCompressed(value, getDefaultCompressionThreshold());
+
+        if (ttl != null && !ttl.isZero()) {
+            valueBuilder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
+        builder.setValue(valueBuilder);
+        getStub(timeout).createKeyValue(builder.build(), new CompletableFutureObserver<>(future, keyHintResponse -> {
             KeyHint keyHint = keyHintResponse.getKeyHint();
             return KeyHintData.of(keyHint.getStrongHash(), keyHint.getWeakHash(), keyHintResponse.getRelayed());
         }));
@@ -234,11 +256,16 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                               int clientId,
                                               Duration timeout) {
         CompletableFuture<Variant> future = new CompletableFuture<>();
-        UpdateRequest req = UpdateRequest.newBuilder()
-                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setValue(buildValueFromVariant(value, ttl))
-                .build();
-        getStub(timeout).updateValue(req, new CompletableFutureObserver<>(future, resp -> {
+        UpdateRequest.Builder builder = UpdateRequest.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()));
+
+        Value.Builder valueBuilder = buildValueFromVariantCompressed(value, getDefaultCompressionThreshold());
+
+        if (ttl != null && !ttl.isZero()) {
+            valueBuilder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
+        builder.setValue(valueBuilder);
+        getStub(timeout).updateValue(builder.build(), new CompletableFutureObserver<>(future, resp -> {
             if (resp.hasValue()) {
                 return toVariant(resp);
             }
@@ -327,7 +354,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
         if (initialValue != null) {
             for (Variant payload : initialValue) {
-                Value.Builder compressedValue = KeyValueUtils.buildValueFromVariantCompressed(payload,
+                Value.Builder compressedValue = buildValueFromVariantCompressed(payload,
                                                                                               getDefaultCompressionThreshold());
                 builder.addValueUnordered(compressedValue);
             }
@@ -402,7 +429,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                 Key kVal = KeyValueUtils.createUnorderedKey(entry.getKey().getValue(),
                                                             clientId,
                                                             getDefaultCompressionThreshold()).build();
-                Value.Builder vVal = KeyValueUtils.buildValueFromVariantCompressed(entry.getValue(),
+                Value.Builder vVal = buildValueFromVariantCompressed(entry.getValue(),
                                                                                    getDefaultCompressionThreshold());
                 if (ttl != null && !ttl.isZero()) {
                     vVal.setTtl(System.currentTimeMillis() + ttl.toMillis());
@@ -446,7 +473,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                                  order,
                                                                  clientId,
                                                                  getDefaultCompressionThreshold()).build();
-                Value.Builder vVal = KeyValueUtils.buildValueFromVariantCompressed(entry.getValue(),
+                Value.Builder vVal = buildValueFromVariantCompressed(entry.getValue(),
                                                                                    getDefaultCompressionThreshold());
                 if (ttl != null && !ttl.isZero()) {
                     vVal.setTtl(System.currentTimeMillis() + ttl.toMillis());
@@ -673,6 +700,90 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     // =========================================================================
+    // GET AND DELETE ELEMENTS IN RANGE
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<List<OrderedVariant>> getAndDeleteElementInRangeOrderedSet(byte[] key,
+                                                                                        KeyHintData hint,
+                                                                                        long startWeight,
+                                                                                        long endWeight,
+                                                                                        boolean reverse,
+                                                                                        int clientId,
+                                                                                        Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.ORDERED_SET)
+                .setReverse(reverse);
+        if (startWeight > 0) builder.setPos(startWeight);
+        if (endWeight > 0) builder.setEnd(endWeight);
+
+        CompletableFuture<List<OrderedVariant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchOrderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
+    public CompletableFuture<Map<OrderedPayload, Variant>> getAndDeleteElementInRangeOrderedMap(byte[] key,
+                                                                                                KeyHintData hint,
+                                                                                                long startWeight,
+                                                                                                long endWeight,
+                                                                                                boolean reverse,
+                                                                                                int clientId,
+                                                                                                Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.ORDERED_MAP)
+                .setReverse(reverse);
+        if (startWeight > 0) builder.setPos(startWeight);
+        if (endWeight > 0) builder.setEnd(endWeight);
+
+        CompletableFuture<Map<OrderedPayload, Variant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchOrderedMapVariantObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
+    public CompletableFuture<List<Variant>> getAndDeleteListElementsInRange(byte[] key,
+                                                                            KeyHintData hint,
+                                                                            long start,
+                                                                            long end,
+                                                                            boolean reverse,
+                                                                            int clientId,
+                                                                            Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.LIST)
+                .setReverse(reverse);
+        if (start > 0) builder.setPos(start);
+        if (end > 0) builder.setEnd(end);
+
+        CompletableFuture<List<Variant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchUnorderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    @Override
+    public CompletableFuture<List<Variant>> getAndDeleteVectorElementsInRange(byte[] key,
+                                                                              KeyHintData hint,
+                                                                              long start,
+                                                                              long end,
+                                                                              boolean reverse,
+                                                                              int clientId,
+                                                                              Duration timeout) {
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setType(ContainerType.VECTOR)
+                .setReverse(reverse);
+        if (start > 0) builder.setPos(start);
+        if (end > 0) builder.setEnd(end);
+
+        CompletableFuture<List<Variant>> rawFuture = new CompletableFuture<>();
+        getStub(timeout).getAndDeleteElementsInRange(builder.build(), new StreamBatchUnorderedObserver(rawFuture));
+        return rawFuture;
+    }
+
+    // =========================================================================
     // INSERTION OPERATIONS
     // =========================================================================
 
@@ -689,8 +800,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey).setPos(-1);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum,
-                                                                                    getDefaultCompressionThreshold()));
+            builder.addValueUnordered(buildValueFromVariantCompressed(datum,
+                                                                      getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -736,8 +847,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum,
-                                                                                    getDefaultCompressionThreshold()));
+            builder.addValueUnordered(buildValueFromVariantCompressed(datum,
+                                                                      getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -759,8 +870,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum,
-                                                                                    getDefaultCompressionThreshold()));
+            builder.addValueUnordered(buildValueFromVariantCompressed(datum,
+                                                                      getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -783,8 +894,8 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToRequest.Builder builder = AddToRequest.newBuilder().setKey(protoKey).setPos(pos);
 
         for (Variant datum : data) {
-            builder.addValueUnordered(KeyValueUtils.buildValueFromVariantCompressed(datum,
-                                                                                    getDefaultCompressionThreshold()));
+            builder.addValueUnordered(buildValueFromVariantCompressed(datum,
+                                                                      getDefaultCompressionThreshold()));
         }
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -806,10 +917,10 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToValRequest.Builder builder = AddToValRequest.newBuilder();
         builder.setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()));
         builder.setIsBefore(true);
-        data.forEach(element -> builder.addValue(KeyValueUtils.buildValueFromVariantCompressed(element,
-                                                                                               getDefaultCompressionThreshold())
+        data.forEach(element -> builder.addValue(buildValueFromVariantCompressed(element,
+                                                                                 getDefaultCompressionThreshold())
                                                          .build()));
-        builder.setPos(KeyValueUtils.buildValueFromVariantCompressed(pivot, getDefaultCompressionThreshold()).build());
+        builder.setPos(buildValueFromVariantCompressed(pivot, getDefaultCompressionThreshold()).build());
         getStub(timeout).addElementToPositionByValue(builder.build(),
                                                      new CompletableFutureObserver<>(future, IntResponse::getSize));
         return future;
@@ -829,10 +940,10 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         AddToValRequest.Builder builder = AddToValRequest.newBuilder();
         builder.setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()));
         builder.setIsBefore(false);
-        data.forEach(element -> builder.addValue(KeyValueUtils.buildValueFromVariantCompressed(element,
-                                                                                               getDefaultCompressionThreshold())
+        data.forEach(element -> builder.addValue(buildValueFromVariantCompressed(element,
+                                                                                 getDefaultCompressionThreshold())
                                                          .build()));
-        builder.setPos(KeyValueUtils.buildValueFromVariantCompressed(pivot, getDefaultCompressionThreshold()).build());
+        builder.setPos(buildValueFromVariantCompressed(pivot, getDefaultCompressionThreshold()).build());
         getStub(timeout).addElementToPositionByValue(builder.build(),
                                                      new CompletableFutureObserver<>(future, IntResponse::getSize));
         return future;
@@ -913,7 +1024,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
         if (values != null) {
             for (Variant val : values) {
-                builder.addValues(KeyValueUtils.buildValueFromVariantCompressed(val, getDefaultCompressionThreshold()));
+                builder.addValues(buildValueFromVariantCompressed(val, getDefaultCompressionThreshold()));
             }
         }
 
@@ -1253,14 +1364,309 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
     }
 
     // =========================================================================
+    // CONTAINER ATOMICS
+    // =========================================================================
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                         long value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, containerKey, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                         double value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, containerKey, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos,
+                                                         long value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, pos, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> exchangeInContainer(byte[] key, KeyHintData hint, long pos,
+                                                         double value, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicExchange(
+                buildAtomicCreateRequest(key, hint, pos, value, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                                    long expectedValue, long newValue, int clientId,
+                                                                    Duration timeout) {
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(expectedValue))
+                .setValueType(ValueType.INT);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(newValue))
+                .setValueType(ValueType.INT);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setElementKey(buildKey(containerKey, null, clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                                    double expectedValue, double newValue, int clientId,
+                                                                    Duration timeout) {
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(expectedValue))
+                .setValueType(ValueType.DOUBLE);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(newValue))
+                .setValueType(ValueType.DOUBLE);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setElementKey(buildKey(containerKey, null, clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                                    long expectedValue, long newValue, int clientId,
+                                                                    Duration timeout) {
+        if (orderedKey == null || orderedKey.getOrder() == null) {
+            throw new IllegalArgumentException("orderedKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(expectedValue))
+                .setValueType(ValueType.INT);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setIntPayload(newValue))
+                .setValueType(ValueType.INT);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(orderedKey.getValue(), orderedKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<AtomicCasRes> compareAndSetInContainer(byte[] key, KeyHintData hint, OrderedPayload orderedKey,
+                                                                    double expectedValue, double newValue, int clientId,
+                                                                    Duration timeout) {
+        if (orderedKey == null || orderedKey.getOrder() == null) {
+            throw new IllegalArgumentException("orderedKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<AtomicCasRes> future = new CompletableFuture<>();
+        Value.Builder expectedBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(expectedValue))
+                .setValueType(ValueType.DOUBLE);
+        Value.Builder toSetBuilder = Value.newBuilder()
+                .setValue(BinaryPayload.newBuilder().setDoublePayload(newValue))
+                .setValueType(ValueType.DOUBLE);
+        AtomicCas req = AtomicCas.newBuilder()
+                .setKey(buildKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(orderedKey.getValue(), orderedKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setExpected(expectedBuilder)
+                .setToSet(toSetBuilder)
+                .build();
+        getStub(timeout).atomicCompareAndSet(req, new CompletableFutureObserver<>(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> addInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicAdd(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, containerKey, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    long delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Number> subInContainer(byte[] key, KeyHintData hint, long pos,
+                                                    double delta, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Number> future = new CompletableFuture<>();
+        getStub(timeout).atomicSub(
+                buildAtomicCreateRequest(key, hint, pos, delta, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> KeyValueUtils.toVariant(resp).numberValue()));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicAnd(
+                buildAtomicCreateRequest(key, hint, containerKey, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> andInContainer(byte[] key, KeyHintData hint, long pos,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicAnd(
+                buildAtomicCreateRequest(key, hint, pos, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                 long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicOr(
+                buildAtomicCreateRequest(key, hint, containerKey, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> orInContainer(byte[] key, KeyHintData hint, long pos,
+                                                 long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicOr(
+                buildAtomicCreateRequest(key, hint, pos, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, byte[] containerKey,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicXor(
+                buildAtomicCreateRequest(key, hint, containerKey, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Long> xorInContainer(byte[] key, KeyHintData hint, long pos,
+                                                  long mask, Duration ttl, int clientId, Duration timeout) {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        getStub(timeout).atomicXor(
+                buildAtomicCreateRequest(key, hint, pos, mask, ttl, clientId, getDefaultCompressionThreshold()),
+                new CompletableFutureObserver<>(future, resp -> {
+                    Variant variant = KeyValueUtils.toVariant(resp);
+                    return variant.isNone() ? 0L : variant.longValue();
+                }));
+        return future;
+    }
+
+    // =========================================================================
     // HELPER & UTILITY METHODS
     // =========================================================================
 
     private HurriCacheGrpcServiceGrpc.HurriCacheGrpcServiceStub getStub(Duration timeout) {
-        if (timeout == null || timeout.isZero()) {
+        Duration effectiveTimeout = (timeout == null || timeout.isZero()) ? defaultTimeout : timeout;
+        if (effectiveTimeout == null || effectiveTimeout.isZero()) {
             return asyncStub;
         }
-        return asyncStub.withDeadlineAfter(timeout);
+        return asyncStub.withDeadlineAfter(effectiveTimeout);
     }
 
     @Override
@@ -1320,17 +1726,61 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                              int clientId,
                                              Duration timeout) {
         CompletableFuture<Variant> future = new CompletableFuture<>();
-        UpdateContainerRequest request = UpdateContainerRequest.newBuilder()
+        UpdateContainerRequest.Builder builder = UpdateContainerRequest.newBuilder()
                 .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
-                .setElementKey(KeyValueUtils.createUnorderedKey(elementKey, null, clientId, null))
-                .setValue(buildValueFromVariant(value, null))
-                .build();
-        getStub(timeout).updateValueInContainer(request, new CompletableFutureObserver<>(future, resp -> {
+                .setElementKey(KeyValueUtils.createUnorderedKey(elementKey, null, clientId, null));
+                //.setValue(buildValueFromVariant(value, null))
+
+        Value.Builder valueBuilder = buildValueFromVariantCompressed(value, getDefaultCompressionThreshold());
+        builder.setValue(valueBuilder);
+        getStub(timeout).updateValueInContainer(builder.build(), new CompletableFutureObserver<>(future, resp -> {
             if (resp.hasValue()) {
                 return toVariant(ValueResponse.newBuilder().setValueUnordered(resp.getValue()).build());
             }
             return Variant.none();
         }));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> update(byte[] key,
+                                             KeyHintData hint,
+                                             OrderedPayload elementKey,
+                                             long new_order,
+                                             int clientId,
+                                             Duration timeout) {
+        if (elementKey == null || elementKey.getOrder() == null) {
+            throw new IllegalArgumentException("elementKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        UpdateContainerRequest.Builder builder = UpdateContainerRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(elementKey.getValue(), elementKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setNewOrder(new_order);
+        getStub(timeout).updateValueInContainer(builder.build(),
+                                                new CompletableFutureObserver<>(future, UpdateValueResponse::getResult));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> incrementOrder(byte[] key,
+                                                     KeyHintData hint,
+                                                     OrderedPayload elementKey,
+                                                     long delta,
+                                                     int clientId,
+                                                     Duration timeout) {
+        if (elementKey == null || elementKey.getOrder() == null) {
+            throw new IllegalArgumentException("elementKey must carry an order: a key may appear with multiple weights");
+        }
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        UpdateContainerRequest.Builder builder = UpdateContainerRequest.newBuilder()
+                .setKey(KeyValueUtils.createUnorderedKey(key, hint, clientId, getDefaultCompressionThreshold()))
+                .setOrderedElementKey(KeyValueUtils.createOrderedKey(elementKey.getValue(), elementKey.getOrder(),
+                                                                     clientId, getDefaultCompressionThreshold()))
+                .setDeltaOrder(delta);
+        getStub(timeout).updateValueInContainer(builder.build(),
+                                                new CompletableFutureObserver<>(future, UpdateValueResponse::getResult));
         return future;
     }
 
@@ -1381,7 +1831,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                         .build())
                     .build();
 
-            Value.Builder unorderedValueBuilder = KeyValueUtils.buildValueFromVariantCompressed(upayload,
+            Value.Builder unorderedValueBuilder = buildValueFromVariantCompressed(upayload,
                                                                                                 getDefaultCompressionThreshold());
 
             builder.addKeyUnordered(uk).addValueUnordered(unorderedValueBuilder);
@@ -1424,7 +1874,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                                                            clientId,
                                                                            getDefaultCompressionThreshold()).build();
 
-            Value.Builder unorderedValueBuilder = KeyValueUtils.buildValueFromVariantCompressed(upayload,
+            Value.Builder unorderedValueBuilder = buildValueFromVariantCompressed(upayload,
                                                                                                 getDefaultCompressionThreshold());
             builder.addKeyOrdered(orderedValue).addValueUnordered(unorderedValueBuilder);
         }
@@ -1440,7 +1890,18 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
 
     @Override
     public void shutdown() {
+        if (!ownedChannel) {
+            return;
+        }
         channel.shutdown();
+        try {
+            if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
+                channel.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            channel.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override

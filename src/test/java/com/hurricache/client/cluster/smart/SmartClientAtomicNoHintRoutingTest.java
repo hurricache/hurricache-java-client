@@ -29,7 +29,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_exchange_int_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number previous = client.exchange(key, 200).get();
@@ -48,7 +48,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_exchange_double_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number previous = client.exchange(key, 2.71).get();
@@ -66,7 +66,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_add_int_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number result = client.add(key, 5).get();
@@ -85,7 +85,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_add_negative_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number result = client.add(key, -3).get();
@@ -103,7 +103,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_add_double_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(10.5)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number result = client.add(key, 2.5).get();
@@ -126,7 +126,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_sub_int_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number result = client.sub(key, 25).get();
@@ -145,7 +145,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_sub_double_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(50.0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number result = client.sub(key, 5.5).get();
@@ -164,7 +164,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_sub_negative_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number result = client.sub(key, 30).get();
@@ -182,7 +182,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_and_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(255)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Long result = client.and(key, 15).get();
@@ -200,7 +200,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_or_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(8)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Long result = client.or(key, 7).get();
@@ -218,7 +218,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_xor_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(15)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Long result = client.xor(key, 7).get();
@@ -236,7 +236,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_success_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         AtomicCasRes result = client.compareAndSet(key, 100, 200).get();
@@ -255,7 +255,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_failure_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         AtomicCasRes result = client.compareAndSet(key, 999, 200).get();
@@ -274,7 +274,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_cas_double_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vd(3.14)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         AtomicCasRes result = client.compareAndSet(key, 3.14, 2.71).get();
@@ -293,7 +293,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_add_lock_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         LockStatus lock = client.lock(key, LockType.WRITE_LOCK, 100, Duration.ofSeconds(30)).get();
@@ -318,7 +318,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_exchange_read_lock_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         LockStatus lock = client.lock(key, LockType.READ_LOCK, 100, Duration.ofSeconds(30)).get();
@@ -343,7 +343,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_chained_add_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number r1 = client.add(key, 10).get();
@@ -366,7 +366,7 @@ public class SmartClientAtomicNoHintRoutingTest extends TestBaseCluster {
         String key = "atomic_chained_add_sub_no_hint_" + UUID.randomUUID();
 
         KeyHintData hint = client.create(key, vi(100)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
 
         client.setMode(Mode.MASTER);
         Number r1 = client.add(key, 50).get();

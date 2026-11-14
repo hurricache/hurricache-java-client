@@ -24,7 +24,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         String key = "oset_no_hint_empty_" + UUID.randomUUID();
         KeyHintData hint = client.createOrderedSet(key, new ArrayList<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Integer size = client.setMode(Mode.MASTER).getSize(key).get();
         assertEquals(0, size);
     }
@@ -35,7 +35,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         String key = "oset_no_hint_empty_b_" + UUID.randomUUID();
         KeyHintData hint = client.createOrderedSet(key, new ArrayList<>()).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Integer size = client.setMode(Mode.BACKUP).getSize(key).get();
         assertEquals(0, size);
     }
@@ -51,7 +51,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
@@ -67,7 +67,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> stream = client.setMode(Mode.BACKUP).getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
@@ -83,7 +83,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
@@ -99,7 +99,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
         assertNotNull(hint);
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> stream = client.setMode(Mode.BACKUP).getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
@@ -109,7 +109,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
     void testAddElementToOrderedSetWithoutKeyHintOnMaster() throws ExecutionException, InterruptedException {
         String key = "oset_no_hint_add_" + UUID.randomUUID();
         KeyHintData hint = client.createOrderedSet(key, new ArrayList<>()).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         client.setMode(Mode.MASTER);
         Integer added = client.addElementWithWeight(key, null, List.of(OrderedVariant.ofBytes("elem1".getBytes(), 1L))).get();
         assertEquals(1, added);
@@ -123,7 +123,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
     void testAddElementToOrderedSetWithoutKeyHintOnBackup() throws ExecutionException, InterruptedException {
         String key = "oset_no_hint_add_b_" + UUID.randomUUID();
         KeyHintData hint = client.createOrderedSet(key, new ArrayList<>()).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         client.setMode(Mode.MASTER);
         client.addElementWithWeight(key, null, List.of(OrderedVariant.ofBytes("elem1".getBytes(), 1L))).get();
         Thread.sleep(500);
@@ -145,7 +145,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("elem2".getBytes(), 2L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Boolean contains = client.setMode(Mode.MASTER).containsKey(key, null, "elem1".getBytes()).get();
         assertTrue(contains);
     }
@@ -159,7 +159,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("elem2".getBytes(), 2L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Boolean contains = client.setMode(Mode.BACKUP).containsKey(key, null, "elem1".getBytes()).get();
         assertTrue(contains);
         contains = client.setMode(Mode.MASTER).containsKey(key, null, "missing".getBytes()).get();
@@ -176,7 +176,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("elem3".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Integer size = client.setMode(Mode.MASTER).getSize(key).get();
         assertEquals(3, size);
     }
@@ -191,7 +191,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("elem3".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Integer size = client.setMode(Mode.BACKUP).getSize(key).get();
         assertEquals(3, size);
     }
@@ -206,7 +206,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("c".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> stream = client.setMode(Mode.MASTER).getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
@@ -221,7 +221,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("c".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> stream = client.setMode(Mode.BACKUP).getOrderedSet(key).get();
         assertEquals(3, stream.size());
     }
@@ -236,7 +236,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("third".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Variant element = client.setMode(Mode.MASTER).getAt(key, null, 1).get();
         assertNotNull(element);
         assertEquals("first", new String(element.bytesValue(), StandardCharsets.UTF_8));
@@ -252,7 +252,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("third".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Variant element = client.setMode(Mode.BACKUP).getAt(key, null, 2).get();
         assertNotNull(element);
         assertEquals("second", new String(element.bytesValue(), StandardCharsets.UTF_8));
@@ -268,7 +268,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("3".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         client.setMode(Mode.MASTER);
         Variant deleted = client.popAt(key, null, 1).get();
         assertNotNull(deleted);
@@ -288,7 +288,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("3".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         client.setMode(Mode.MASTER);
         Integer deleted = client.removeAt(key, null, 1).get();
         assertEquals(1, deleted);
@@ -309,7 +309,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("5".getBytes(), 5L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> range = client.setMode(Mode.MASTER).getElementInRangeOrderedSet(key, null, 2L, 4L, false).get();
         assertEquals(3, range.size());
         assertEquals("2", new String(range.get(0).bytesValue(), StandardCharsets.UTF_8));
@@ -325,7 +325,7 @@ public class SmartClientOrderedSetNoHintRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("3".getBytes(), 3L)
         );
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         List<OrderedVariant> range = client.setMode(Mode.BACKUP).getElementInRangeOrderedSet(key, null, 1L, 3L, true).get();
         assertEquals(3, range.size());
         assertEquals("3", new String(range.get(0).bytesValue(), StandardCharsets.UTF_8));
