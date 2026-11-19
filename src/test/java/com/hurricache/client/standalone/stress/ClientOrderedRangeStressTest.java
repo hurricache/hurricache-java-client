@@ -1,6 +1,5 @@
 package com.hurricache.client.standalone.stress;
 
-import com.hurricache.TestBase;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.OrderedVariant;
@@ -24,12 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * Tests OrderedSet, OrderedMap, List, and Vector range deletion with proper concurrency control.
  */
 @Execution(ExecutionMode.SAME_THREAD)
-public class ClientOrderedRangeStressTest extends TestBase {
+public class ClientOrderedRangeStressTest extends BaseStandaloneStressTest {
 
-    private static final int CONTAINER_SIZE = 1000;
-    private static final int BENCHMARK_ITERATIONS = 50000;
-    private static final int CONCURRENCY = 100;
-    private static final int THREAD_COUNT = 4;
+    private static final int BENCHMARK_ITERATIONS_OVERRIDE = 50000;
 
     // =========================================================================
     // ORDERED SET RANGE DELETE TESTS
@@ -47,7 +43,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("OrderedSet full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet full range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 0, false)
         );
     }
@@ -64,7 +60,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("OrderedSet partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet partial range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedSet(key, hint, 100, 200, false)
         );
     }
@@ -81,7 +77,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("OrderedSet start only", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet start only", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedSet(key, hint, 500, 0, false)
         );
     }
@@ -98,7 +94,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("OrderedSet end only", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet end only", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 500, false)
         );
     }
@@ -115,7 +111,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("OrderedSet reverse range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet reverse range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedSet(key, hint, 500, 100, true)
         );
     }
@@ -136,7 +132,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("OrderedMap partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedMap partial range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedMap(key, hint, 100, 200, false)
         );
     }
@@ -153,7 +149,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedMap(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("OrderedMap full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedMap full range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedMap(key, hint, 0, 0, false)
         );
     }
@@ -174,7 +170,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createList(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("List partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("List partial range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteListElementsInRange(key, hint, 0, 100, false)
         );
     }
@@ -191,7 +187,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createList(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("List full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("List full range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteListElementsInRange(key, hint, 0, 0, false)
         );
     }
@@ -212,7 +208,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("Vector partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("Vector partial range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteVectorElementsInRange(key, hint, 0, 100, false)
         );
     }
@@ -229,7 +225,7 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createVector(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("Vector full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("Vector full range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteVectorElementsInRange(key, hint, 0, 0, false)
         );
     }
@@ -250,54 +246,9 @@ public class ClientOrderedRangeStressTest extends TestBase {
         KeyHintData hint = client.createOrderedSet(key, data).get();
         Thread.sleep(500);
 
-        runBenchmark("Empty range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("Empty range", BENCHMARK_ITERATIONS_OVERRIDE, i ->
                 client.getAndDeleteElementInRangeOrderedSet(key, hint, 1000, 2000, false)
         );
     }
 
-    // =========================================================================
-    // HELPER METHODS
-    // =========================================================================
-
-    @FunctionalInterface
-    interface ThrowingFunction<T, R> {
-        R apply(T t) throws Exception;
-    }
-
-    protected void runBenchmark(String name, int iterations, ThrowingFunction<Integer, CompletableFuture<?>> action) throws Exception {
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long start = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<?> f;
-            try {
-                f = action.apply(i);
-            } catch (Exception e) {
-                semaphore.release();
-                errors.incrementAndGet();
-                continue;
-            }
-
-            if (f != null) {
-                futures.add(f.whenComplete((res, ex) -> {
-                    semaphore.release();
-                    if (ex != null) errors.incrementAndGet();
-                }));
-            } else {
-                semaphore.release();
-            }
-        }
-
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        printResults(name, iterations, System.nanoTime() - start, errors.get());
-    }
-
-    protected void printResults(String operation, int iterations, long elapsedNanos, long errors) {
-        double elapsed = elapsedNanos / 1_000_000_000.0;
-        double ops = elapsed > 0 ? iterations / elapsed : 0;
-        System.out.printf("[%s] %d iters, %.3fs, %.2f OPS, %d errors%n", operation, iterations, elapsed, ops, errors);
-    }
 }

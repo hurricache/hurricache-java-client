@@ -371,7 +371,7 @@ public class ClusterRedisScalarCompatibilityTest extends RedisCompatibilityTestB
 
         awaitReplication();
         long ttl = jedis.ttl(key);
-        assertTrue(ttl > 0 && ttl <= 300);
+        assertTrue(ttl > 0 && ttl <= 300, "ttl=" + ttl);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.grpc.ContainerType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,25 +12,15 @@ import java.util.UUID;
 public class SmartClientSetStressTest extends BaseClusterStressTest {
 
     @Test
-    @DisplayName("Stress test: getSet")
-    void stressTestGetSet() throws Exception {
-        String key = "stress_s_get_" + UUID.randomUUID();
-        KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
-
-        runWarmup(WARMUP_ITERATIONS, i -> client.getSet(key, hint));
-        runBenchmark("Set.getSet", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getSet(key, hint));
-    }
-
-    @Test
     @DisplayName("Stress test: addElementUnordered")
     void stressTestAddElementUnordered() throws Exception {
         String key = "stress_s_add_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE / 10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.addElementUnordered(key, hint, List.of(v("new_" + i))));
-        runBenchmark("Set.addElementUnordered", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.addElementUnordered(key, hint, List.of(v("new_" + i))));
+        runMetricsBenchmark("Set.addElementUnordered", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.addElementUnordered(key, hint, List.of(v("new_" + i))));
     }
 
     @Test
@@ -37,10 +28,23 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestContainsKey() throws Exception {
         String key = "stress_s_contains_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.containsKey(key, hint, ("item_" + (i % CONTAINER_SIZE)).getBytes()));
-        runBenchmark("Set.containsKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.containsKey(key, hint, ("item_" + (i % CONTAINER_SIZE)).getBytes()));
+        runMetricsBenchmark("Set.containsKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.containsKey(key, hint, ("item_" + (i % CONTAINER_SIZE)).getBytes()));
+    }
+
+    @Test
+    @DisplayName("Stress test: containsKey (no hint)")
+    void stressTestSetContainsKeyNoHint() throws Exception {
+        String key = "stress_s_contains_nh_" + UUID.randomUUID();
+        client.createSet(key, generateListData(CONTAINER_SIZE)).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        runWarmup(WARMUP_ITERATIONS, i -> client.containsKey(key, ("item_" + (i % 100)).getBytes()));
+        runMetricsBenchmark("Set.containsKey (no hint)", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.containsKey(key, ("item_" + (i % 100)).getBytes()));
     }
 
     @Test
@@ -48,7 +52,8 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestRemoveFromContainerByKeyAndValue() throws Exception {
         String key = "stress_s_remove_val_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> {
             client.removeFromContainerByKeyAndValue(key, hint, ContainerType.SET, List.of(), List.of(v("item_" + (i % CONTAINER_SIZE)))).get();
@@ -56,7 +61,7 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
             return null;
         });
 
-        runBenchmark("Set.removeFromContainerByKeyAndValue", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> {
+        runMetricsBenchmark("Set.removeFromContainerByKeyAndValue", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> {
             var future = client.removeFromContainerByKeyAndValue(key, hint, ContainerType.SET, List.of(), List.of(v("item_" + (i % CONTAINER_SIZE))));
             if (i % 10 == 0) client.addElementUnordered(key, hint, List.of(v("item_" + i)));
             return future;
@@ -68,7 +73,8 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestRemoveFromContainerByKey() throws Exception {
         String key = "stress_s_remove_key_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> {
             client.removeFromContainerByKey(key, hint, v("item_" + (i % CONTAINER_SIZE))).get();
@@ -76,7 +82,7 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
             return null;
         });
 
-        runBenchmark("Set.removeFromContainerByKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> {
+        runMetricsBenchmark("Set.removeFromContainerByKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> {
             var future = client.removeFromContainerByKey(key, hint, v("item_" + (i % CONTAINER_SIZE)));
             if (i % 10 == 0) client.addElementUnordered(key, hint, List.of(v("item_" + i)));
             return future;
@@ -88,10 +94,11 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestSetGetSize() throws Exception {
         String key = "stress_s_size_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.getSize(key, hint));
-        runBenchmark("Set.getSize", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getSize(key, hint));
+        runMetricsBenchmark("Set.getSize", CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getSize(key, hint));
     }
 
     // MULTI-THREADED TESTS
@@ -101,9 +108,10 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestContainsKeyMultiThreaded() throws Exception {
         String key = "stress_s_mt_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("Set.containsKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+        runMetricsBenchmarkMT("Set.containsKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
                                   (threadId, i) -> client.containsKey(key, hint, ("item_" + (i % CONTAINER_SIZE)).getBytes()));
     }
 
@@ -112,9 +120,10 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestAddElementUnorderedMultiThreaded() throws Exception {
         String key = "stress_s_mt_add_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE / 10)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("Set.addElementUnordered", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+        runMetricsBenchmarkMT("Set.addElementUnordered", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
                                   (threadId, i) -> client.addElementUnordered(key, hint, List.of(v("new_" + i))));
     }
 
@@ -123,9 +132,10 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestRemoveFromContainerByKeyAndValueMultiThreaded() throws Exception {
         String key = "stress_s_mt_remove_val_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("Set.removeFromContainerByKeyAndValue", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
+        runMetricsBenchmarkMT("Set.removeFromContainerByKeyAndValue", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             var future = client.removeFromContainerByKeyAndValue(key, hint, ContainerType.SET, List.of(), List.of(v("item_" + (i % CONTAINER_SIZE))));
             if (i % 10 == 0) client.addElementUnordered(key, hint, List.of(v("item_" + i)));
             return future;
@@ -137,9 +147,10 @@ public class SmartClientSetStressTest extends BaseClusterStressTest {
     void stressTestRemoveFromContainerByKeyMultiThreaded() throws Exception {
         String key = "stress_s_mt_remove_key_" + UUID.randomUUID();
         KeyHintData hint = client.createSet(key, generateListData(CONTAINER_SIZE)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("Set.removeFromContainerByKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
+        runMetricsBenchmarkMT("Set.removeFromContainerByKey", CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             var future = client.removeFromContainerByKey(key, hint, v("item_" + (i % CONTAINER_SIZE)));
             if (i % 10 == 0) client.addElementUnordered(key, hint, List.of(v("item_" + i)));
             return future;

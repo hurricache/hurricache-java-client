@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.OrderedVariant;
 import com.hurricache.client.intf.Variant;
@@ -46,10 +47,11 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // startWeight=0, endWeight=0 → full range
-        runBenchmark("OrderedSet full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet full range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 0, false)
         );
     }
@@ -64,10 +66,11 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // startWeight=100, endWeight=200
-        runBenchmark("OrderedSet partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet partial range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedSet(key, hint, 100, 200, false)
         );
     }
@@ -82,10 +85,11 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // startWeight=500, endWeight=0 → from 500 to max
-        runBenchmark("OrderedSet start only", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet start only", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedSet(key, hint, 500, 0, false)
         );
     }
@@ -100,10 +104,11 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         // startWeight=0, endWeight=500 → from min to 500
-        runBenchmark("OrderedSet end only", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet end only", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedSet(key, hint, 0, 500, false)
         );
     }
@@ -118,9 +123,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("OrderedSet reverse range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedSet reverse range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedSet(key, hint, 500, 100, true)
         );
     }
@@ -135,9 +141,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("OrderedSet MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
+        runMetricsBenchmarkMT("OrderedSet MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
             client.getAndDeleteElementInRangeOrderedSet(key, hint,
                 (long) threadId * 250 + 1, (long) threadId * 250 + 250, false)
         );
@@ -157,9 +164,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.put(new OrderedPayload(("key_" + i).getBytes(), (long) i), vi(i));
         }
         KeyHintData hint = client.createOrderedMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("OrderedMap partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedMap partial range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedMap(key, hint, 100, 200, false)
         );
     }
@@ -174,9 +182,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.put(new OrderedPayload(("key_" + i).getBytes(), (long) i), vi(i));
         }
         KeyHintData hint = client.createOrderedMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("OrderedMap full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("OrderedMap full range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedMap(key, hint, 0, 0, false)
         );
     }
@@ -191,9 +200,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.put(new OrderedPayload(("key_" + i).getBytes(), (long) i), vi(i));
         }
         KeyHintData hint = client.createOrderedMap(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("OrderedMap MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
+        runMetricsBenchmarkMT("OrderedMap MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
             client.getAndDeleteElementInRangeOrderedMap(key, hint,
                 (long) threadId * 250 + 1, (long) threadId * 250 + 250, false)
         );
@@ -213,9 +223,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(vi(i));
         }
         KeyHintData hint = client.createList(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("List partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("List partial range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteListElementsInRange(key, hint, 0, 100, false)
         );
     }
@@ -230,9 +241,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(vi(i));
         }
         KeyHintData hint = client.createList(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("List full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("List full range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteListElementsInRange(key, hint, 0, 0, false)
         );
     }
@@ -247,9 +259,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(vi(i));
         }
         KeyHintData hint = client.createList(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("List start only", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("List start only", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteListElementsInRange(key, hint, 500, 0, false)
         );
     }
@@ -264,9 +277,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(vi(i));
         }
         KeyHintData hint = client.createList(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("List MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
+        runMetricsBenchmarkMT("List MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
             client.getAndDeleteListElementsInRange(key, hint,
                 (long) threadId * 250, (long) threadId * 250 + 249, false)
         );
@@ -286,9 +300,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(vi(i));
         }
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("Vector partial range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("Vector partial range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteVectorElementsInRange(key, hint, 0, 100, false)
         );
     }
@@ -303,9 +318,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(vi(i));
         }
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("Vector full range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("Vector full range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteVectorElementsInRange(key, hint, 0, 0, false)
         );
     }
@@ -320,9 +336,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(vi(i));
         }
         KeyHintData hint = client.createVector(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("Vector MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
+        runMetricsBenchmarkMT("Vector MT", CONTAINER_SIZE, THREAD_COUNT, (threadId, i) ->
             client.getAndDeleteVectorElementsInRange(key, hint,
                 (long) threadId * 250, (long) threadId * 250 + 249, false)
         );
@@ -342,9 +359,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("Empty range", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("Empty range", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedSet(key, hint, 1000, 2000, false)
         );
     }
@@ -359,9 +377,10 @@ public class SmartClientOrderedRangeStressTest extends BaseClusterStressTest {
             data.add(OrderedVariant.ofInt(i, (long) i));
         }
         KeyHintData hint = client.createOrderedSet(key, data).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runBenchmark("No hint", BENCHMARK_ITERATIONS, i ->
+        runMetricsBenchmark("No hint", BENCHMARK_ITERATIONS, i ->
             client.getAndDeleteElementInRangeOrderedSet(key, null, 1, 100, false)
         );
     }

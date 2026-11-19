@@ -2,6 +2,7 @@ package com.hurricache.client.cluster.stress;
 
 import com.hurricache.TestBaseCluster;
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,8 +77,11 @@ public class SmartClientBulkStressTest extends TestBaseCluster {
         }
     }
 
+    // Массовое создание: ждём, пока последний сгенерированный ключ не дойдёт до backup
     private void waitForReplication() throws InterruptedException {
-        Thread.sleep(500);
+        String sampleKey = generateKey(DATA_SIZE - 1);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(sampleKey).get()
+                && client.setMode(Mode.MASTER).containsKey(sampleKey).get());
     }
 
     /**

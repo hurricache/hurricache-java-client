@@ -1,6 +1,7 @@
 package com.hurricache.client.cluster.stress;
 
 import com.hurricache.client.intf.KeyHintData;
+import com.hurricache.client.intf.Mode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,10 +14,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestExchangeLong() throws Exception {
         String key = "stress_exchange_long_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.exchange(key, hint, i));
-        runBenchmark("Exchange(long)", BENCHMARK_ITERATIONS, i -> client.exchange(key, hint, i));
+        runMetricsBenchmark("Exchange(long)", BENCHMARK_ITERATIONS, i -> client.exchange(key, hint, i));
     }
 
     @Test
@@ -24,10 +26,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestExchangeDouble() throws Exception {
         String key = "stress_exchange_double_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vd(0.0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.exchange(key, hint, i * 1.0));
-        runBenchmark("Exchange(double)", BENCHMARK_ITERATIONS, i -> client.exchange(key, hint, i * 1.0));
+        runMetricsBenchmark("Exchange(double)", BENCHMARK_ITERATIONS, i -> client.exchange(key, hint, i * 1.0));
     }
 
     @Test
@@ -35,10 +38,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestAddLong() throws Exception {
         String key = "stress_add_long_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.add(key, hint, 1));
-        runBenchmark("Add(long)", BENCHMARK_ITERATIONS, i -> client.add(key, hint, 1));
+        runMetricsBenchmark("Add(long)", BENCHMARK_ITERATIONS, i -> client.add(key, hint, 1));
     }
 
     @Test
@@ -46,10 +50,23 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestAddDouble() throws Exception {
         String key = "stress_add_double_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vd(0.0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.add(key, hint, 1.0));
-        runBenchmark("Add(double)", BENCHMARK_ITERATIONS, i -> client.add(key, hint, 1.0));
+        runMetricsBenchmark("Add(double)", BENCHMARK_ITERATIONS, i -> client.add(key, hint, 1.0));
+    }
+
+    @Test
+    @DisplayName("Stress test: add (long, no hint)")
+    void stressTestAddLongNoHint() throws Exception {
+        String key = "stress_add_long_nh_" + UUID.randomUUID();
+        client.create(key, vi(0)).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        runWarmup(WARMUP_ITERATIONS, i -> client.add(key, 1));
+        runMetricsBenchmark("Add(long, no hint)", BENCHMARK_ITERATIONS, i -> client.add(key, 1));
     }
 
     @Test
@@ -57,10 +74,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestSubLong() throws Exception {
         String key = "stress_sub_long_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(BENCHMARK_ITERATIONS)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.sub(key, hint, 1));
-        runBenchmark("Sub(long)", BENCHMARK_ITERATIONS, i -> client.sub(key, hint, 1));
+        runMetricsBenchmark("Sub(long)", BENCHMARK_ITERATIONS, i -> client.sub(key, hint, 1));
     }
 
     @Test
@@ -68,10 +86,23 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestSubDouble() throws Exception {
         String key = "stress_sub_double_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vd(BENCHMARK_ITERATIONS * 1.0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.sub(key, hint, 1.0));
-        runBenchmark("Sub(double)", BENCHMARK_ITERATIONS, i -> client.sub(key, hint, 1.0));
+        runMetricsBenchmark("Sub(double)", BENCHMARK_ITERATIONS, i -> client.sub(key, hint, 1.0));
+    }
+
+    @Test
+    @DisplayName("Stress test: add (double, no hint)")
+    void stressTestAddDoubleNoHint() throws Exception {
+        String key = "stress_add_double_nh_" + UUID.randomUUID();
+        client.create(key, vd(0.0)).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        runWarmup(WARMUP_ITERATIONS, i -> client.add(key, 1.0));
+        runMetricsBenchmark("Add(double, no hint)", BENCHMARK_ITERATIONS, i -> client.add(key, 1.0));
     }
 
     @Test
@@ -79,10 +110,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestAnd() throws Exception {
         String key = "stress_and_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(-1)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.and(key, hint, 0xFF));
-        runBenchmark("And", BENCHMARK_ITERATIONS, i -> client.and(key, hint, 0xFF));
+        runMetricsBenchmark("And", BENCHMARK_ITERATIONS, i -> client.and(key, hint, 0xFF));
     }
 
     @Test
@@ -90,10 +122,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestOr() throws Exception {
         String key = "stress_or_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.or(key, hint, 0xFF));
-        runBenchmark("Or", BENCHMARK_ITERATIONS, i -> client.or(key, hint, 0xFF));
+        runMetricsBenchmark("Or", BENCHMARK_ITERATIONS, i -> client.or(key, hint, 0xFF));
     }
 
     @Test
@@ -101,10 +134,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestXor() throws Exception {
         String key = "stress_xor_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.xor(key, hint, 0xFF));
-        runBenchmark("Xor", BENCHMARK_ITERATIONS, i -> client.xor(key, hint, 0xFF));
+        runMetricsBenchmark("Xor", BENCHMARK_ITERATIONS, i -> client.xor(key, hint, 0xFF));
     }
 
     @Test
@@ -112,10 +146,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestCasLong() throws Exception {
         String key = "stress_cas_long_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.compareAndSet(key, hint, i % 2, i % 2 + 1));
-        runBenchmark("CAS(long)", BENCHMARK_ITERATIONS, i -> client.compareAndSet(key, hint, i % 2, i % 2 + 1));
+        runMetricsBenchmark("CAS(long)", BENCHMARK_ITERATIONS, i -> client.compareAndSet(key, hint, i % 2, i % 2 + 1));
     }
 
     @Test
@@ -123,10 +158,11 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestCasDouble() throws Exception {
         String key = "stress_cas_double_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vd(0.0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.compareAndSet(key, hint, i % 2.0, i % 2.0 + 1.0));
-        runBenchmark("CAS(double)", BENCHMARK_ITERATIONS, i -> client.compareAndSet(key, hint, i % 2.0, i % 2.0 + 1.0));
+        runMetricsBenchmark("CAS(double)", BENCHMARK_ITERATIONS, i -> client.compareAndSet(key, hint, i % 2.0, i % 2.0 + 1.0));
     }
 
     @Test
@@ -134,8 +170,9 @@ public class SmartClientAtomicStressTest extends BaseClusterStressTest {
     void stressTestAddMultiThreaded() throws Exception {
         String key = "stress_add_mt_" + UUID.randomUUID();
         KeyHintData hint = client.create(key, vi(0)).get();
-        Thread.sleep(500);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("Add(long)", BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> client.add(key, hint, 1));
+        runMetricsBenchmarkMT("Add(long)", BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> client.add(key, hint, 1));
     }
 }

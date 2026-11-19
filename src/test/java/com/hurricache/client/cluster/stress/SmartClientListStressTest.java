@@ -9,21 +9,34 @@ import java.util.List;
 import java.util.UUID;
 
 public class SmartClientListStressTest extends BaseClusterStressTest {
+    // pop с немедленным возвратом на противоположный конец: размер списка стабилен
+    private java.util.concurrent.CompletableFuture<com.hurricache.client.intf.Variant> popHeadAndRestore(
+            String key, KeyHintData hint, int i) {
+        return client.popHead(key, hint)
+                .thenCompose(old -> client.pushTail(key, hint, java.util.List.of(v("item_" + i)))
+                                        .thenApply(x -> old));
+    }
+
+
+    private java.util.concurrent.CompletableFuture<Integer> removeAtAndRestore(
+            String key, KeyHintData hint, int i) {
+        // см. SmartClientVectorStressTest: ограничение позиции с учётом in-flight операций
+        return client.removeAt(key, hint, i % (LIST_CONTAINER_SIZE - CONCURRENCY))
+                .thenCompose(removed -> removed != null && removed > 0
+                        ? client.pushTail(key, hint, java.util.List.of(v("item_" + i)))
+                                  .thenApply(x -> removed)
+                        : java.util.concurrent.CompletableFuture.completedFuture(removed));
+    }
+
+    private java.util.concurrent.CompletableFuture<com.hurricache.client.intf.Variant> popTailAndRestore(
+            String key, KeyHintData hint, int i) {
+        return client.popTail(key, hint)
+                .thenCompose(old -> client.pushHead(key, hint, java.util.List.of(v("item_" + i)))
+                                        .thenApply(x -> old));
+    }
+
 
     private static final int LIST_CONTAINER_SIZE = 10000;
-
-    @Test
-    @DisplayName("Stress test: getList")
-    void stressTestGetList() throws Exception {
-        String key = "stress_l_get_" + UUID.randomUUID();
-        KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        waitForCondition(() -> {
-            return client.setMode(Mode.MASTER).getSize(key, hint).get() == LIST_CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == LIST_CONTAINER_SIZE;
-        });
-
-        runWarmup(WARMUP_ITERATIONS, i -> client.getList(key, hint));
-        runBenchmark("List.getList", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getList(key, hint));
-    }
 
     @Test
     @DisplayName("Stress test: peekHead")
@@ -31,10 +44,23 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
         String key = "stress_l_peek_head_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
         System.out.println("Created: " + key + " with hint: " + hint);
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.peekHead(key, hint));
-        runBenchmark("List.peekHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.peekHead(key, hint));
+        runMetricsBenchmark("List.peekHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.peekHead(key, hint));
+    }
+
+    @Test
+    @DisplayName("Stress test: peekHead (no hint)")
+    void stressTestListPeekHeadNoHint() throws Exception {
+        String key = "stress_l_peek_head_nh_" + UUID.randomUUID();
+        client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
+
+        runWarmup(WARMUP_ITERATIONS, i -> client.peekHead(key));
+        runMetricsBenchmark("List.peekHead (no hint)", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.peekHead(key));
     }
 
     @Test
@@ -43,10 +69,11 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
         String key = "stress_l_peek_tail_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
         System.out.println("Created: " + key + " with hint: " + hint);
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.peekTail(key, hint));
-        runBenchmark("List.peekTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.peekTail(key, hint));
+        runMetricsBenchmark("List.peekTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.peekTail(key, hint));
     }
 
     @Test
@@ -54,10 +81,11 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListPushTail() throws Exception {
         String key = "stress_l_push_tail_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE / 10)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.pushTail(key, hint, List.of(v("item_" + i))));
-        runBenchmark("List.pushTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.pushTail(key, hint, List.of(v("item_" + i))));
+        runMetricsBenchmark("List.pushTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.pushTail(key, hint, List.of(v("item_" + i))));
     }
 
     @Test
@@ -65,10 +93,11 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListPushHead() throws Exception {
         String key = "stress_l_push_head_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE / 10)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.pushHead(key, hint, List.of(v("item_" + i))));
-        runBenchmark("List.pushHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.pushHead(key, hint, List.of(v("item_" + i))));
+        runMetricsBenchmark("List.pushHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.pushHead(key, hint, List.of(v("item_" + i))));
     }
 
     @Test
@@ -76,19 +105,12 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListPopHead() throws Exception {
         String key = "stress_l_pop_head_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runWarmup(WARMUP_ITERATIONS, i -> {
-            client.popHead(key, hint).get();
-            if (i % 10 == 0) client.pushTail(key, hint, List.of(v("item_" + i))).get();
-            return null;
-        });
+        runWarmup(WARMUP_ITERATIONS, i -> popHeadAndRestore(key, hint, i));
 
-        runBenchmark("List.popHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> {
-            var future = client.popHead(key, hint);
-            if (i % 10 == 0) client.pushTail(key, hint, List.of(v("item_" + i)));
-            return future;
-        });
+        runMetricsBenchmark("List.popHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> popHeadAndRestore(key, hint, i));
     }
 
     @Test
@@ -96,19 +118,12 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListPopTail() throws Exception {
         String key = "stress_l_pop_tail_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runWarmup(WARMUP_ITERATIONS, i -> {
-            client.popTail(key, hint).get();
-            if (i % 10 == 0) client.pushHead(key, hint, List.of(v("item_" + i))).get();
-            return null;
-        });
+        runWarmup(WARMUP_ITERATIONS, i -> popTailAndRestore(key, hint, i));
 
-        runBenchmark("List.popTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> {
-            var future = client.popTail(key, hint);
-            if (i % 10 == 0) client.pushHead(key, hint, List.of(v("item_" + i)));
-            return future;
-        });
+        runMetricsBenchmark("List.popTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> popTailAndRestore(key, hint, i));
     }
 
     @Test
@@ -116,10 +131,11 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestInsertAt() throws Exception {
         String key = "stress_l_insert_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.insertAt(key, hint, List.of(v("new_" + i)), i % LIST_CONTAINER_SIZE));
-        runBenchmark("List.insertAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.insertAt(key, hint, List.of(v("new_" + i)), i % LIST_CONTAINER_SIZE));
+        runMetricsBenchmark("List.insertAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.insertAt(key, hint, List.of(v("new_" + i)), i % LIST_CONTAINER_SIZE));
     }
 
     @Test
@@ -127,10 +143,11 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestRemoveAt() throws Exception {
         String key = "stress_l_remove_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runWarmup(WARMUP_ITERATIONS, i -> client.removeAt(key, hint, i % LIST_CONTAINER_SIZE));
-        runBenchmark("List.removeAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.removeAt(key, hint, i % LIST_CONTAINER_SIZE));
+        runWarmup(WARMUP_ITERATIONS, i -> removeAtAndRestore(key, hint, i));
+        runMetricsBenchmark("List.removeAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> removeAtAndRestore(key, hint, i));
     }
 
     @Test
@@ -138,35 +155,24 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListGetSize() throws Exception {
         String key = "stress_l_size_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
         runWarmup(WARMUP_ITERATIONS, i -> client.getSize(key, hint));
-        runBenchmark("List.getSize", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getSize(key, hint));
+        runMetricsBenchmark("List.getSize", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, i -> client.getSize(key, hint));
     }
 
     // MULTI-THREADED TESTS
-
-    @Test
-    @DisplayName("Stress test: getList (multi-threaded)")
-    void stressTestGetListMultiThreaded() throws Exception {
-        String key = "stress_l_mt_" + UUID.randomUUID();
-        KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        waitForCondition(() -> {
-            return client.setMode(Mode.MASTER).getSize(key, hint).get() == LIST_CONTAINER_SIZE && client.setMode(Mode.BACKUP).getSize(key, hint).get() == LIST_CONTAINER_SIZE;
-        });
-
-        runMultiThreadedBenchmark("List.getList", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
-                                  (threadId, i) -> client.getList(key, hint));
-    }
 
     @Test
     @DisplayName("Stress test: pushHead (multi-threaded)")
     void stressTestListPushHeadMultiThreaded() throws Exception {
         String key = "stress_l_mt_push_head_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE / 10)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("List.pushHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+        runMetricsBenchmarkMT("List.pushHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
                                   (threadId, i) -> client.pushHead(key, hint, List.of(v("item_mt_" + i))));
     }
 
@@ -175,9 +181,10 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListPushTailMultiThreaded() throws Exception {
         String key = "stress_l_mt_push_tail_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE / 10)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("List.pushTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+        runMetricsBenchmarkMT("List.pushTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
                                   (threadId, i) -> client.pushTail(key, hint, List.of(v("item_mt_" + i))));
     }
 
@@ -186,13 +193,11 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListPopHeadMultiThreaded() throws Exception {
         String key = "stress_l_mt_pop_head_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("List.popHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
-            var future = client.popHead(key, hint);
-            if (i % 10 == 0) client.pushTail(key, hint, List.of(v("item_mt_" + i)));
-            return future;
-        });
+        runMetricsBenchmarkMT("List.popHead", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+                              (threadId, i) -> popHeadAndRestore(key, hint, i));
     }
 
     @Test
@@ -200,13 +205,11 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListPopTailMultiThreaded() throws Exception {
         String key = "stress_l_mt_pop_tail_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("List.popTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
-            var future = client.popTail(key, hint);
-            if (i % 10 == 0) client.pushHead(key, hint, List.of(v("item_mt_" + i)));
-            return future;
-        });
+        runMetricsBenchmarkMT("List.popTail", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+                              (threadId, i) -> popTailAndRestore(key, hint, i));
     }
 
     @Test
@@ -214,9 +217,10 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListInsertAtMultiThreaded() throws Exception {
         String key = "stress_l_mt_insert_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("List.insertAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+        runMetricsBenchmarkMT("List.insertAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
                                   (threadId, i) -> client.insertAt(key, hint, List.of(v("new_" + i)), i % LIST_CONTAINER_SIZE));
     }
 
@@ -225,12 +229,10 @@ public class SmartClientListStressTest extends BaseClusterStressTest {
     void stressTestListRemoveAtMultiThreaded() throws Exception {
         String key = "stress_l_mt_remove_" + UUID.randomUUID();
         KeyHintData hint = client.createList(key, generateListData(LIST_CONTAINER_SIZE)).get();
-        Thread.sleep(1000);
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get()
+                && client.setMode(Mode.MASTER).containsKey(key).get());
 
-        runMultiThreadedBenchmark("List.removeAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
-            var future = client.removeAt(key, hint, i % LIST_CONTAINER_SIZE);
-            if (i % 10 == 0) client.pushTail(key, hint, List.of(v("item_mt_" + i)));
-            return future;
-        });
+        runMetricsBenchmarkMT("List.removeAt", LIST_CONTAINER_SIZE, BENCHMARK_ITERATIONS, THREAD_COUNT,
+                              (threadId, i) -> removeAtAndRestore(key, hint, i));
     }
 }

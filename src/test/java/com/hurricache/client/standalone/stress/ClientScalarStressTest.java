@@ -1,662 +1,200 @@
 package com.hurricache.client.standalone.stress;
 
-import com.hurricache.TestBase;
-import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.Variant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Stress tests for scalar operations (create, get, replace, remove) with heterogeneous data types.
- * Fixed version with proper concurrency control and pre-populated keys for remove operations.
+ * Standalone scalar stress test with latency/error metrics.
+ * GET/REPLACE scenarios exist in two variants: with KeyHint and without.
  */
-@Execution(ExecutionMode.SAME_THREAD)
-public class ClientScalarStressTest extends TestBase {
-
-    // ====== CONFIGURABLE PARAMETERS ======
-    private static final int WARMUP_ITERATIONS = 100;
-    private static final int BENCHMARK_ITERATIONS = 100000; // Снижено до 50k для стабильности асинхронного пайплайна, можно вернуть 100k
-    private static final int CONCURRENCY = 500;
-    private static final int THREAD_COUNT = 4;
+public class ClientScalarStressTest extends BaseStandaloneStressTest {
 
     // =========================================================================
-    // CREATE TESTS
+    // CREATE
     // =========================================================================
 
     @Test
     @DisplayName("Stress test: create (bytes)")
     void stressTestCreateBytes() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            String key = "stress_create_bytes_" + i + "_" + UUID.randomUUID();
-            CompletableFuture<Boolean> future = client.create(key, v("value_bytes_" + (i % 100)))
-                    .thenApply(h -> true);
-
-            CompletableFuture<Boolean> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Create(bytes)", iterations, endTime - startTime, errors.get());
+        runMetricsBenchmark("Create(bytes)", BENCHMARK_ITERATIONS, i ->
+                client.create("s_create_bytes_" + UUID.randomUUID(), v("value_bytes_" + (i % 100))));
     }
 
     @Test
     @DisplayName("Stress test: create (int)")
     void stressTestCreateInt() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            String key = "stress_create_int_" + i + "_" + UUID.randomUUID();
-            CompletableFuture<Boolean> future = client.create(key, vi(i))
-                    .thenApply(h -> true);
-
-            CompletableFuture<Boolean> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Create(int)", iterations, endTime - startTime, errors.get());
+        runMetricsBenchmark("Create(int)", BENCHMARK_ITERATIONS, i ->
+                client.create("s_create_int_" + UUID.randomUUID(), vi(i)));
     }
 
     @Test
     @DisplayName("Stress test: create (double)")
     void stressTestCreateDouble() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            String key = "stress_create_double_" + i + "_" + UUID.randomUUID();
-            CompletableFuture<Boolean> future = client.create(key, vd(i * 1.5))
-                    .thenApply(h -> true);
-
-            CompletableFuture<Boolean> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Create(double)", iterations, endTime - startTime, errors.get());
+        runMetricsBenchmark("Create(double)", BENCHMARK_ITERATIONS, i ->
+                client.create("s_create_double_" + UUID.randomUUID(), vd(i * 1.5)));
     }
 
     @Test
     @DisplayName("Stress test: create (heterogeneous)")
     void stressTestCreateHeterogeneous() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            String key = "stress_create_mix_" + i + "_" + UUID.randomUUID();
-            Variant value;
-            if (i % 3 == 0) {
-                value = v("mixed_bytes_" + i);
-            } else if (i % 3 == 1) {
-                value = vi(i);
-            } else {
-                value = vd(i * 1.5);
-            }
-            CompletableFuture<Boolean> future = client.create(key, value)
-                    .thenApply(h -> true);
-
-            CompletableFuture<Boolean> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Create(heterogeneous)", iterations, endTime - startTime, errors.get());
+        runMetricsBenchmark("Create(heterogeneous)", BENCHMARK_ITERATIONS, i -> {
+            Variant value = (i % 3 == 0) ? v("mixed_bytes_" + i) : (i % 3 == 1) ? vi(i) : vd(i * 1.5);
+            return client.create("s_create_mix_" + UUID.randomUUID(), value);
+        });
     }
 
     // =========================================================================
-    // GET TESTS
+    // GET
     // =========================================================================
 
     @Test
-    @DisplayName("Stress test: get (bytes)")
+    @DisplayName("Stress test: get random (bytes, KeyHint)")
     void stressTestGetBytes() throws Exception {
-        String key = "stress_get_bytes_" + UUID.randomUUID();
-        KeyHintData hint = client.create(key, v("hello_world_bytes_data")).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            client.get(key, hint).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future = client.get(key, hint);
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Get(bytes)", iterations, endTime - startTime, errors.get());
+        Keyspace ks = createBytesKeyspace("s_get_b_hint_" + UUID.randomUUID() + "_");
+        runMetricsBenchmark("Get(bytes, KeyHint)", BENCHMARK_ITERATIONS, i -> {
+            int idx = ks.randomIndex();
+            return client.get(ks.keys[idx], ks.hints[idx]);
+        });
     }
 
     @Test
-    @DisplayName("Stress test: get (int)")
+    @DisplayName("Stress test: get random (bytes, no hint)")
+    void stressTestGetBytesNoHint() throws Exception {
+        Keyspace ks = createBytesKeyspace("s_get_b_nohint_" + UUID.randomUUID() + "_");
+        runMetricsBenchmark("Get(bytes, no hint)", BENCHMARK_ITERATIONS, i ->
+                client.get(ks.keys[ks.randomIndex()]));
+    }
+
+    @Test
+    @DisplayName("Stress test: get random (int, KeyHint)")
     void stressTestGetInt() throws Exception {
-        String key = "stress_get_int_" + UUID.randomUUID();
-        KeyHintData hint = client.create(key, vi(42)).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            client.get(key, hint).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future = client.get(key, hint);
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Get(int)", iterations, endTime - startTime, errors.get());
+        Keyspace ks = createKeyspace("s_get_i_hint_" + UUID.randomUUID() + "_", i -> vi(i));
+        runMetricsBenchmark("Get(int, KeyHint)", BENCHMARK_ITERATIONS, i -> {
+            int idx = ks.randomIndex();
+            return client.get(ks.keys[idx], ks.hints[idx]);
+        });
     }
 
     @Test
-    @DisplayName("Stress test: get (double)")
+    @DisplayName("Stress test: get random (double, KeyHint)")
     void stressTestGetDouble() throws Exception {
-        String key = "stress_get_double_" + UUID.randomUUID();
-        KeyHintData hint = client.create(key, vd(3.14159265)).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            client.get(key, hint).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future = client.get(key, hint);
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Get(double)", iterations, endTime - startTime, errors.get());
+        Keyspace ks = createKeyspace("s_get_d_hint_" + UUID.randomUUID() + "_", i -> vd(i * 1.5));
+        runMetricsBenchmark("Get(double, KeyHint)", BENCHMARK_ITERATIONS, i -> {
+            int idx = ks.randomIndex();
+            return client.get(ks.keys[idx], ks.hints[idx]);
+        });
     }
 
     @Test
-    @DisplayName("Stress test: get (heterogeneous)")
+    @DisplayName("Stress test: get random (heterogeneous, KeyHint)")
     void stressTestGetHeterogeneous() throws Exception {
-        String keyBytes = "stress_get_mix_bytes_" + UUID.randomUUID();
-        String keyInt = "stress_get_mix_int_" + UUID.randomUUID();
-        String keyDouble = "stress_get_mix_double_" + UUID.randomUUID();
-
-        KeyHintData hintBytes = client.create(keyBytes, v("mixed_bytes_data")).get();
-        KeyHintData hintInt = client.create(keyInt, vi(123)).get();
-        KeyHintData hintDouble = client.create(keyDouble, vd(2.71828)).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            if (i % 3 == 0) client.get(keyBytes, hintBytes).get();
-            else if (i % 3 == 1) client.get(keyInt, hintInt).get();
-            else client.get(keyDouble, hintDouble).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future;
+        Keyspace kb = createBytesKeyspace("s_get_mix_b_" + UUID.randomUUID() + "_");
+        Keyspace ki = createKeyspace("s_get_mix_i_" + UUID.randomUUID() + "_", i -> vi(i));
+        Keyspace kd = createKeyspace("s_get_mix_d_" + UUID.randomUUID() + "_", i -> vd(i * 2.5));
+        runMetricsBenchmark("Get(heterogeneous, KeyHint)", BENCHMARK_ITERATIONS, i -> {
             if (i % 3 == 0) {
-                future = client.get(keyBytes, hintBytes);
+                int idx = kb.randomIndex();
+                return client.get(kb.keys[idx], kb.hints[idx]);
             } else if (i % 3 == 1) {
-                future = client.get(keyInt, hintInt);
+                int idx = ki.randomIndex();
+                return client.get(ki.keys[idx], ki.hints[idx]);
             } else {
-                future = client.get(keyDouble, hintDouble);
+                int idx = kd.randomIndex();
+                return client.get(kd.keys[idx], kd.hints[idx]);
             }
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
+        });
+    }
 
-        printResults("Get(heterogeneous)", iterations, endTime - startTime, errors.get());
+    @Test
+    @DisplayName("Stress test: get random (heterogeneous, no hint)")
+    void stressTestGetHeterogeneousNoHint() throws Exception {
+        Keyspace kb = createBytesKeyspace("s_get_mix_b_nh_" + UUID.randomUUID() + "_");
+        Keyspace ki = createKeyspace("s_get_mix_i_nh_" + UUID.randomUUID() + "_", i -> vi(i));
+        Keyspace kd = createKeyspace("s_get_mix_d_nh_" + UUID.randomUUID() + "_", i -> vd(i * 2.5));
+        runMetricsBenchmark("Get(heterogeneous, no hint)", BENCHMARK_ITERATIONS, i -> {
+            if (i % 3 == 0) return client.get(kb.keys[kb.randomIndex()]);
+            else if (i % 3 == 1) return client.get(ki.keys[ki.randomIndex()]);
+            else return client.get(kd.keys[kd.randomIndex()]);
+        });
     }
 
     // =========================================================================
-    // REPLACE TESTS
+    // REPLACE
     // =========================================================================
 
     @Test
-    @DisplayName("Stress test: replace (bytes)")
+    @DisplayName("Stress test: replace random (bytes, KeyHint)")
     void stressTestReplaceBytes() throws Exception {
-        String key = "stress_replace_bytes_" + UUID.randomUUID();
-        KeyHintData hint = client.create(key, v("old_bytes_value")).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            client.replace(key, hint, v("new_bytes_" + (i % 10))).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future = client.replace(key, hint, v("new_bytes_" + (i % 100)));
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Replace(bytes)", iterations, endTime - startTime, errors.get());
+        Keyspace ks = createBytesKeyspace("s_replace_b_" + UUID.randomUUID() + "_");
+        runMetricsBenchmark("Replace(bytes, KeyHint)", BENCHMARK_ITERATIONS, i -> {
+            int idx = ks.randomIndex();
+            return client.replace(ks.keys[idx], ks.hints[idx], v("new_bytes_" + i));
+        });
     }
 
     @Test
-    @DisplayName("Stress test: replace (int)")
+    @DisplayName("Stress test: replace random (bytes, no hint)")
+    void stressTestReplaceBytesNoHint() throws Exception {
+        Keyspace ks = createBytesKeyspace("s_replace_b_nh_" + UUID.randomUUID() + "_");
+        runMetricsBenchmark("Replace(bytes, no hint)", BENCHMARK_ITERATIONS, i ->
+                client.replace(ks.keys[ks.randomIndex()], v("new_bytes_" + i)));
+    }
+
+    @Test
+    @DisplayName("Stress test: replace random (int, KeyHint)")
     void stressTestReplaceInt() throws Exception {
-        String key = "stress_replace_int_" + UUID.randomUUID();
-        KeyHintData hint = client.create(key, vi(100)).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            client.replace(key, hint, vi(i % 10)).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future = client.replace(key, hint, vi(i % 100));
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Replace(int)", iterations, endTime - startTime, errors.get());
+        Keyspace ks = createKeyspace("s_replace_i_" + UUID.randomUUID() + "_", i -> vi(i));
+        runMetricsBenchmark("Replace(int, KeyHint)", BENCHMARK_ITERATIONS, i -> {
+            int idx = ks.randomIndex();
+            return client.replace(ks.keys[idx], ks.hints[idx], vi(i));
+        });
     }
 
     @Test
-    @DisplayName("Stress test: replace (double)")
+    @DisplayName("Stress test: replace random (double, KeyHint)")
     void stressTestReplaceDouble() throws Exception {
-        String key = "stress_replace_double_" + UUID.randomUUID();
-        KeyHintData hint = client.create(key, vd(2.71)).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            client.replace(key, hint, vd(i * 1.1)).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future = client.replace(key, hint, vd(i * 1.1));
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Replace(double)", iterations, endTime - startTime, errors.get());
-    }
-
-    @Test
-    @DisplayName("Stress test: replace (heterogeneous)")
-    void stressTestReplaceHeterogeneous() throws Exception {
-        String keyBytes = "stress_replace_mix_bytes_" + UUID.randomUUID();
-        String keyInt = "stress_replace_mix_int_" + UUID.randomUUID();
-        String keyDouble = "stress_replace_mix_double_" + UUID.randomUUID();
-
-        KeyHintData hintBytes = client.create(keyBytes, v("initial_bytes")).get();
-        KeyHintData hintInt = client.create(keyInt, vi(100)).get();
-        KeyHintData hintDouble = client.create(keyDouble, vd(2.71)).get();
-
-        // Warmup
-        for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            if (i % 3 == 0) client.replace(keyBytes, hintBytes, v("mix_bytes_" + i)).get();
-            else if (i % 3 == 1) client.replace(keyInt, hintInt, vi(i % 100)).get();
-            else client.replace(keyDouble, hintDouble, vd(i * 1.1)).get();
-        }
-
-        // Benchmark
-        int iterations = BENCHMARK_ITERATIONS;
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Variant> future;
-            if (i % 3 == 0) {
-                future = client.replace(keyBytes, hintBytes, v("mix_bytes_" + i));
-            } else if (i % 3 == 1) {
-                future = client.replace(keyInt, hintInt, vi(i % 100));
-            } else {
-                future = client.replace(keyDouble, hintDouble, vd(i * 1.1));
-            }
-            CompletableFuture<Variant> wrapped = future
-                    .exceptionally(ex -> { errors.incrementAndGet(); return null; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Replace(heterogeneous)", iterations, endTime - startTime, errors.get());
+        Keyspace ks = createKeyspace("s_replace_d_" + UUID.randomUUID() + "_", i -> vd(i * 1.1));
+        runMetricsBenchmark("Replace(double, KeyHint)", BENCHMARK_ITERATIONS, i -> {
+            int idx = ks.randomIndex();
+            return client.replace(ks.keys[idx], ks.hints[idx], vd(i * 1.1));
+        });
     }
 
     // =========================================================================
-    // REMOVE TESTS (FIXED: Pre-populate keys to avoid NOT_FOUND errors)
+    // REMOVE
     // =========================================================================
 
     @Test
-    @DisplayName("Stress test: remove (bytes)")
-    void stressTestRemoveBytes() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        List<String> keys = new ArrayList<>(iterations);
-        List<KeyHintData> hints = new ArrayList<>(iterations);
-
-        // Предварительно создаем ключи для удаления, чтобы замерять именно remove, а не NOT_FOUND
-        for (int i = 0; i < iterations; i++) {
-            String key = "stress_remove_bytes_" + i + "_" + UUID.randomUUID();
-            KeyHintData hint = client.create(key, v("value_bytes")).get();
-            keys.add(key);
-            hints.add(hint);
-        }
-
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Boolean> removeFuture = client.remove(keys.get(i), hints.get(i));
-            CompletableFuture<Boolean> wrapped = removeFuture
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Remove(bytes)", iterations, endTime - startTime, errors.get());
-    }
-
-    @Test
-    @DisplayName("Stress test: remove (int)")
-    void stressTestRemoveInt() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        List<String> keys = new ArrayList<>(iterations);
-        List<KeyHintData> hints = new ArrayList<>(iterations);
-
-        for (int i = 0; i < iterations; i++) {
-            String key = "stress_remove_int_" + i + "_" + UUID.randomUUID();
-            KeyHintData hint = client.create(key, vi(999)).get();
-            keys.add(key);
-            hints.add(hint);
-        }
-
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Boolean> removeFuture = client.remove(keys.get(i), hints.get(i));
-            CompletableFuture<Boolean> wrapped = removeFuture
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Remove(int)", iterations, endTime - startTime, errors.get());
-    }
-
-    @Test
-    @DisplayName("Stress test: remove (double)")
-    void stressTestRemoveDouble() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        List<String> keys = new ArrayList<>(iterations);
-        List<KeyHintData> hints = new ArrayList<>(iterations);
-
-        for (int i = 0; i < iterations; i++) {
-            String key = "stress_remove_double_" + i + "_" + UUID.randomUUID();
-            KeyHintData hint = client.create(key, vd(99.99)).get();
-            keys.add(key);
-            hints.add(hint);
-        }
-
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Boolean> removeFuture = client.remove(keys.get(i), hints.get(i));
-            CompletableFuture<Boolean> wrapped = removeFuture
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Remove(double)", iterations, endTime - startTime, errors.get());
-    }
-
-    @Test
-    @DisplayName("Stress test: remove (heterogeneous)")
-    void stressTestRemoveHeterogeneous() throws Exception {
-        int iterations = BENCHMARK_ITERATIONS;
-        List<String> keys = new ArrayList<>(iterations);
-        List<KeyHintData> hints = new ArrayList<>(iterations);
-
-        for (int i = 0; i < iterations; i++) {
-            String key;
-            KeyHintData hint;
-            if (i % 3 == 0) {
-                key = "stress_remove_mix_bytes_" + i + "_" + UUID.randomUUID();
-                hint = client.create(key, v("value_bytes")).get();
-            } else if (i % 3 == 1) {
-                key = "stress_remove_mix_int_" + i + "_" + UUID.randomUUID();
-                hint = client.create(key, vi(999)).get();
-            } else {
-                key = "stress_remove_mix_double_" + i + "_" + UUID.randomUUID();
-                hint = client.create(key, vd(99.99)).get();
-            }
-            keys.add(key);
-            hints.add(hint);
-        }
-
-        AtomicLong errors = new AtomicLong(0);
-        Semaphore semaphore = new Semaphore(CONCURRENCY);
-        List<CompletableFuture<?>> futures = new ArrayList<>(iterations);
-
-        long startTime = System.nanoTime();
-        for (int i = 0; i < iterations; i++) {
-            semaphore.acquire();
-            CompletableFuture<Boolean> removeFuture = client.remove(keys.get(i), hints.get(i));
-            CompletableFuture<Boolean> wrapped = removeFuture
-                    .exceptionally(ex -> { errors.incrementAndGet(); return false; })
-                    .whenComplete((res, ex) -> semaphore.release());
-            futures.add(wrapped);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        long endTime = System.nanoTime();
-
-        printResults("Remove(heterogeneous)", iterations, endTime - startTime, errors.get());
+    @DisplayName("Stress test: remove")
+    void stressTestRemove() throws Exception {
+        Keyspace ks = createBytesKeyspace("s_remove_" + UUID.randomUUID() + "_");
+        runMetricsBenchmark("Remove", KEYSPACE_SIZE, i -> client.remove(ks.keys[i]));
     }
 
     // =========================================================================
-    // MULTI-THREADED TESTS
+    // MULTI-THREADED
     // =========================================================================
 
     @Test
-    @DisplayName("Stress test: get (heterogeneous, multi-threaded)")
+    @DisplayName("Stress test: get random (heterogeneous, KeyHint, multi-threaded)")
     void stressTestGetHeterogeneousMultiThreaded() throws Exception {
-        final String keyBytes = "stress_get_mix_mt_bytes_" + UUID.randomUUID();
-        final String keyInt = "stress_get_mix_mt_int_" + UUID.randomUUID();
-        final String keyDouble = "stress_get_mix_mt_double_" + UUID.randomUUID();
-
-        final KeyHintData hintBytes = client.create(keyBytes, v("mixed_bytes_data")).get();
-        final KeyHintData hintInt = client.create(keyInt, vi(123)).get();
-        final KeyHintData hintDouble = client.create(keyDouble, vd(2.71828)).get();
-
-        int iterationsPerThread = BENCHMARK_ITERATIONS / THREAD_COUNT;
-        java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
-        java.util.concurrent.CountDownLatch doneLatch = new java.util.concurrent.CountDownLatch(THREAD_COUNT);
-        AtomicLong totalErrors = new AtomicLong(0);
-
-        List<Thread> threads = new ArrayList<>();
-        long startTime = System.nanoTime();
-
-        for (int t = 0; t < THREAD_COUNT; t++) {
-            final int threadIdx = t;
-            Thread bt = new Thread(() -> {
-                try {
-                    startLatch.await();
-                    List<CompletableFuture<?>> threadFutures = new ArrayList<>(iterationsPerThread);
-                    Semaphore threadSemaphore = new Semaphore(CONCURRENCY / THREAD_COUNT);
-
-                    int seed = threadIdx * 1000;
-                    for (int i = 0; i < iterationsPerThread; i++) {
-                        threadSemaphore.acquire();
-                        int idx = (seed + i) % 3;
-                        final CompletableFuture<Variant> future;
-                        if (idx == 0) future = client.get(keyBytes, hintBytes);
-                        else if (idx == 1) future = client.get(keyInt, hintInt);
-                        else future = client.get(keyDouble, hintDouble);
-
-                        CompletableFuture<Variant> wrapped = future
-                                .exceptionally(ex -> { totalErrors.incrementAndGet(); return null; })
-                                .whenComplete((res, ex) -> threadSemaphore.release());
-                        threadFutures.add(wrapped);
-                    }
-                    CompletableFuture.allOf(threadFutures.toArray(new CompletableFuture[0])).join();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    doneLatch.countDown();
-                }
-            });
-            threads.add(bt);
-            bt.start();
-        }
-
-        startLatch.countDown();
-        doneLatch.await();
-        long endTime = System.nanoTime();
-
-        double elapsed = (endTime - startTime) / 1_000_000_000.0;
-        double ops = BENCHMARK_ITERATIONS / elapsed;
-        System.out.printf("[Get(heterogeneous) MT] %d iters x %d threads, %.3fs, %.2f OPS, %d errors%n",
-                          iterationsPerThread, THREAD_COUNT, elapsed, ops, totalErrors.get());
-    }
-
-    // =========================================================================
-    // HELPERS
-    // =========================================================================
-
-    private void printResults(String operation, int iterations, long elapsedNanos, long errors) {
-        double elapsed = elapsedNanos / 1_000_000_000.0;
-        double ops = elapsed > 0 ? iterations / elapsed : 0;
-        System.out.printf("[%s] %d iters, %.3fs, %.2f OPS, %d errors%n",
-                          operation, iterations, elapsed, ops, errors);
+        Keyspace kb = createBytesKeyspace("s_get_mix_b_mt_" + UUID.randomUUID() + "_");
+        Keyspace ki = createKeyspace("s_get_mix_i_mt_" + UUID.randomUUID() + "_", i -> vi(i));
+        Keyspace kd = createKeyspace("s_get_mix_d_mt_" + UUID.randomUUID() + "_", i -> vd(i * 2.5));
+        runMetricsBenchmarkMT("Get(heterogeneous, KeyHint)", BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
+            if (i % 3 == 0) {
+                int idx = kb.randomIndex();
+                return client.get(kb.keys[idx], kb.hints[idx]);
+            } else if (i % 3 == 1) {
+                int idx = ki.randomIndex();
+                return client.get(ki.keys[idx], ki.hints[idx]);
+            } else {
+                int idx = kd.randomIndex();
+                return client.get(kd.keys[idx], kd.hints[idx]);
+            }
+        });
     }
 }

@@ -26,7 +26,7 @@ public class SmartClientCasInContainerRoutingTest extends TestBaseCluster {
         Map<com.hurricache.client.intf.Payload, Variant> data = new HashMap<>();
         data.put(com.hurricache.client.intf.Payload.of("counter".getBytes()), Variant.ofLong(10));
         client.createMap(key, data).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         AtomicCasRes ok = client.compareAndSetInContainer(key, "counter".getBytes(), 10, 42).get();
         assertTrue(ok.getResult());
 

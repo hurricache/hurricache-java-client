@@ -37,7 +37,7 @@ public class SmartClientOrderedSetWeightRoutingTest extends TestBaseCluster {
                 OrderedVariant.ofBytes("alpha".getBytes(), 10L),
                 OrderedVariant.ofBytes("beta".getBytes(), 20L)
         )).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Boolean ok = client.incrementOrder(key, OrderedPayload.of(10L, "alpha".getBytes()), 7).get();
         assertTrue(ok);
 
@@ -56,7 +56,7 @@ public class SmartClientOrderedSetWeightRoutingTest extends TestBaseCluster {
     void testSetAbsoluteWeightRoutedAndReplicated() throws Exception {
         String key = "zset_weight_abs_routing_" + UUID.randomUUID();
         client.createOrderedSet(key, List.of(OrderedVariant.ofBytes("beta".getBytes(), 20L))).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         Boolean ok = client.update(key, OrderedPayload.of(20L, "beta".getBytes()), 55).get();
         assertTrue(ok);
 
@@ -75,7 +75,7 @@ public class SmartClientOrderedSetWeightRoutingTest extends TestBaseCluster {
     void testUnderflowPropagates() throws Exception {
         String key = "zset_weight_oor_" + UUID.randomUUID();
         client.createOrderedSet(key, List.of(OrderedVariant.ofBytes("alpha".getBytes(), 5L))).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         assertThrows(ExecutionException.class,
                      () -> client.incrementOrder(key, OrderedPayload.of(5L, "alpha".getBytes()), -6).get());
         assertEquals(5L, weightOf(key, "alpha", Mode.MASTER));

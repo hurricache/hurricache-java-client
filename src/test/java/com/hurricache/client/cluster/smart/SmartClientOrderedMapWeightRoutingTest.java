@@ -83,7 +83,7 @@ public class SmartClientOrderedMapWeightRoutingTest extends TestBaseCluster {
         Map<OrderedPayload, Variant> data = new HashMap<>();
         data.put(OrderedPayload.of("k1".getBytes(), 5L), Variant.ofBytes("v1".getBytes()));
         client.createOrderedMap(key, data).get();
-
+        waitForCondition(() -> client.setMode(Mode.BACKUP).containsKey(key).get() && client.setMode(Mode.MASTER).containsKey(key).get());
         assertThrows(ExecutionException.class,
                      () -> client.incrementOrder(key, OrderedPayload.of(5L, "k1".getBytes()), -6).get());
         assertNotNull(valueAt(key, "k1", 5L, Mode.MASTER));
