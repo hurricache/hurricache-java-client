@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Variant — универсальный тип возврата, может содержать int, double или byte[].
- * Тип определяется на основе ValueType из протокола.
+ * Variant — a universal return type, may hold an int, double or byte[].
+ * The type is derived from the ValueType in the protocol.
  */
 public final class Variant {
 

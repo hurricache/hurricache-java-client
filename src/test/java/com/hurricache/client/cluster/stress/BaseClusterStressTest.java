@@ -32,6 +32,20 @@ import java.util.function.IntFunction;
  */
 public abstract class BaseClusterStressTest extends TestBaseCluster {
 
+    // stale write (ABORTED) при конкурентной записи в один ключ — легитимный исход
+    // (сервер честно отклонил опоздавшую запись), не считаем ошибкой бенчмарка
+    protected static <T> CompletableFuture<T> tolerateAborted(CompletableFuture<T> f) {
+        return f.exceptionally(ex -> {
+            Throwable c = (ex instanceof java.util.concurrent.CompletionException && ex.getCause() != null)
+                          ? ex.getCause() : ex;
+            if (c instanceof io.grpc.StatusRuntimeException sre
+                    && sre.getStatus().getCode() == io.grpc.Status.Code.ABORTED) {
+                return null;
+            }
+            throw new java.util.concurrent.CompletionException(ex);
+        });
+    }
+
     protected static final int WARMUP_ITERATIONS = 10000;
     protected static final int BENCHMARK_ITERATIONS = 100000;
     protected static final int CONCURRENCY = 100;

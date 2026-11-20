@@ -524,9 +524,9 @@ public interface HurriCacheClientAtomics extends HurriCacheClientInterfaceCommon
     }
 
     // =========================================================================
-    // CONTAINER ATOMICS — атомики над элементами контейнеров.
-    // Адресация: containerKey для MAP/ORDERED_MAP, pos для VECTOR/LIST.
-    // Возвращается СТАРОЕ значение элемента (как у скалярных атомиков).
+    // CONTAINER ATOMICS — atomics over container elements.
+    // Addressing: containerKey for MAP/ORDERED_MAP, pos for VECTOR/LIST.
+    // The OLD element value is returned (same as scalar atomics).
     // =========================================================================
 
     /**

@@ -24,7 +24,7 @@ public final class LZ4CompressionUtils {
     private static final LZ4Factory FACTORY = LZ4Factory.fastestInstance();
 
     private LZ4CompressionUtils() {
-        // Утилитный класс
+        // Utility class
     }
 
     private record PreparedPayload(ByteString payload, int size, CompressedInfo compressionInfo) {}

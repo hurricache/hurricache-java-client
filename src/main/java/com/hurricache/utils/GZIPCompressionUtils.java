@@ -25,7 +25,7 @@ import java.util.zip.GZIPOutputStream;
 public final class GZIPCompressionUtils {
 
     private GZIPCompressionUtils() {
-        // Утилитный класс
+        // Utility class
     }
 
     private static byte[] compressGzip(byte[] data) {
@@ -156,8 +156,8 @@ public final class GZIPCompressionUtils {
             return decompressGzip(byteString, responseValue.getCompressionInfo().getRawSize());
         }
 
-        // Zero-copy извлечение в массив байт без дублирования буфера, если это поддерживается
-        if (byteString.isValidUtf8() || true) { // Напрямую через ByteBuffer
+        // Zero-copy extraction into a byte array without duplicating the buffer, when supported
+        if (byteString.isValidUtf8() || true) { // Directly via ByteBuffer
             ByteBuffer buffer = byteString.asReadOnlyByteBuffer();
             if (buffer.hasArray() && buffer.arrayOffset() == 0 && buffer.array().length == byteString.size()) {
                 return buffer.array();

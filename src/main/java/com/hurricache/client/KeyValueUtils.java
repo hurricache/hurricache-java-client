@@ -93,7 +93,7 @@ public class KeyValueUtils {
         return CreateRequest.newBuilder().setKey(buildKey(key, hint, clientId,compressionThreshold)).setValue(vb).build();
     }
 
-    // Контейнерные атомики: элемент адресуется ключом (MAP/ORDERED_MAP) или позицией (VECTOR/LIST)
+    // Container atomics: the element is addressed by key (MAP/ORDERED_MAP) or position (VECTOR/LIST)
 
     public static CreateRequest buildAtomicCreateRequest(byte[] key, KeyHintData hint, byte[] containerKey,
                                                          long value, Duration ttl, int clientId,

@@ -3,8 +3,8 @@ package com.hurricache.client.intf;
 import java.util.Objects;
 
 /**
- * OrderedVariant — Variant с порядковым весом (order) для сортированных структур.
- * Наследует всю функциональность Variant и добавляет long order.
+ * OrderedVariant — a Variant with an ordering weight (order) for sorted structures.
+ * Inherits all Variant functionality and adds a long order.
  */
 public final class OrderedVariant {
 

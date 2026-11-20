@@ -8,14 +8,13 @@ import io.grpc.ForwardingClientCall;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.time.Instant;
 
 /**
- * Прикрепляет к каждому вызову заголовок x-hc-client-ts — время отправки клиента
- * в миллисекундах от Unix epoch (UTC/GMT-0). Сервер использует его для штампа
- * версий и честного отклонения записей, задержанных сетью (stale write).
+ * Attaches the x-hc-client-ts-bin metadata to every call — client send time in
+ * milliseconds since Unix epoch (UTC/GMT-0), uint64 little-endian.
+ * The server uses it to stamp write versions and to honestly reject writes
+ * delayed by the network (stale write).
  */
 public final class ClientSendTimeInterceptor implements ClientInterceptor {
 

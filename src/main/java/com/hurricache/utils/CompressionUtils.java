@@ -17,7 +17,7 @@ public class CompressionUtils {
     private static final boolean IS_GZIP;
 
     static {
-        // Читаем проперти, по умолчанию можно использовать lz4 (или gzip, как вам привычнее)
+        // Read the property; lz4 is the default (or gzip, if you prefer)
         String compressionType = System.getProperty(PROPERTY_NAME, "gzip");
         IS_GZIP = "gzip".equalsIgnoreCase(compressionType) || "deflate".equalsIgnoreCase(compressionType);
     }

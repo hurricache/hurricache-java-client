@@ -1915,7 +1915,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
         try {
             if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
                 channel.shutdownNow();
-                // Даем еще немного времени на принудительный сброс
+                // Allow a bit more time for a forced flush
                 if (!channel.awaitTermination(2, TimeUnit.SECONDS)) {
                     System.err.println("Channel did not terminate gracefully");
                 }
@@ -1925,7 +1925,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             Thread.currentThread().interrupt();
         }
 
-        // 2. Обязательно гасим кастомный экзекьютор задач gRPC
+        // 2. Always shut down the custom gRPC task executor
         if (customExecutor != null && !customExecutor.isShutdown()) {
             customExecutor.shutdown();
             try {
@@ -1938,7 +1938,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             }
         }
 
-        // 3. Гасим нативную Epoll/Nio группу Netty (если она создавалась отдельно)
+        // 3. Shut down the native Netty Epoll/Nio group (if it was created separately)
         if (eventLoopGroup != null && !eventLoopGroup.isShuttingDown()) {
             eventLoopGroup.shutdownGracefully(2, 5, TimeUnit.SECONDS);
         }

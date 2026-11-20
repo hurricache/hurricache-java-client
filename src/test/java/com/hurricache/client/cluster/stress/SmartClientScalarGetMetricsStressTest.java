@@ -144,7 +144,7 @@ public class SmartClientScalarGetMetricsStressTest extends BaseClusterStressTest
         Keyspace ks = createBytesKeyspace("m_replace_b_" + UUID.randomUUID() + "_");
         runMetricsBenchmark("Replace(bytes, KeyHint)", BENCHMARK_ITERATIONS, i -> {
             int idx = ks.randomIndex();
-            return client.replace(ks.keys[idx], ks.hints[idx], v("new_bytes_" + i));
+            return tolerateAborted(client.replace(ks.keys[idx], ks.hints[idx], v("new_bytes_" + i)));
         });
     }
 
@@ -153,7 +153,7 @@ public class SmartClientScalarGetMetricsStressTest extends BaseClusterStressTest
     void metricsReplaceBytesNoKeyHint() throws Exception {
         Keyspace ks = createBytesKeyspace("m_replace_b_nh_" + UUID.randomUUID() + "_");
         runMetricsBenchmark("Replace(bytes, no KeyHint)", BENCHMARK_ITERATIONS, i ->
-                client.replace(ks.keys[ks.randomIndex()], v("new_bytes_" + i)));
+                tolerateAborted(client.replace(ks.keys[ks.randomIndex()], v("new_bytes_" + i))));
     }
 
     @Test
@@ -162,7 +162,7 @@ public class SmartClientScalarGetMetricsStressTest extends BaseClusterStressTest
         Keyspace ks = createKeyspace("m_replace_i_" + UUID.randomUUID() + "_", i -> vi(i));
         runMetricsBenchmark("Replace(int, KeyHint)", BENCHMARK_ITERATIONS, i -> {
             int idx = ks.randomIndex();
-            return client.replace(ks.keys[idx], ks.hints[idx], vi(i));
+            return tolerateAborted(client.replace(ks.keys[idx], ks.hints[idx], vi(i)));
         });
     }
 
@@ -172,7 +172,7 @@ public class SmartClientScalarGetMetricsStressTest extends BaseClusterStressTest
         Keyspace ks = createKeyspace("m_replace_d_" + UUID.randomUUID() + "_", i -> vd(i * 1.1));
         runMetricsBenchmark("Replace(double, KeyHint)", BENCHMARK_ITERATIONS, i -> {
             int idx = ks.randomIndex();
-            return client.replace(ks.keys[idx], ks.hints[idx], vd(i * 1.1));
+            return tolerateAborted(client.replace(ks.keys[idx], ks.hints[idx], vd(i * 1.1)));
         });
     }
 
@@ -286,7 +286,7 @@ public class SmartClientScalarGetMetricsStressTest extends BaseClusterStressTest
         Keyspace ks = createBytesKeyspace("m_replace_b_mt_" + UUID.randomUUID() + "_");
         runMetricsBenchmarkMT("Replace(bytes, KeyHint)", BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             int idx = ks.randomIndex();
-            return client.replace(ks.keys[idx], ks.hints[idx], v("new_bytes_" + i));
+            return tolerateAborted(client.replace(ks.keys[idx], ks.hints[idx], v("new_bytes_" + i)));
         });
     }
 
@@ -296,7 +296,7 @@ public class SmartClientScalarGetMetricsStressTest extends BaseClusterStressTest
         Keyspace ks = createKeyspace("m_replace_i_mt_" + UUID.randomUUID() + "_", i -> vi(i));
         runMetricsBenchmarkMT("Replace(int, KeyHint)", BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             int idx = ks.randomIndex();
-            return client.replace(ks.keys[idx], ks.hints[idx], vi(i));
+            return tolerateAborted(client.replace(ks.keys[idx], ks.hints[idx], vi(i)));
         });
     }
 
@@ -306,7 +306,7 @@ public class SmartClientScalarGetMetricsStressTest extends BaseClusterStressTest
         Keyspace ks = createKeyspace("m_replace_d_mt_" + UUID.randomUUID() + "_", i -> vd(i * 1.1));
         runMetricsBenchmarkMT("Replace(double, KeyHint)", BENCHMARK_ITERATIONS, THREAD_COUNT, (threadId, i) -> {
             int idx = ks.randomIndex();
-            return client.replace(ks.keys[idx], ks.hints[idx], vd(i * 1.1));
+            return tolerateAborted(client.replace(ks.keys[idx], ks.hints[idx], vd(i * 1.1)));
         });
     }
 }

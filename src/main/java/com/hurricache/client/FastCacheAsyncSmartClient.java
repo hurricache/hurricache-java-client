@@ -393,7 +393,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             }
 
             // =========================================================================
-            // 1. ОБРАБОТКА РЕРОУТИНГА (FAILED_PRECONDITION)
+            // 1. REROUTE HANDLING (FAILED_PRECONDITION)
             // =========================================================================
             if (isReroute(ex)) {
                 RerouteTargets routes = getRerouteTargets(ex);
@@ -433,7 +433,7 @@ public class FastCacheAsyncSmartClient implements HurriCacheClientInterface {
             }
 
             // =========================================================================
-            // 2. ОБРАБОТКА НЕДОСТУПНОСТИ/ТАЙМАУТА НОДЫ (UNAVAILABLE, DEADLINE_EXCEEDED)
+            // 2. NODE UNAVAILABILITY/TIMEOUT HANDLING (UNAVAILABLE, DEADLINE_EXCEEDED)
             // =========================================================================
             if (isUnavailable(ex) || isTimeout(ex)) {
                 String deadTarget = currentEndpoint != null ? currentEndpoint.getTarget() : "UNKNOWN";
