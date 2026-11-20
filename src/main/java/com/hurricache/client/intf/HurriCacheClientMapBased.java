@@ -1,6 +1,7 @@
 package com.hurricache.client.intf;
 
 import com.hurricache.grpc.ContainerType;
+import com.hurricache.grpc.KeyHint;
 
 import java.time.Duration;
 import java.util.List;
@@ -211,6 +212,12 @@ public interface HurriCacheClientMapBased extends HurriCacheClientInterfaceCommo
                                                       OrderedPayload elementKey,
                                                       long delta) {
         return incrementOrder(key, null, elementKey, delta, getDefaultClientId(), getDefaultTimeout());
+    }
+
+    default CompletableFuture<Boolean> incrementOrder(String key, KeyHintData hint,
+                                                      OrderedPayload elementKey,
+                                                      long delta) {
+        return incrementOrder(key, hint, elementKey, delta, getDefaultClientId(), getDefaultTimeout());
     }
 
     /**

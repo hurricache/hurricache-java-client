@@ -9,26 +9,55 @@ import java.util.List;
 import java.util.UUID;
 
 public class SmartClientVectorStressTest extends BaseClusterStressTest {
-    // pop/remove с немедленным возвратом в хвост: размер вектора стабилен, OUT_OF_RANGE не возникает
+    // Трекаем размер вектора атомиком: pop/remove уменьшает на 1, pushTail возвращает обратно.
+    // Позицию считаем от отслеженного размера — OUT_OF_RANGE не возникает даже при
+    // конкурентных операциях; операции адресуем явно на MASTER (BACKUP может отставать).
+    private final java.util.concurrent.atomic.AtomicInteger vectorSize =
+            new java.util.concurrent.atomic.AtomicInteger(VECTOR_CONTAINER_SIZE);
+
+    // занять слот удаления: возвращает валидную позицию или -1, если удалять нечего
+    private int acquireRemovalSlot(int i) {
+        int before = vectorSize.getAndUpdate(s -> s > 1 ? s - 1 : s);
+        if (before <= 1) {
+            return -1; // контейнер на минимуме — не удаляем (и слот не занимали)
+        }
+        // позиция < нового отслеженного размера ≤ фактического (pushTail может ещё лететь)
+        return Math.floorMod(i, before - 1);
+    }
+
     private java.util.concurrent.CompletableFuture<com.hurricache.client.intf.Variant> popAtAndRestore(
             String key, KeyHintData hint, int i) {
-        // до CONCURRENCY операций может быть в полёте одновременно — позицию ограничиваем,
-        // чтобы даже при максимальной просадке размера не выйти за границы
-        int pos = i % (VECTOR_CONTAINER_SIZE - CONCURRENCY);
-        return client.popAt(key, hint, pos)
-                .thenCompose(old -> client.pushTail(key, hint, java.util.List.of(v("item_" + i)))
-                                        .thenApply(x -> old));
+        int pos = acquireRemovalSlot(i);
+        if (pos < 0) {
+            return client.setMode(com.hurricache.client.intf.Mode.MASTER)
+                    .pushTail(key, hint, java.util.List.of(v("item_" + i)))
+                    .thenApply(x -> null);
+        }
+        return client.setMode(com.hurricache.client.intf.Mode.MASTER).popAt(key, hint, pos)
+                .thenCompose(old -> client.setMode(com.hurricache.client.intf.Mode.MASTER)
+                        .pushTail(key, hint, java.util.List.of(v("item_" + i)))
+                        .thenApply(x -> {
+                            vectorSize.incrementAndGet();
+                            return old;
+                        }));
     }
 
     private java.util.concurrent.CompletableFuture<Integer> removeAtAndRestore(
             String key, KeyHintData hint, int i) {
-        // до CONCURRENCY операций может быть в полёте одновременно — позицию ограничиваем,
-        // чтобы даже при максимальной просадке размера не выйти за границы
-        int pos = i % (VECTOR_CONTAINER_SIZE - CONCURRENCY);
-        return client.removeAt(key, hint, pos)
+        int pos = acquireRemovalSlot(i);
+        if (pos < 0) {
+            return client.setMode(com.hurricache.client.intf.Mode.MASTER)
+                    .pushTail(key, hint, java.util.List.of(v("item_" + i)))
+                    .thenApply(x -> 0);
+        }
+        return client.setMode(com.hurricache.client.intf.Mode.MASTER).removeAt(key, hint, pos)
                 .thenCompose(removed -> removed != null && removed > 0
-                        ? client.pushTail(key, hint, java.util.List.of(v("item_" + i)))
-                                  .thenApply(x -> removed)
+                        ? client.setMode(com.hurricache.client.intf.Mode.MASTER)
+                                .pushTail(key, hint, java.util.List.of(v("item_" + i)))
+                                .thenApply(x -> {
+                                    vectorSize.incrementAndGet();
+                                    return removed;
+                                })
                         : java.util.concurrent.CompletableFuture.completedFuture(removed));
     }
 

@@ -2,6 +2,7 @@ package com.hurricache.client;
 
 import com.google.protobuf.UnsafeByteOperations;
 import com.hurricache.client.intf.HurriCacheClientInterface;
+import com.hurricache.utils.ClientSendTimeInterceptor;
 import com.hurricache.client.intf.KeyHintData;
 import com.hurricache.client.intf.OrderedPayload;
 import com.hurricache.client.intf.OrderedVariant;
@@ -48,6 +49,7 @@ import com.hurricache.utils.StreamBatchOrderedMapVariantObserver;
 import com.hurricache.utils.StreamBatchOrderedObserver;
 import com.hurricache.utils.StreamBatchUnorderedObserver;
 import com.hurricache.utils.StreamBatchVariantObserver;
+import io.grpc.ClientInterceptors;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.shaded.io.netty.channel.ChannelOption;
@@ -100,7 +102,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
             eventLoopGroup= null;
         }
         this.channel = nettyChannelBuilder.build();
-        this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
+        this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(ClientInterceptors.intercept(channel, ClientSendTimeInterceptor.INSTANCE));
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
         this.defaultCompressionThreshold = defaultCompressionThreshold;
@@ -149,7 +151,7 @@ public class FastCacheAsyncSimpleClient implements HurriCacheClientInterface {
                                       int defaultCompressionThreshold,
                                       boolean ownedChannel) {
         this.channel = channel;
-        this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(channel);
+        this.asyncStub = HurriCacheGrpcServiceGrpc.newStub(ClientInterceptors.intercept(channel, ClientSendTimeInterceptor.INSTANCE));
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = duration;
         this.defaultCompressionThreshold = defaultCompressionThreshold;
